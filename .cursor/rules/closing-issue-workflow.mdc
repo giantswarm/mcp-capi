@@ -13,4 +13,4 @@ When closing an issue:
     *   DO NOT proceed with closing the issue.
 5.  **If tests pass:**
     *   Proceed with committing and pushing the changes, follow the `commit-and-push-workflow`.
-    *   After the `commit-and-push-workflow` is successful, then use the `mcp_github_update_issue` tool to change the state of the issue to 'closed'. Make sure to specify the `owner` as `giantswarm`, `repo` as `envctl`, and the correct `issue_number`.
+    *   After the `commit-and-push-workflow` is successful, then use the `mcp_github_update_issue` tool to change the state of the issue to 'closed'. Make sure to specify the `owner` as `giantswarm`, `repo` as `mcp-capi`, and the correct `issue_number`.
