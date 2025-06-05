@@ -239,6 +239,25 @@ func main() {
 
 	mcpServer.AddTool(getMachineTool, createGetMachineHandler(serverCtx))
 
+	// Add CAPI delete cluster tool
+	deleteClusterTool := mcp.NewTool(
+		"capi_delete_cluster",
+		mcp.WithDescription("Delete a CAPI cluster safely (with confirmation)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+		mcp.WithBoolean("force",
+			mcp.Description("Skip safety checks and force deletion (use with caution)"),
+		),
+	)
+
+	mcpServer.AddTool(deleteClusterTool, createDeleteClusterHandler(serverCtx))
+
 	// Add a simple test resource
 	testResource := mcp.NewResource(
 		"capi://test",

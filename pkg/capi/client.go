@@ -283,3 +283,23 @@ func (c *Client) ResumeCluster(ctx context.Context, namespace, name string) erro
 
 	return nil
 }
+
+// DeleteCluster deletes a CAPI cluster
+func (c *Client) DeleteCluster(ctx context.Context, namespace, name string) error {
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
+		return fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	// Delete the cluster
+	if err := c.ctrlClient.Delete(ctx, cluster); err != nil {
+		return fmt.Errorf("failed to delete cluster: %w", err)
+	}
+
+	return nil
+}

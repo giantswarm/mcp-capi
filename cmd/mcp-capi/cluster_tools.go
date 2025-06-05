@@ -256,3 +256,76 @@ func createResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}, nil
 	}
 }
+
+// createDeleteClusterHandler creates a handler for deleting a cluster
+func createDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, fmt.Errorf("namespace argument is required")
+		}
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name argument is required")
+		}
+		force, _ := arguments["force"].(bool)
+
+		// Get cluster status first to show what will be deleted
+		status, err := serverCtx.capiClient.GetClusterStatus(ctx, namespace, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cluster status: %w", err)
+		}
+
+		var content strings.Builder
+
+		// Show cluster information
+		content.WriteString("⚠️  WARNING: You are about to delete the following cluster:\n\n")
+		content.WriteString(capi.FormatClusterInfo(status))
+		content.WriteString("\n")
+
+		// Safety checks if not forced
+		if !force {
+			if status.Ready {
+				content.WriteString("❌ SAFETY CHECK FAILED: Cluster is currently in Ready state.\n")
+				content.WriteString("   This cluster appears to be healthy and operational.\n")
+				content.WriteString("   Use force=true to override this safety check.\n\n")
+				content.WriteString("   Recommended actions before deletion:\n")
+				content.WriteString("   1. Backup any important data\n")
+				content.WriteString("   2. Migrate workloads to another cluster\n")
+				content.WriteString("   3. Ensure this is the correct cluster\n")
+
+				return &mcp.CallToolResult{
+					Content: []mcp.Content{
+						mcp.TextContent{
+							Type: "text",
+							Text: content.String(),
+						},
+					},
+				}, nil
+			}
+		}
+
+		// Proceed with deletion
+		err = serverCtx.capiClient.DeleteCluster(ctx, namespace, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete cluster: %w", err)
+		}
+
+		content.WriteString(fmt.Sprintf("\n✅ Cluster %s/%s deletion initiated successfully.\n\n", namespace, name))
+		content.WriteString("Note: The actual deletion process may take several minutes as:\n")
+		content.WriteString("- All cluster resources are being cleaned up\n")
+		content.WriteString("- Infrastructure resources are being deprovisioned\n")
+		content.WriteString("- Finalizers are being processed\n\n")
+		content.WriteString("You can monitor the deletion progress by listing clusters in this namespace.")
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}

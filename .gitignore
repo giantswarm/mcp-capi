@@ -53,4 +53,4 @@ coverage.html
 
 # Config files with secrets
 config/secrets.yaml
-config/local.yaml 
+config/local.yaml bin/
