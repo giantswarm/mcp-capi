@@ -12,32 +12,31 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-vendor/
+# vendor/
 
 # Go workspace file
 go.work
 go.work.sum
 
-# Build directory
-bin/
-dist/
-
 # IDE specific files
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
-.vscode/
-*.code-workspace
 
 # OS specific files
 .DS_Store
 Thumbs.db
 
+# Build artifacts
+dist/
+build/
+mcp-capi
+
 # Environment files
 .env
 .env.local
-.env.*.local
 
 # Temporary files
 *.tmp
