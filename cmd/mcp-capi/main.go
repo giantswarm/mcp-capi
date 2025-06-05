@@ -504,6 +504,153 @@ func main() {
 
 	mcpServer.AddTool(deleteClusterTool, createDeleteClusterHandler(serverCtx))
 
+	// Add CAPI update machine deployment tool
+	updateMachineDeploymentTool := mcp.NewTool(
+		"capi_update_machinedeployment",
+		mcp.WithDescription("Update MachineDeployment configuration"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("MachineDeployment namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("MachineDeployment name"),
+		),
+		mcp.WithString("version",
+			mcp.Description("Kubernetes version to update to"),
+		),
+		mcp.WithNumber("replicas",
+			mcp.Description("Number of replicas"),
+		),
+		mcp.WithNumber("min_ready_seconds",
+			mcp.Description("Minimum ready seconds before considering a machine available"),
+		),
+		mcp.WithObject("labels",
+			mcp.Description("Labels to add/update (empty value removes label)"),
+		),
+		mcp.WithObject("annotations",
+			mcp.Description("Annotations to add/update (empty value removes annotation)"),
+		),
+	)
+
+	mcpServer.AddTool(updateMachineDeploymentTool, createUpdateMachineDeploymentHandler(serverCtx))
+
+	// Add CAPI rollout machine deployment tool
+	rolloutMachineDeploymentTool := mcp.NewTool(
+		"capi_rollout_machinedeployment",
+		mcp.WithDescription("Trigger rolling update of MachineDeployment"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("MachineDeployment namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("MachineDeployment name"),
+		),
+		mcp.WithString("reason",
+			mcp.Description("Reason for the rollout"),
+		),
+	)
+
+	mcpServer.AddTool(rolloutMachineDeploymentTool, createRolloutMachineDeploymentHandler(serverCtx))
+
+	// Add CAPI list machine sets tool
+	listMachineSetsTool := mcp.NewTool(
+		"capi_list_machinesets",
+		mcp.WithDescription("List CAPI MachineSets"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace to list machine sets in"),
+		),
+		mcp.WithString("clusterName",
+			mcp.Description("Filter by cluster name"),
+		),
+	)
+
+	mcpServer.AddTool(listMachineSetsTool, createListMachineSetsHandler(serverCtx))
+
+	// Add CAPI get machine set tool
+	getMachineSetTool := mcp.NewTool(
+		"capi_get_machineset",
+		mcp.WithDescription("Get detailed MachineSet information"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("MachineSet namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("MachineSet name"),
+		),
+	)
+
+	mcpServer.AddTool(getMachineSetTool, createGetMachineSetHandler(serverCtx))
+
+	// Add CAPI drain node tool
+	drainNodeTool := mcp.NewTool(
+		"capi_drain_node",
+		mcp.WithDescription("Safely drain a Kubernetes node"),
+		mcp.WithString("namespace",
+			mcp.Description("Machine namespace (required if using machine_name)"),
+		),
+		mcp.WithString("machine_name",
+			mcp.Description("Machine name to get node from"),
+		),
+		mcp.WithString("node_name",
+			mcp.Description("Node name to drain directly"),
+		),
+		mcp.WithBoolean("ignore_daemonsets",
+			mcp.Description("Ignore DaemonSet-managed pods"),
+		),
+		mcp.WithBoolean("delete_local_data",
+			mcp.Description("Delete pods with local storage"),
+		),
+		mcp.WithBoolean("force",
+			mcp.Description("Force deletion of pods"),
+		),
+		mcp.WithNumber("grace_period_seconds",
+			mcp.Description("Grace period for pod termination"),
+		),
+	)
+
+	mcpServer.AddTool(drainNodeTool, createDrainNodeHandler(serverCtx))
+
+	// Add CAPI cordon node tool
+	cordonNodeTool := mcp.NewTool(
+		"capi_cordon_node",
+		mcp.WithDescription("Cordon or uncordon a Kubernetes node"),
+		mcp.WithString("namespace",
+			mcp.Description("Machine namespace (required if using machine_name)"),
+		),
+		mcp.WithString("machine_name",
+			mcp.Description("Machine name to get node from"),
+		),
+		mcp.WithString("node_name",
+			mcp.Description("Node name to cordon/uncordon directly"),
+		),
+		mcp.WithBoolean("uncordon",
+			mcp.Description("Set to true to uncordon (make schedulable)"),
+		),
+	)
+
+	mcpServer.AddTool(cordonNodeTool, createCordonNodeHandler(serverCtx))
+
+	// Add CAPI node status tool
+	nodeStatusTool := mcp.NewTool(
+		"capi_node_status",
+		mcp.WithDescription("Get node status from workload cluster"),
+		mcp.WithString("namespace",
+			mcp.Description("Machine namespace (required if using machine_name)"),
+		),
+		mcp.WithString("machine_name",
+			mcp.Description("Machine name to get node from"),
+		),
+		mcp.WithString("node_name",
+			mcp.Description("Node name to get status for directly"),
+		),
+	)
+
+	mcpServer.AddTool(nodeStatusTool, createNodeStatusHandler(serverCtx))
+
 	// Add a simple test resource
 	testResource := mcp.NewResource(
 		"capi://test",

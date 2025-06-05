@@ -68,7 +68,24 @@ MCP_TRANSPORT=stdio ./bin/mcp-capi
 ### Machine Management
 - `capi_list_machines` - List machines
 - `capi_get_machine` - Get machine details
+- `capi_delete_machine` - Delete a specific machine
+- `capi_remediate_machine` - Trigger machine health check remediation
+
+### MachineDeployment Operations
+- `capi_create_machinedeployment` - Create new worker node pool
+- `capi_list_machinedeployments` - List machine deployments
 - `capi_scale_machinedeployment` - Scale worker nodes
+- `capi_update_machinedeployment` - Update MachineDeployment configuration
+- `capi_rollout_machinedeployment` - Trigger rolling update
+
+### MachineSet Operations
+- `capi_list_machinesets` - List machine sets
+- `capi_get_machineset` - Get machine set details
+
+### Node Operations
+- `capi_drain_node` - Safely drain a node
+- `capi_cordon_node` - Cordon/uncordon nodes
+- `capi_node_status` - Get node status from workload cluster
 
 ### Infrastructure Providers
 - `capi_aws_*` - AWS-specific operations

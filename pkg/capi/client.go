@@ -838,3 +838,266 @@ func (c *Client) CreateMachineDeployment(ctx context.Context, opts CreateMachine
 
 // ScaleClusterOptions contains options for scaling a cluster
 // ... existing code ...
+
+// UpdateMachineDeploymentOptions contains options for updating a machine deployment
+type UpdateMachineDeploymentOptions struct {
+	Namespace        string
+	Name             string
+	Version          *string
+	Replicas         *int32
+	Labels           map[string]string
+	Annotations      map[string]string
+	MinReadySeconds  *int32
+	NodeDrainTimeout *metav1.Duration
+}
+
+// UpdateMachineDeployment updates a MachineDeployment's configuration
+func (c *Client) UpdateMachineDeployment(ctx context.Context, opts UpdateMachineDeploymentOptions) (*clusterv1.MachineDeployment, error) {
+	md, err := c.GetMachineDeployment(ctx, opts.Namespace, opts.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get machine deployment: %w", err)
+	}
+
+	// Update version if specified
+	if opts.Version != nil {
+		md.Spec.Template.Spec.Version = opts.Version
+	}
+
+	// Update replicas if specified
+	if opts.Replicas != nil {
+		md.Spec.Replicas = opts.Replicas
+	}
+
+	// Update minReadySeconds if specified
+	if opts.MinReadySeconds != nil {
+		md.Spec.MinReadySeconds = opts.MinReadySeconds
+	}
+
+	// Update nodeDrainTimeout if specified
+	if opts.NodeDrainTimeout != nil {
+		md.Spec.Template.Spec.NodeDrainTimeout = opts.NodeDrainTimeout
+	}
+
+	// Update labels
+	if opts.Labels != nil {
+		if md.Labels == nil {
+			md.Labels = make(map[string]string)
+		}
+		for k, v := range opts.Labels {
+			if v == "" {
+				delete(md.Labels, k)
+			} else {
+				md.Labels[k] = v
+			}
+		}
+	}
+
+	// Update annotations
+	if opts.Annotations != nil {
+		if md.Annotations == nil {
+			md.Annotations = make(map[string]string)
+		}
+		for k, v := range opts.Annotations {
+			if v == "" {
+				delete(md.Annotations, k)
+			} else {
+				md.Annotations[k] = v
+			}
+		}
+	}
+
+	if err := c.ctrlClient.Update(ctx, md); err != nil {
+		return nil, fmt.Errorf("failed to update machine deployment: %w", err)
+	}
+
+	return md, nil
+}
+
+// RolloutMachineDeploymentOptions contains options for triggering a rollout
+type RolloutMachineDeploymentOptions struct {
+	Namespace string
+	Name      string
+	Reason    string
+}
+
+// RolloutMachineDeployment triggers a rolling update of a MachineDeployment
+func (c *Client) RolloutMachineDeployment(ctx context.Context, opts RolloutMachineDeploymentOptions) error {
+	md, err := c.GetMachineDeployment(ctx, opts.Namespace, opts.Name)
+	if err != nil {
+		return fmt.Errorf("failed to get machine deployment: %w", err)
+	}
+
+	// Trigger rollout by updating an annotation
+	if md.Spec.Template.Annotations == nil {
+		md.Spec.Template.Annotations = make(map[string]string)
+	}
+
+	// Add rollout annotation with timestamp
+	md.Spec.Template.Annotations["cluster.x-k8s.io/rollout-triggered"] = fmt.Sprintf("%v", metav1.Now().Unix())
+	if opts.Reason != "" {
+		md.Spec.Template.Annotations["cluster.x-k8s.io/rollout-reason"] = opts.Reason
+	}
+
+	if err := c.ctrlClient.Update(ctx, md); err != nil {
+		return fmt.Errorf("failed to trigger rollout: %w", err)
+	}
+
+	return nil
+}
+
+// ListMachineSets lists all MachineSets in a namespace
+func (c *Client) ListMachineSets(ctx context.Context, namespace, clusterName string) (*clusterv1.MachineSetList, error) {
+	msList := &clusterv1.MachineSetList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	// Filter by cluster if specified
+	if clusterName != "" {
+		opts = append(opts, client.MatchingLabels{
+			clusterv1.ClusterNameLabel: clusterName,
+		})
+	}
+
+	if err := c.ctrlClient.List(ctx, msList, opts...); err != nil {
+		return nil, fmt.Errorf("failed to list machine sets: %w", err)
+	}
+
+	return msList, nil
+}
+
+// GetMachineSet retrieves a specific MachineSet
+func (c *Client) GetMachineSet(ctx context.Context, namespace, name string) (*clusterv1.MachineSet, error) {
+	ms := &clusterv1.MachineSet{}
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, ms); err != nil {
+		return nil, fmt.Errorf("failed to get machine set %s/%s: %w", namespace, name, err)
+	}
+
+	return ms, nil
+}
+
+// NodeOperationOptions contains options for node operations
+type NodeOperationOptions struct {
+	Namespace   string
+	MachineName string
+	NodeName    string
+	// For drain operations
+	GracePeriodSeconds *int32
+	IgnoreDaemonSets   bool
+	DeleteLocalData    bool
+	Force              bool
+	// For cordon operations
+	Uncordon bool
+}
+
+// DrainNode safely drains a node
+func (c *Client) DrainNode(ctx context.Context, opts NodeOperationOptions) error {
+	// Get the node name from machine if not provided
+	nodeName := opts.NodeName
+	if nodeName == "" && opts.MachineName != "" {
+		machine, err := c.GetMachine(ctx, opts.Namespace, opts.MachineName)
+		if err != nil {
+			return fmt.Errorf("failed to get machine: %w", err)
+		}
+		if machine.Status.NodeRef == nil {
+			return fmt.Errorf("machine %s has no associated node", opts.MachineName)
+		}
+		nodeName = machine.Status.NodeRef.Name
+	}
+
+	if nodeName == "" {
+		return fmt.Errorf("either nodeName or machineName must be provided")
+	}
+
+	// First cordon the node
+	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get node %s: %w", nodeName, err)
+	}
+
+	// Mark as unschedulable
+	node.Spec.Unschedulable = true
+	if _, err := c.k8sClient.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("failed to cordon node %s: %w", nodeName, err)
+	}
+
+	// TODO: Implement actual pod eviction logic
+	// This would involve:
+	// 1. List all pods on the node
+	// 2. Filter out daemonsets if IgnoreDaemonSets is true
+	// 3. Create eviction objects for each pod
+	// 4. Wait for pods to be evicted
+
+	// For now, return a placeholder message
+	return fmt.Errorf("drain operation not fully implemented - node %s has been cordoned", nodeName)
+}
+
+// CordonNode cordons or uncordons a node
+func (c *Client) CordonNode(ctx context.Context, opts NodeOperationOptions) error {
+	// Get the node name from machine if not provided
+	nodeName := opts.NodeName
+	if nodeName == "" && opts.MachineName != "" {
+		machine, err := c.GetMachine(ctx, opts.Namespace, opts.MachineName)
+		if err != nil {
+			return fmt.Errorf("failed to get machine: %w", err)
+		}
+		if machine.Status.NodeRef == nil {
+			return fmt.Errorf("machine %s has no associated node", opts.MachineName)
+		}
+		nodeName = machine.Status.NodeRef.Name
+	}
+
+	if nodeName == "" {
+		return fmt.Errorf("either nodeName or machineName must be provided")
+	}
+
+	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get node %s: %w", nodeName, err)
+	}
+
+	// Update schedulable status
+	node.Spec.Unschedulable = !opts.Uncordon
+
+	if _, err := c.k8sClient.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("failed to update node %s: %w", nodeName, err)
+	}
+
+	return nil
+}
+
+// GetNodeStatus gets the status of a node in the workload cluster
+func (c *Client) GetNodeStatus(ctx context.Context, opts NodeOperationOptions) (*corev1.Node, error) {
+	// Get the node name from machine if not provided
+	nodeName := opts.NodeName
+	if nodeName == "" && opts.MachineName != "" {
+		machine, err := c.GetMachine(ctx, opts.Namespace, opts.MachineName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get machine: %w", err)
+		}
+		if machine.Status.NodeRef == nil {
+			return nil, fmt.Errorf("machine %s has no associated node", opts.MachineName)
+		}
+		nodeName = machine.Status.NodeRef.Name
+	}
+
+	if nodeName == "" {
+		return nil, fmt.Errorf("either nodeName or machineName must be provided")
+	}
+
+	// Get node from workload cluster
+	// Note: This uses the management cluster client. In a real implementation,
+	// you would need to get the workload cluster kubeconfig and create a client for it
+	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get node %s: %w", nodeName, err)
+	}
+
+	return node, nil
+}
