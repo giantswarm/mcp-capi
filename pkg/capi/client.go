@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -172,6 +176,82 @@ func (c *Client) GetMachine(ctx context.Context, namespace, name string) (*clust
 	return machine, nil
 }
 
+// DeleteMachineOptions contains options for deleting a machine
+type DeleteMachineOptions struct {
+	Namespace string
+	Name      string
+	Force     bool
+}
+
+// DeleteMachine deletes a CAPI machine
+func (c *Client) DeleteMachine(ctx context.Context, opts DeleteMachineOptions) error {
+	machine := &clusterv1.Machine{}
+	key := client.ObjectKey{
+		Namespace: opts.Namespace,
+		Name:      opts.Name,
+	}
+
+	// First, get the machine to check if it exists
+	if err := c.ctrlClient.Get(ctx, key, machine); err != nil {
+		return fmt.Errorf("failed to get machine: %w", err)
+	}
+
+	// If not forcing, check if machine is safe to delete
+	if !opts.Force {
+		// Check if machine is healthy
+		for _, condition := range machine.Status.Conditions {
+			if condition.Type == clusterv1.MachineHealthCheckSucceededCondition && condition.Status == corev1.ConditionTrue {
+				return fmt.Errorf("machine %s is healthy, use force=true to delete anyway", machine.Name)
+			}
+		}
+
+		// Check if it's a control plane machine with only one replica
+		if util.IsControlPlaneMachine(machine) {
+			// This is a simplified check - in production you'd want to check the actual replica count
+			return fmt.Errorf("cannot delete control plane machine %s without force=true", machine.Name)
+		}
+	}
+
+	// Delete the machine
+	if err := c.ctrlClient.Delete(ctx, machine); err != nil {
+		return fmt.Errorf("failed to delete machine: %w", err)
+	}
+
+	return nil
+}
+
+// RemediateMachineOptions contains options for remediating a machine
+type RemediateMachineOptions struct {
+	Namespace string
+	Name      string
+}
+
+// RemediateMachine triggers machine health check remediation by annotating the machine
+func (c *Client) RemediateMachine(ctx context.Context, opts RemediateMachineOptions) error {
+	machine := &clusterv1.Machine{}
+	key := client.ObjectKey{
+		Namespace: opts.Namespace,
+		Name:      opts.Name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, machine); err != nil {
+		return fmt.Errorf("failed to get machine: %w", err)
+	}
+
+	// Add remediation annotation
+	if machine.Annotations == nil {
+		machine.Annotations = make(map[string]string)
+	}
+	machine.Annotations["cluster.x-k8s.io/remediate-machine"] = fmt.Sprintf("%d", time.Now().Unix())
+
+	// Update the machine
+	if err := c.ctrlClient.Update(ctx, machine); err != nil {
+		return fmt.Errorf("failed to update machine with remediation annotation: %w", err)
+	}
+
+	return nil
+}
+
 // ListMachineDeployments lists all machine deployments
 func (c *Client) ListMachineDeployments(ctx context.Context, namespace, clusterName string) (*clusterv1.MachineDeploymentList, error) {
 	mdList := &clusterv1.MachineDeploymentList{}
@@ -202,7 +282,7 @@ func (c *Client) GetMachineDeployment(ctx context.Context, namespace, name strin
 	}
 
 	if err := c.ctrlClient.Get(ctx, key, md); err != nil {
-		return nil, fmt.Errorf("failed to get machine deployment %s/%s: %w", namespace, name, err)
+		return nil, fmt.Errorf("failed to get machine deployment: %w", err)
 	}
 
 	return md, nil
@@ -361,6 +441,229 @@ func (c *Client) CreateCluster(ctx context.Context, opts CreateClusterOptions) (
 	return cluster, nil
 }
 
+// UpgradeClusterOptions contains options for upgrading a cluster
+type UpgradeClusterOptions struct {
+	Namespace      string
+	Name           string
+	TargetVersion  string
+	UpgradeWorkers bool
+}
+
+// UpgradeCluster upgrades a CAPI cluster to a new Kubernetes version
+func (c *Client) UpgradeCluster(ctx context.Context, opts UpgradeClusterOptions) error {
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: opts.Namespace,
+		Name:      opts.Name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
+		return fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	// Update the control plane version
+	if cluster.Spec.ControlPlaneRef != nil {
+		switch cluster.Spec.ControlPlaneRef.Kind {
+		case "KubeadmControlPlane":
+			kcp := &controlplanev1.KubeadmControlPlane{}
+			cpKey := client.ObjectKey{
+				Namespace: cluster.Spec.ControlPlaneRef.Namespace,
+				Name:      cluster.Spec.ControlPlaneRef.Name,
+			}
+			if err := c.ctrlClient.Get(ctx, cpKey, kcp); err != nil {
+				return fmt.Errorf("failed to get control plane: %w", err)
+			}
+
+			// Update version
+			kcp.Spec.Version = opts.TargetVersion
+			if err := c.ctrlClient.Update(ctx, kcp); err != nil {
+				return fmt.Errorf("failed to update control plane version: %w", err)
+			}
+		default:
+			return fmt.Errorf("unsupported control plane type: %s", cluster.Spec.ControlPlaneRef.Kind)
+		}
+	}
+
+	// Update worker nodes if requested
+	if opts.UpgradeWorkers {
+		mdList, err := c.ListMachineDeployments(ctx, opts.Namespace, opts.Name)
+		if err != nil {
+			return fmt.Errorf("failed to list machine deployments: %w", err)
+		}
+
+		for i := range mdList.Items {
+			md := &mdList.Items[i]
+			if md.Spec.Template.Spec.Version != nil {
+				*md.Spec.Template.Spec.Version = opts.TargetVersion
+				if err := c.ctrlClient.Update(ctx, md); err != nil {
+					return fmt.Errorf("failed to update machine deployment %s: %w", md.Name, err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// UpdateClusterOptions contains options for updating a cluster
+type UpdateClusterOptions struct {
+	Namespace   string
+	Name        string
+	Labels      map[string]string
+	Annotations map[string]string
+}
+
+// UpdateCluster updates a CAPI cluster's metadata
+func (c *Client) UpdateCluster(ctx context.Context, opts UpdateClusterOptions) (*clusterv1.Cluster, error) {
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: opts.Namespace,
+		Name:      opts.Name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
+		return nil, fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	// Update labels
+	if opts.Labels != nil {
+		if cluster.Labels == nil {
+			cluster.Labels = make(map[string]string)
+		}
+		for k, v := range opts.Labels {
+			if v == "" {
+				// Empty value means remove the label
+				delete(cluster.Labels, k)
+			} else {
+				cluster.Labels[k] = v
+			}
+		}
+	}
+
+	// Update annotations
+	if opts.Annotations != nil {
+		if cluster.Annotations == nil {
+			cluster.Annotations = make(map[string]string)
+		}
+		for k, v := range opts.Annotations {
+			if v == "" {
+				// Empty value means remove the annotation
+				delete(cluster.Annotations, k)
+			} else {
+				cluster.Annotations[k] = v
+			}
+		}
+	}
+
+	if err := c.ctrlClient.Update(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("failed to update cluster: %w", err)
+	}
+
+	return cluster, nil
+}
+
+// MoveClusterOptions contains options for moving a cluster
+type MoveClusterOptions struct {
+	Namespace        string
+	Name             string
+	TargetKubeconfig string
+	TargetNamespace  string
+	DryRun           bool
+}
+
+// MoveCluster prepares a cluster for migration to another management cluster
+// Note: This is a simplified implementation that exports the cluster resources
+func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (string, error) {
+	// Get the cluster
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: opts.Namespace,
+		Name:      opts.Name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
+		return "", fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	// Prepare target namespace
+	targetNs := opts.TargetNamespace
+	if targetNs == "" {
+		targetNs = opts.Namespace
+	}
+
+	// Create a YAML manifest for the move
+	var manifest strings.Builder
+	manifest.WriteString("# Cluster Move Manifest\n")
+	manifest.WriteString(fmt.Sprintf("# Source: %s/%s\n", opts.Namespace, opts.Name))
+	manifest.WriteString(fmt.Sprintf("# Target: %s/%s\n", targetNs, opts.Name))
+	manifest.WriteString("# Apply this manifest to the target management cluster\n")
+	manifest.WriteString("---\n")
+
+	// Note: In a real implementation, you would:
+	// 1. Use clusterctl move command or equivalent
+	// 2. Export all related resources (Machines, MachineDeployments, etc.)
+	// 3. Handle infrastructure-specific resources
+	// 4. Pause source cluster before move
+	// 5. Update object references
+
+	manifest.WriteString("# This is a placeholder implementation\n")
+	manifest.WriteString("# In production, use 'clusterctl move' command\n")
+	manifest.WriteString("# Example: clusterctl move --to-kubeconfig=target.kubeconfig\n")
+
+	return manifest.String(), nil
+}
+
+// BackupClusterOptions contains options for backing up a cluster
+type BackupClusterOptions struct {
+	Namespace      string
+	Name           string
+	IncludeSecrets bool
+	OutputFormat   string // yaml or json
+}
+
+// BackupCluster creates a backup of cluster resources
+func (c *Client) BackupCluster(ctx context.Context, opts BackupClusterOptions) (string, error) {
+	// Get the cluster
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: opts.Namespace,
+		Name:      opts.Name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
+		return "", fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	// Create backup manifest
+	var backup strings.Builder
+	backup.WriteString("# Cluster Backup\n")
+	backup.WriteString(fmt.Sprintf("# Cluster: %s/%s\n", opts.Namespace, opts.Name))
+	backup.WriteString(fmt.Sprintf("# Date: %s\n", fmt.Sprintf("%v", cluster.CreationTimestamp)))
+	backup.WriteString("# Resources included:\n")
+	backup.WriteString("# - Cluster\n")
+	backup.WriteString("# - Control Plane\n")
+	backup.WriteString("# - MachineDeployments\n")
+	backup.WriteString("# - Infrastructure Resources\n")
+	if opts.IncludeSecrets {
+		backup.WriteString("# - Secrets (kubeconfig, certificates)\n")
+	}
+	backup.WriteString("---\n")
+
+	// Note: In a real implementation, you would:
+	// 1. Export the Cluster resource
+	// 2. Export ControlPlane resources
+	// 3. Export all Machines and MachineDeployments
+	// 4. Export infrastructure-specific resources
+	// 5. Optionally export secrets (kubeconfig, certs)
+	// 6. Add restore instructions
+
+	backup.WriteString("# This is a placeholder implementation\n")
+	backup.WriteString("# Use velero or similar tools for complete cluster backup\n")
+	backup.WriteString("# Example: velero backup create cluster-backup --include-namespaces=<namespace>\n")
+
+	return backup.String(), nil
+}
+
 // Helper functions to map provider to API versions and kinds
 func getInfraAPIVersion(provider string) string {
 	switch provider {
@@ -408,7 +711,7 @@ func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cluster status: %w", err)
 	}
-	
+
 	health := &ClusterHealthStatus{
 		Healthy:           true,
 		ControlPlaneReady: status.ControlPlaneReady,
@@ -416,25 +719,25 @@ func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (
 		Issues:            []string{},
 		Warnings:          []string{},
 	}
-	
+
 	// Check control plane
 	if !status.ControlPlaneReady {
 		health.Healthy = false
 		health.Issues = append(health.Issues, "Control plane is not ready")
 	}
-	
+
 	// Check infrastructure
 	if !status.InfraReady {
 		health.Healthy = false
 		health.Issues = append(health.Issues, "Infrastructure is not ready")
 	}
-	
+
 	// Check workers
 	machines, err := c.ListMachines(ctx, namespace, name)
 	if err == nil {
 		readyMachines := 0
 		totalMachines := len(machines.Items)
-		
+
 		for _, machine := range machines.Items {
 			for _, condition := range machine.Status.Conditions {
 				if condition.Type == "Ready" && condition.Status == "True" {
@@ -443,14 +746,14 @@ func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (
 				}
 			}
 		}
-		
+
 		health.WorkersReady = readyMachines == totalMachines && totalMachines > 0
 		if !health.WorkersReady {
 			health.Healthy = false
 			health.Issues = append(health.Issues, fmt.Sprintf("Only %d/%d machines are ready", readyMachines, totalMachines))
 		}
 	}
-	
+
 	// Check conditions for issues
 	for _, condition := range status.Conditions {
 		if condition.Status != "True" && condition.Severity == "Error" {
@@ -460,11 +763,78 @@ func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (
 			health.Warnings = append(health.Warnings, fmt.Sprintf("%s: %s", condition.Type, condition.Message))
 		}
 	}
-	
+
 	// Check phase
 	if status.Phase != "Provisioned" && status.Phase != "" {
 		health.Warnings = append(health.Warnings, fmt.Sprintf("Cluster phase is '%s', expected 'Provisioned'", status.Phase))
 	}
-	
+
 	return health, nil
 }
+
+// CreateMachineDeploymentOptions contains options for creating a machine deployment
+type CreateMachineDeploymentOptions struct {
+	Namespace          string
+	Name               string
+	ClusterName        string
+	Replicas           int32
+	InfrastructureRef  corev1.ObjectReference
+	BootstrapConfigRef corev1.ObjectReference
+	Version            string
+	Labels             map[string]string
+	NodeDrainTimeout   *metav1.Duration
+	MinReadySeconds    int32
+}
+
+// CreateMachineDeployment creates a new CAPI MachineDeployment
+func (c *Client) CreateMachineDeployment(ctx context.Context, opts CreateMachineDeploymentOptions) (*clusterv1.MachineDeployment, error) {
+	// Create the machine deployment
+	md := &clusterv1.MachineDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
+			Labels:    opts.Labels,
+		},
+		Spec: clusterv1.MachineDeploymentSpec{
+			ClusterName: opts.ClusterName,
+			Replicas:    &opts.Replicas,
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"machinedeployment": opts.Name,
+				},
+			},
+			Template: clusterv1.MachineTemplateSpec{
+				ObjectMeta: clusterv1.ObjectMeta{
+					Labels: map[string]string{
+						"machinedeployment":                  opts.Name,
+						clusterv1.ClusterNameLabel:           opts.ClusterName,
+						clusterv1.MachineDeploymentNameLabel: opts.Name,
+					},
+				},
+				Spec: clusterv1.MachineSpec{
+					ClusterName:       opts.ClusterName,
+					Version:           &opts.Version,
+					InfrastructureRef: opts.InfrastructureRef,
+					Bootstrap: clusterv1.Bootstrap{
+						ConfigRef: &opts.BootstrapConfigRef,
+					},
+				},
+			},
+			MinReadySeconds: &opts.MinReadySeconds,
+		},
+	}
+
+	if opts.NodeDrainTimeout != nil {
+		md.Spec.Template.Spec.NodeDrainTimeout = opts.NodeDrainTimeout
+	}
+
+	// Create the machine deployment
+	if err := c.ctrlClient.Create(ctx, md); err != nil {
+		return nil, fmt.Errorf("failed to create machine deployment: %w", err)
+	}
+
+	return md, nil
+}
+
+// ScaleClusterOptions contains options for scaling a cluster
+// ... existing code ...

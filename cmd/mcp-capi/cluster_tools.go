@@ -229,20 +229,20 @@ func createClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		
+
 		// Overall status
 		if health.Healthy {
 			content.WriteString(fmt.Sprintf("✅ Cluster %s/%s is HEALTHY\n\n", namespace, name))
 		} else {
 			content.WriteString(fmt.Sprintf("❌ Cluster %s/%s is UNHEALTHY\n\n", namespace, name))
 		}
-		
+
 		// Component status
 		content.WriteString("Component Status:\n")
 		content.WriteString(fmt.Sprintf("  • Control Plane: %s\n", formatHealthStatus(health.ControlPlaneReady)))
 		content.WriteString(fmt.Sprintf("  • Infrastructure: %s\n", formatHealthStatus(health.InfraReady)))
 		content.WriteString(fmt.Sprintf("  • Worker Nodes: %s\n", formatHealthStatus(health.WorkersReady)))
-		
+
 		// Issues
 		if len(health.Issues) > 0 {
 			content.WriteString("\n🔴 Issues:\n")
@@ -250,7 +250,7 @@ func createClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 				content.WriteString(fmt.Sprintf("  • %s\n", issue))
 			}
 		}
-		
+
 		// Warnings
 		if len(health.Warnings) > 0 {
 			content.WriteString("\n⚠️  Warnings:\n")
@@ -258,7 +258,7 @@ func createClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 				content.WriteString(fmt.Sprintf("  • %s\n", warning))
 			}
 		}
-		
+
 		// Recommendations
 		if !health.Healthy {
 			content.WriteString("\n📋 Recommendations:\n")
@@ -506,6 +506,353 @@ func createDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		content.WriteString("- Infrastructure resources are being deprovisioned\n")
 		content.WriteString("- Finalizers are being processed\n\n")
 		content.WriteString("You can monitor the deletion progress by listing clusters in this namespace.")
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
+
+// createUpgradeClusterHandler creates a handler for upgrading cluster Kubernetes version
+func createUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, fmt.Errorf("namespace argument is required")
+		}
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name argument is required")
+		}
+		targetVersion, ok := arguments["target_version"].(string)
+		if !ok || targetVersion == "" {
+			return nil, fmt.Errorf("target_version argument is required")
+		}
+
+		// Default to upgrading workers
+		upgradeWorkers := true
+		if uw, ok := arguments["upgrade_workers"].(bool); ok {
+			upgradeWorkers = uw
+		}
+
+		// Get current cluster status
+		status, err := serverCtx.capiClient.GetClusterStatus(ctx, namespace, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cluster status: %w", err)
+		}
+
+		var content strings.Builder
+		content.WriteString(fmt.Sprintf("🚀 Initiating cluster upgrade for %s/%s\n\n", namespace, name))
+		content.WriteString("Current State:\n")
+		content.WriteString(fmt.Sprintf("  • Current Version: %s\n", status.Version))
+		content.WriteString(fmt.Sprintf("  • Target Version: %s\n", targetVersion))
+		content.WriteString(fmt.Sprintf("  • Upgrade Workers: %v\n\n", upgradeWorkers))
+
+		// Perform the upgrade
+		opts := capi.UpgradeClusterOptions{
+			Namespace:      namespace,
+			Name:           name,
+			TargetVersion:  targetVersion,
+			UpgradeWorkers: upgradeWorkers,
+		}
+
+		if err := serverCtx.capiClient.UpgradeCluster(ctx, opts); err != nil {
+			return nil, fmt.Errorf("failed to upgrade cluster: %w", err)
+		}
+
+		content.WriteString("✅ Upgrade initiated successfully!\n\n")
+		content.WriteString("Upgrade Process:\n")
+		content.WriteString("1. Control plane nodes will be upgraded first (one by one)\n")
+		if upgradeWorkers {
+			content.WriteString("2. Worker nodes will be upgraded after control plane is ready\n")
+		} else {
+			content.WriteString("2. Worker nodes will NOT be upgraded (upgrade_workers=false)\n")
+		}
+		content.WriteString("\n⚠️  Important Notes:\n")
+		content.WriteString("• The upgrade process can take 30-60 minutes depending on cluster size\n")
+		content.WriteString("• Control plane will remain available during rolling upgrade\n")
+		content.WriteString("• Workloads may be rescheduled during worker node upgrades\n")
+		content.WriteString("• Monitor progress with: capi_cluster_status\n")
+		content.WriteString("\n📋 Recommended Actions:\n")
+		content.WriteString("1. Monitor cluster health: capi_cluster_health\n")
+		content.WriteString("2. Watch control plane: capi_list_machines\n")
+		content.WriteString("3. Check events for any issues\n")
+		content.WriteString("4. Verify workloads after upgrade completes\n")
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
+
+// createUpdateClusterHandler creates a handler for updating cluster metadata
+func createUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, fmt.Errorf("namespace argument is required")
+		}
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name argument is required")
+		}
+
+		// Get labels and annotations from arguments
+		labels, _ := arguments["labels"].(map[string]interface{})
+		annotations, _ := arguments["annotations"].(map[string]interface{})
+
+		// Convert interface{} maps to string maps
+		labelMap := make(map[string]string)
+		for k, v := range labels {
+			if strVal, ok := v.(string); ok {
+				labelMap[k] = strVal
+			}
+		}
+
+		annotationMap := make(map[string]string)
+		for k, v := range annotations {
+			if strVal, ok := v.(string); ok {
+				annotationMap[k] = strVal
+			}
+		}
+
+		// Update the cluster
+		opts := capi.UpdateClusterOptions{
+			Namespace:   namespace,
+			Name:        name,
+			Labels:      labelMap,
+			Annotations: annotationMap,
+		}
+
+		cluster, err := serverCtx.capiClient.UpdateCluster(ctx, opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update cluster: %w", err)
+		}
+
+		var content strings.Builder
+		content.WriteString(fmt.Sprintf("✅ Cluster %s/%s updated successfully!\n\n", namespace, name))
+
+		// Show what was updated
+		if len(labelMap) > 0 {
+			content.WriteString("Labels updated:\n")
+			for k, v := range labelMap {
+				if v == "" {
+					content.WriteString(fmt.Sprintf("  ✗ Removed: %s\n", k))
+				} else {
+					content.WriteString(fmt.Sprintf("  ✓ Set: %s=%s\n", k, v))
+				}
+			}
+			content.WriteString("\n")
+		}
+
+		if len(annotationMap) > 0 {
+			content.WriteString("Annotations updated:\n")
+			for k, v := range annotationMap {
+				if v == "" {
+					content.WriteString(fmt.Sprintf("  ✗ Removed: %s\n", k))
+				} else {
+					content.WriteString(fmt.Sprintf("  ✓ Set: %s=%s\n", k, v))
+				}
+			}
+			content.WriteString("\n")
+		}
+
+		// Show current metadata
+		content.WriteString("Current metadata:\n")
+		content.WriteString("Labels:\n")
+		if len(cluster.Labels) > 0 {
+			for k, v := range cluster.Labels {
+				content.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
+			}
+		} else {
+			content.WriteString("  (none)\n")
+		}
+
+		content.WriteString("\nAnnotations:\n")
+		if len(cluster.Annotations) > 0 {
+			for k, v := range cluster.Annotations {
+				content.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
+			}
+		} else {
+			content.WriteString("  (none)\n")
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
+
+// createMoveClusterHandler creates a handler for moving clusters between management clusters
+func createMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, fmt.Errorf("namespace argument is required")
+		}
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name argument is required")
+		}
+
+		targetKubeconfig, _ := arguments["target_kubeconfig"].(string)
+		targetNamespace, _ := arguments["target_namespace"].(string)
+		dryRun, _ := arguments["dry_run"].(bool)
+
+		// Prepare move options
+		opts := capi.MoveClusterOptions{
+			Namespace:        namespace,
+			Name:             name,
+			TargetKubeconfig: targetKubeconfig,
+			TargetNamespace:  targetNamespace,
+			DryRun:           dryRun,
+		}
+
+		// Get move instructions/manifest
+		manifest, err := serverCtx.capiClient.MoveCluster(ctx, opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare cluster move: %w", err)
+		}
+
+		var content strings.Builder
+		content.WriteString(fmt.Sprintf("🚀 Cluster Move Preparation for %s/%s\n\n", namespace, name))
+
+		if dryRun {
+			content.WriteString("⚠️  DRY RUN MODE - No actual changes will be made\n\n")
+		}
+
+		content.WriteString("📋 Move Instructions:\n")
+		content.WriteString("1. Ensure target management cluster is ready\n")
+		content.WriteString("2. Install required providers on target cluster\n")
+		content.WriteString("3. Create target namespace if needed\n")
+		content.WriteString("4. Use clusterctl to perform the move:\n\n")
+
+		content.WriteString("```bash\n")
+		content.WriteString("# Pause the cluster first\n")
+		content.WriteString(fmt.Sprintf("kubectl patch cluster %s -n %s --type merge -p '{\"spec\":{\"paused\":true}}'\n\n", name, namespace))
+
+		content.WriteString("# Move the cluster\n")
+		if targetKubeconfig != "" {
+			content.WriteString(fmt.Sprintf("clusterctl move --to-kubeconfig=%s", targetKubeconfig))
+		} else {
+			content.WriteString("clusterctl move --to-kubeconfig=<target-kubeconfig>")
+		}
+		if targetNamespace != "" && targetNamespace != namespace {
+			content.WriteString(fmt.Sprintf(" --namespace %s --to-namespace %s", namespace, targetNamespace))
+		} else {
+			content.WriteString(fmt.Sprintf(" --namespace %s", namespace))
+		}
+		content.WriteString("\n")
+		content.WriteString("```\n\n")
+
+		content.WriteString("⚠️  Important Notes:\n")
+		content.WriteString("• The source cluster will be paused during move\n")
+		content.WriteString("• All cluster resources will be migrated\n")
+		content.WriteString("• Ensure network connectivity between clusters\n")
+		content.WriteString("• Verify provider versions match\n\n")
+
+		content.WriteString("📝 Move Manifest Preview:\n")
+		content.WriteString("```yaml\n")
+		content.WriteString(manifest)
+		content.WriteString("\n```\n")
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
+
+// createBackupClusterHandler creates a handler for backing up cluster configurations
+func createBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, fmt.Errorf("namespace argument is required")
+		}
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name argument is required")
+		}
+
+		includeSecrets, _ := arguments["include_secrets"].(bool)
+		outputFormat, _ := arguments["output_format"].(string)
+		if outputFormat == "" {
+			outputFormat = "yaml"
+		}
+
+		// Create backup
+		opts := capi.BackupClusterOptions{
+			Namespace:      namespace,
+			Name:           name,
+			IncludeSecrets: includeSecrets,
+			OutputFormat:   outputFormat,
+		}
+
+		backup, err := serverCtx.capiClient.BackupCluster(ctx, opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cluster backup: %w", err)
+		}
+
+		var content strings.Builder
+		content.WriteString(fmt.Sprintf("📦 Cluster Backup for %s/%s\n\n", namespace, name))
+
+		content.WriteString("Backup Configuration:\n")
+		content.WriteString(fmt.Sprintf("  • Format: %s\n", outputFormat))
+		content.WriteString(fmt.Sprintf("  • Include Secrets: %v\n\n", includeSecrets))
+
+		content.WriteString("📋 Backup Instructions:\n")
+		content.WriteString("1. Save the backup content below to a file\n")
+		content.WriteString("2. Store in a secure location (git, S3, etc.)\n")
+		content.WriteString("3. Test restore procedure in a non-production environment\n\n")
+
+		content.WriteString("🔧 Recommended Backup Tools:\n")
+		content.WriteString("• Velero - Complete cluster backup solution\n")
+		content.WriteString("  velero backup create <backup-name> --include-namespaces=<namespace>\n")
+		content.WriteString("• etcd snapshot - For control plane state\n")
+		content.WriteString("• Git repositories - For GitOps managed clusters\n\n")
+
+		content.WriteString("⚠️  Important Notes:\n")
+		content.WriteString("• This backup includes CAPI resources only\n")
+		content.WriteString("• Workload data is NOT included\n")
+		content.WriteString("• Infrastructure provider resources may need separate backup\n")
+		if includeSecrets {
+			content.WriteString("• ⚠️  Secrets are included - handle with care!\n")
+		}
+		content.WriteString("\n")
+
+		content.WriteString("📄 Backup Content:\n")
+		content.WriteString("```" + outputFormat + "\n")
+		content.WriteString(backup)
+		content.WriteString("\n```\n\n")
+
+		content.WriteString("💾 To save this backup:\n")
+		content.WriteString(fmt.Sprintf("1. Copy the content between the ``` markers\n"))
+		content.WriteString(fmt.Sprintf("2. Save to a file: cluster-%s-%s-backup.%s\n", namespace, name, outputFormat))
+		content.WriteString("3. Encrypt if it contains secrets\n")
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{

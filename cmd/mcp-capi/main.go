@@ -169,6 +169,98 @@ func main() {
 
 	mcpServer.AddTool(clusterHealthTool, createClusterHealthHandler(serverCtx))
 
+	// Add CAPI upgrade cluster tool
+	upgradeClusterTool := mcp.NewTool(
+		"capi_upgrade_cluster",
+		mcp.WithDescription("Upgrade a CAPI cluster to a new Kubernetes version"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+		mcp.WithString("target_version",
+			mcp.Required(),
+			mcp.Description("Target Kubernetes version (e.g., v1.29.0)"),
+		),
+		mcp.WithBoolean("upgrade_workers",
+			mcp.Description("Also upgrade worker nodes (default: true)"),
+		),
+	)
+
+	mcpServer.AddTool(upgradeClusterTool, createUpgradeClusterHandler(serverCtx))
+
+	// Add CAPI update cluster tool
+	updateClusterTool := mcp.NewTool(
+		"capi_update_cluster",
+		mcp.WithDescription("Update cluster metadata (labels and annotations)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+		mcp.WithObject("labels",
+			mcp.Description("Labels to add/update/remove (use empty string to remove)"),
+		),
+		mcp.WithObject("annotations",
+			mcp.Description("Annotations to add/update/remove (use empty string to remove)"),
+		),
+	)
+
+	mcpServer.AddTool(updateClusterTool, createUpdateClusterHandler(serverCtx))
+
+	// Add CAPI move cluster tool
+	moveClusterTool := mcp.NewTool(
+		"capi_move_cluster",
+		mcp.WithDescription("Prepare a cluster for migration to another management cluster"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+		mcp.WithString("target_kubeconfig",
+			mcp.Description("Path to target management cluster kubeconfig"),
+		),
+		mcp.WithString("target_namespace",
+			mcp.Description("Target namespace (defaults to source namespace)"),
+		),
+		mcp.WithBoolean("dry_run",
+			mcp.Description("Show what would be moved without doing it"),
+		),
+	)
+
+	mcpServer.AddTool(moveClusterTool, createMoveClusterHandler(serverCtx))
+
+	// Add CAPI backup cluster tool
+	backupClusterTool := mcp.NewTool(
+		"capi_backup_cluster",
+		mcp.WithDescription("Create a backup of cluster configuration and resources"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+		mcp.WithBoolean("include_secrets",
+			mcp.Description("Include secrets in backup (kubeconfig, certificates)"),
+		),
+		mcp.WithString("output_format",
+			mcp.Description("Output format: yaml or json (default: yaml)"),
+		),
+	)
+
+	mcpServer.AddTool(backupClusterTool, createBackupClusterHandler(serverCtx))
+
 	// Add CAPI scale cluster tool
 	scaleClusterTool := mcp.NewTool(
 		"capi_scale_cluster",
@@ -225,6 +317,74 @@ func main() {
 	)
 
 	mcpServer.AddTool(listMachineDeploymentsTool, createListMachineDeploymentsHandler(serverCtx))
+
+	// Add CAPI create machine deployment tool
+	createMachineDeploymentTool := mcp.NewTool(
+		"capi_create_machinedeployment",
+		mcp.WithDescription("Create a new worker node pool (MachineDeployment)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace for the machine deployment"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the machine deployment"),
+		),
+		mcp.WithString("cluster_name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster this deployment belongs to"),
+		),
+		mcp.WithNumber("replicas",
+			mcp.Description("Number of replicas (default: 1)"),
+		),
+		mcp.WithString("version",
+			mcp.Description("Kubernetes version (e.g., v1.29.0)"),
+		),
+		mcp.WithString("infra_kind",
+			mcp.Required(),
+			mcp.Description("Kind of infrastructure template (e.g., AWSMachineTemplate)"),
+		),
+		mcp.WithString("infra_name",
+			mcp.Required(),
+			mcp.Description("Name of infrastructure template"),
+		),
+		mcp.WithString("infra_api_version",
+			mcp.Description("API version of infrastructure template"),
+		),
+		mcp.WithString("bootstrap_kind",
+			mcp.Required(),
+			mcp.Description("Kind of bootstrap config (e.g., KubeadmConfigTemplate)"),
+		),
+		mcp.WithString("bootstrap_name",
+			mcp.Required(),
+			mcp.Description("Name of bootstrap config template"),
+		),
+		mcp.WithString("bootstrap_api_version",
+			mcp.Description("API version of bootstrap config"),
+		),
+	)
+
+	mcpServer.AddTool(createMachineDeploymentTool, createCreateMachineDeploymentHandler(serverCtx))
+
+	// Add CAPI scale machine deployment tool
+	scaleMachineDeploymentTool := mcp.NewTool(
+		"capi_scale_machinedeployment",
+		mcp.WithDescription("Scale worker nodes up or down"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the machine deployment"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the machine deployment"),
+		),
+		mcp.WithNumber("replicas",
+			mcp.Required(),
+			mcp.Description("Number of replicas to scale to"),
+		),
+	)
+
+	mcpServer.AddTool(scaleMachineDeploymentTool, createScaleMachineDeploymentHandler(serverCtx))
 
 	// Add CAPI get kubeconfig tool
 	getKubeconfigTool := mcp.NewTool(
@@ -289,6 +449,41 @@ func main() {
 	)
 
 	mcpServer.AddTool(getMachineTool, createGetMachineHandler(serverCtx))
+
+	// Add CAPI delete machine tool
+	deleteMachineTool := mcp.NewTool(
+		"capi_delete_machine",
+		mcp.WithDescription("Delete a specific CAPI machine"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the machine"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the machine to delete"),
+		),
+		mcp.WithBoolean("force",
+			mcp.Description("Force deletion even if machine is healthy or control plane"),
+		),
+	)
+
+	mcpServer.AddTool(deleteMachineTool, createDeleteMachineHandler(serverCtx))
+
+	// Add CAPI remediate machine tool
+	remediateMachineTool := mcp.NewTool(
+		"capi_remediate_machine",
+		mcp.WithDescription("Trigger machine health check remediation"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the machine"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the machine to remediate"),
+		),
+	)
+
+	mcpServer.AddTool(remediateMachineTool, createRemediateMachineHandler(serverCtx))
 
 	// Add CAPI delete cluster tool
 	deleteClusterTool := mcp.NewTool(
