@@ -32,7 +32,7 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
-mcp-capi
+/mcp-capi
 
 # Environment files
 .env
