@@ -651,6 +651,263 @@ func main() {
 
 	mcpServer.AddTool(nodeStatusTool, createNodeStatusHandler(serverCtx))
 
+	// Infrastructure Provider Tools
+
+	// Generic infrastructure provider tools
+	listInfraProvidersTool := mcp.NewTool(
+		"capi_list_infrastructure_providers",
+		mcp.WithDescription("List available infrastructure providers"),
+	)
+	mcpServer.AddTool(listInfraProvidersTool, createListInfrastructureProvidersHandler(serverCtx))
+
+	getProviderConfigTool := mcp.NewTool(
+		"capi_get_provider_config",
+		mcp.WithDescription("Get provider configuration requirements"),
+		mcp.WithString("provider",
+			mcp.Required(),
+			mcp.Description("Provider name (aws, azure, gcp, vsphere)"),
+		),
+	)
+	mcpServer.AddTool(getProviderConfigTool, createGetProviderConfigHandler(serverCtx))
+
+	// AWS infrastructure tools
+	awsListClustersTool := mcp.NewTool(
+		"capi_aws_list_clusters",
+		mcp.WithDescription("List AWS clusters"),
+		mcp.WithString("namespace",
+			mcp.Description("Namespace to filter clusters (optional)"),
+		),
+	)
+	mcpServer.AddTool(awsListClustersTool, createAWSListClustersHandler(serverCtx))
+
+	awsGetClusterTool := mcp.NewTool(
+		"capi_aws_get_cluster",
+		mcp.WithDescription("Get AWS cluster details"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+	)
+	mcpServer.AddTool(awsGetClusterTool, createAWSGetClusterHandler(serverCtx))
+
+	awsCreateClusterTool := mcp.NewTool(
+		"capi_aws_create_cluster",
+		mcp.WithDescription("Create AWS cluster with specific configuration (placeholder)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+		mcp.WithString("region",
+			mcp.Required(),
+			mcp.Description("AWS region"),
+		),
+		mcp.WithString("vpc_cidr",
+			mcp.Description("VPC CIDR block"),
+		),
+	)
+	mcpServer.AddTool(awsCreateClusterTool, createAWSCreateClusterHandler(serverCtx))
+
+	awsUpdateVPCTool := mcp.NewTool(
+		"capi_aws_update_vpc",
+		mcp.WithDescription("Update VPC configuration (placeholder)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+		mcp.WithString("operation",
+			mcp.Required(),
+			mcp.Description("Operation to perform"),
+		),
+	)
+	mcpServer.AddTool(awsUpdateVPCTool, createAWSUpdateVPCHandler(serverCtx))
+
+	awsManageSecurityGroupsTool := mcp.NewTool(
+		"capi_aws_manage_security_groups",
+		mcp.WithDescription("Manage security groups (placeholder)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+		mcp.WithString("operation",
+			mcp.Required(),
+			mcp.Description("Operation to perform"),
+		),
+	)
+	mcpServer.AddTool(awsManageSecurityGroupsTool, createAWSManageSecurityGroupsHandler(serverCtx))
+
+	awsGetMachineTemplateTool := mcp.NewTool(
+		"capi_aws_get_machine_template",
+		mcp.WithDescription("Get/list AWS machine templates"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace to search in"),
+		),
+		mcp.WithString("name",
+			mcp.Description("Template name (optional, lists all if not provided)"),
+		),
+	)
+	mcpServer.AddTool(awsGetMachineTemplateTool, createAWSGetMachineTemplateHandler(serverCtx))
+
+	// Azure infrastructure tools
+	azureListClustersTool := mcp.NewTool(
+		"capi_azure_list_clusters",
+		mcp.WithDescription("List Azure clusters"),
+		mcp.WithString("namespace",
+			mcp.Description("Namespace to filter clusters (optional)"),
+		),
+	)
+	mcpServer.AddTool(azureListClustersTool, createAzureListClustersHandler(serverCtx))
+
+	azureGetClusterTool := mcp.NewTool(
+		"capi_azure_get_cluster",
+		mcp.WithDescription("Get Azure cluster details"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+	)
+	mcpServer.AddTool(azureGetClusterTool, createAzureGetClusterHandler(serverCtx))
+
+	azureManageResourceGroupTool := mcp.NewTool(
+		"capi_azure_manage_resource_group",
+		mcp.WithDescription("Manage resource groups (placeholder)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+		mcp.WithString("operation",
+			mcp.Required(),
+			mcp.Description("Operation to perform"),
+		),
+	)
+	mcpServer.AddTool(azureManageResourceGroupTool, createAzureManageResourceGroupHandler(serverCtx))
+
+	azureNetworkConfigTool := mcp.NewTool(
+		"capi_azure_network_config",
+		mcp.WithDescription("Configure Azure networking (placeholder)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+		mcp.WithString("operation",
+			mcp.Required(),
+			mcp.Description("Operation to perform"),
+		),
+	)
+	mcpServer.AddTool(azureNetworkConfigTool, createAzureNetworkConfigHandler(serverCtx))
+
+	// GCP infrastructure tools
+	gcpListClustersTool := mcp.NewTool(
+		"capi_gcp_list_clusters",
+		mcp.WithDescription("List GCP clusters"),
+		mcp.WithString("namespace",
+			mcp.Description("Namespace to filter clusters (optional)"),
+		),
+	)
+	mcpServer.AddTool(gcpListClustersTool, createGCPListClustersHandler(serverCtx))
+
+	gcpGetClusterTool := mcp.NewTool(
+		"capi_gcp_get_cluster",
+		mcp.WithDescription("Get GCP cluster details"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+	)
+	mcpServer.AddTool(gcpGetClusterTool, createGCPGetClusterHandler(serverCtx))
+
+	gcpManageNetworkTool := mcp.NewTool(
+		"capi_gcp_manage_network",
+		mcp.WithDescription("Manage GCP networks (placeholder)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+		mcp.WithString("operation",
+			mcp.Required(),
+			mcp.Description("Operation to perform"),
+		),
+	)
+	mcpServer.AddTool(gcpManageNetworkTool, createGCPManageNetworkHandler(serverCtx))
+
+	// vSphere infrastructure tools
+	vsphereListClustersTool := mcp.NewTool(
+		"capi_vsphere_list_clusters",
+		mcp.WithDescription("List vSphere clusters"),
+		mcp.WithString("namespace",
+			mcp.Description("Namespace to filter clusters (optional)"),
+		),
+	)
+	mcpServer.AddTool(vsphereListClustersTool, createVSphereListClustersHandler(serverCtx))
+
+	vsphereGetClusterTool := mcp.NewTool(
+		"capi_vsphere_get_cluster",
+		mcp.WithDescription("Get vSphere cluster details"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+	)
+	mcpServer.AddTool(vsphereGetClusterTool, createVSphereGetClusterHandler(serverCtx))
+
+	vsphereManageVMsTool := mcp.NewTool(
+		"capi_vsphere_manage_vms",
+		mcp.WithDescription("Manage vSphere VMs (placeholder)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Cluster namespace"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Cluster name"),
+		),
+		mcp.WithString("operation",
+			mcp.Required(),
+			mcp.Description("Operation to perform"),
+		),
+	)
+	mcpServer.AddTool(vsphereManageVMsTool, createVSphereManageVMsHandler(serverCtx))
+
 	// Add a simple test resource
 	testResource := mcp.NewResource(
 		"capi://test",

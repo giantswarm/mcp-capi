@@ -87,10 +87,34 @@ MCP_TRANSPORT=stdio ./bin/mcp-capi
 - `capi_cordon_node` - Cordon/uncordon nodes
 - `capi_node_status` - Get node status from workload cluster
 
-### Infrastructure Providers
-- `capi_aws_*` - AWS-specific operations
-- `capi_azure_*` - Azure-specific operations
-- `capi_gcp_*` - GCP-specific operations
+### Infrastructure Provider Tools
+#### Generic
+- `capi_list_infrastructure_providers` - List available providers
+- `capi_get_provider_config` - Get provider configuration requirements
+
+#### AWS
+- `capi_aws_list_clusters` - List AWS clusters
+- `capi_aws_get_cluster` - Get AWS cluster details
+- `capi_aws_create_cluster` - Create AWS cluster (placeholder)
+- `capi_aws_update_vpc` - Update VPC configuration (placeholder)
+- `capi_aws_manage_security_groups` - Manage security groups (placeholder)
+- `capi_aws_get_machine_template` - Get/list AWS machine templates
+
+#### Azure
+- `capi_azure_list_clusters` - List Azure clusters
+- `capi_azure_get_cluster` - Get Azure cluster details
+- `capi_azure_manage_resource_group` - Manage resource groups (placeholder)
+- `capi_azure_network_config` - Configure Azure networking (placeholder)
+
+#### GCP
+- `capi_gcp_list_clusters` - List GCP clusters
+- `capi_gcp_get_cluster` - Get GCP cluster details
+- `capi_gcp_manage_network` - Manage GCP networks (placeholder)
+
+#### vSphere
+- `capi_vsphere_list_clusters` - List vSphere clusters
+- `capi_vsphere_get_cluster` - Get vSphere cluster details
+- `capi_vsphere_manage_vms` - Manage vSphere VMs (placeholder)
 
 ## Resources
 
