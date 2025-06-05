@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ClusterStatus represents the status of a CAPI cluster
@@ -75,28 +73,6 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 	}
 
 	return status, nil
-}
-
-// GetKubeconfig retrieves the kubeconfig for a workload cluster
-func (c *Client) GetKubeconfig(ctx context.Context, namespace, clusterName string) (string, error) {
-	secretName := fmt.Sprintf("%s-kubeconfig", clusterName)
-
-	secret := &corev1.Secret{}
-	key := client.ObjectKey{
-		Namespace: namespace,
-		Name:      secretName,
-	}
-
-	if err := c.ctrlClient.Get(ctx, key, secret); err != nil {
-		return "", fmt.Errorf("failed to get kubeconfig secret: %w", err)
-	}
-
-	kubeconfig, ok := secret.Data["value"]
-	if !ok {
-		return "", fmt.Errorf("kubeconfig secret does not contain 'value' key")
-	}
-
-	return string(kubeconfig), nil
 }
 
 // IsClusterReady checks if a cluster is fully ready

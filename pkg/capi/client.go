@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -204,4 +205,81 @@ func (c *Client) GetMachineDeployment(ctx context.Context, namespace, name strin
 	}
 
 	return md, nil
+}
+
+// GetKubeconfig retrieves the kubeconfig for a workload cluster
+func (c *Client) GetKubeconfig(ctx context.Context, namespace, clusterName string) (string, error) {
+	// The kubeconfig is typically stored in a secret named {cluster-name}-kubeconfig
+	secretName := fmt.Sprintf("%s-kubeconfig", clusterName)
+
+	secret, err := c.k8sClient.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get kubeconfig secret: %w", err)
+	}
+
+	// The kubeconfig is typically stored in the 'value' key
+	kubeconfigData, exists := secret.Data["value"]
+	if !exists {
+		// Try 'data' key as alternative
+		kubeconfigData, exists = secret.Data["data"]
+		if !exists {
+			// List all keys for debugging
+			var keys []string
+			for k := range secret.Data {
+				keys = append(keys, k)
+			}
+			return "", fmt.Errorf("kubeconfig not found in secret, available keys: %v", keys)
+		}
+	}
+
+	return string(kubeconfigData), nil
+}
+
+// PauseCluster pauses reconciliation for a cluster by adding the cluster.x-k8s.io/paused annotation
+func (c *Client) PauseCluster(ctx context.Context, namespace, name string) error {
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
+		return fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	// Add paused annotation
+	if cluster.Annotations == nil {
+		cluster.Annotations = make(map[string]string)
+	}
+	cluster.Annotations[clusterv1.PausedAnnotation] = "true"
+
+	if err := c.ctrlClient.Update(ctx, cluster); err != nil {
+		return fmt.Errorf("failed to pause cluster: %w", err)
+	}
+
+	return nil
+}
+
+// ResumeCluster resumes reconciliation for a cluster by removing the cluster.x-k8s.io/paused annotation
+func (c *Client) ResumeCluster(ctx context.Context, namespace, name string) error {
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}
+
+	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
+		return fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	// Remove paused annotation
+	if cluster.Annotations != nil {
+		delete(cluster.Annotations, clusterv1.PausedAnnotation)
+	}
+
+	if err := c.ctrlClient.Update(ctx, cluster); err != nil {
+		return fmt.Errorf("failed to resume cluster: %w", err)
+	}
+
+	return nil
 }

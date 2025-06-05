@@ -175,6 +175,70 @@ func main() {
 
 	mcpServer.AddTool(listMachineDeploymentsTool, createListMachineDeploymentsHandler(serverCtx))
 
+	// Add CAPI get kubeconfig tool
+	getKubeconfigTool := mcp.NewTool(
+		"capi_get_kubeconfig",
+		mcp.WithDescription("Retrieve kubeconfig for a workload cluster"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+	)
+
+	mcpServer.AddTool(getKubeconfigTool, createGetKubeconfigHandler(serverCtx))
+
+	// Add CAPI pause cluster tool
+	pauseClusterTool := mcp.NewTool(
+		"capi_pause_cluster",
+		mcp.WithDescription("Pause cluster reconciliation (stops all CAPI controllers from reconciling the cluster)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+	)
+
+	mcpServer.AddTool(pauseClusterTool, createPauseClusterHandler(serverCtx))
+
+	// Add CAPI resume cluster tool
+	resumeClusterTool := mcp.NewTool(
+		"capi_resume_cluster",
+		mcp.WithDescription("Resume cluster reconciliation (allows CAPI controllers to reconcile the cluster again)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+	)
+
+	mcpServer.AddTool(resumeClusterTool, createResumeClusterHandler(serverCtx))
+
+	// Add CAPI get machine tool
+	getMachineTool := mcp.NewTool(
+		"capi_get_machine",
+		mcp.WithDescription("Get detailed information about a specific CAPI machine"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the machine"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the machine"),
+		),
+	)
+
+	mcpServer.AddTool(getMachineTool, createGetMachineHandler(serverCtx))
+
 	// Add a simple test resource
 	testResource := mcp.NewResource(
 		"capi://test",
