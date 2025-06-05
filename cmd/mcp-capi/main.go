@@ -153,6 +153,22 @@ func main() {
 
 	mcpServer.AddTool(clusterStatusTool, createClusterStatusHandler(serverCtx))
 
+	// Add CAPI cluster health tool
+	clusterHealthTool := mcp.NewTool(
+		"capi_cluster_health",
+		mcp.WithDescription("Check cluster health and identify issues"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+	)
+
+	mcpServer.AddTool(clusterHealthTool, createClusterHealthHandler(serverCtx))
+
 	// Add CAPI scale cluster tool
 	scaleClusterTool := mcp.NewTool(
 		"capi_scale_cluster",

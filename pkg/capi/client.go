@@ -391,3 +391,80 @@ func getInfraKind(provider string) string {
 		return "Cluster"
 	}
 }
+
+// ClusterHealthStatus represents the health status of a cluster
+type ClusterHealthStatus struct {
+	Healthy           bool
+	ControlPlaneReady bool
+	WorkersReady      bool
+	InfraReady        bool
+	Issues            []string
+	Warnings          []string
+}
+
+// GetClusterHealth checks the health of a cluster
+func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (*ClusterHealthStatus, error) {
+	status, err := c.GetClusterStatus(ctx, namespace, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster status: %w", err)
+	}
+	
+	health := &ClusterHealthStatus{
+		Healthy:           true,
+		ControlPlaneReady: status.ControlPlaneReady,
+		InfraReady:        status.InfraReady,
+		Issues:            []string{},
+		Warnings:          []string{},
+	}
+	
+	// Check control plane
+	if !status.ControlPlaneReady {
+		health.Healthy = false
+		health.Issues = append(health.Issues, "Control plane is not ready")
+	}
+	
+	// Check infrastructure
+	if !status.InfraReady {
+		health.Healthy = false
+		health.Issues = append(health.Issues, "Infrastructure is not ready")
+	}
+	
+	// Check workers
+	machines, err := c.ListMachines(ctx, namespace, name)
+	if err == nil {
+		readyMachines := 0
+		totalMachines := len(machines.Items)
+		
+		for _, machine := range machines.Items {
+			for _, condition := range machine.Status.Conditions {
+				if condition.Type == "Ready" && condition.Status == "True" {
+					readyMachines++
+					break
+				}
+			}
+		}
+		
+		health.WorkersReady = readyMachines == totalMachines && totalMachines > 0
+		if !health.WorkersReady {
+			health.Healthy = false
+			health.Issues = append(health.Issues, fmt.Sprintf("Only %d/%d machines are ready", readyMachines, totalMachines))
+		}
+	}
+	
+	// Check conditions for issues
+	for _, condition := range status.Conditions {
+		if condition.Status != "True" && condition.Severity == "Error" {
+			health.Healthy = false
+			health.Issues = append(health.Issues, fmt.Sprintf("%s: %s", condition.Type, condition.Message))
+		} else if condition.Status != "True" && condition.Severity == "Warning" {
+			health.Warnings = append(health.Warnings, fmt.Sprintf("%s: %s", condition.Type, condition.Message))
+		}
+	}
+	
+	// Check phase
+	if status.Phase != "Provisioned" && status.Phase != "" {
+		health.Warnings = append(health.Warnings, fmt.Sprintf("Cluster phase is '%s', expected 'Provisioned'", status.Phase))
+	}
+	
+	return health, nil
+}

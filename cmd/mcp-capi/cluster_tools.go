@@ -210,6 +210,91 @@ func createClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 	}
 }
 
+// createClusterHealthHandler creates a handler for checking cluster health
+func createClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, fmt.Errorf("namespace argument is required")
+		}
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name argument is required")
+		}
+
+		health, err := serverCtx.capiClient.GetClusterHealth(ctx, namespace, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cluster health: %w", err)
+		}
+
+		var content strings.Builder
+		
+		// Overall status
+		if health.Healthy {
+			content.WriteString(fmt.Sprintf("✅ Cluster %s/%s is HEALTHY\n\n", namespace, name))
+		} else {
+			content.WriteString(fmt.Sprintf("❌ Cluster %s/%s is UNHEALTHY\n\n", namespace, name))
+		}
+		
+		// Component status
+		content.WriteString("Component Status:\n")
+		content.WriteString(fmt.Sprintf("  • Control Plane: %s\n", formatHealthStatus(health.ControlPlaneReady)))
+		content.WriteString(fmt.Sprintf("  • Infrastructure: %s\n", formatHealthStatus(health.InfraReady)))
+		content.WriteString(fmt.Sprintf("  • Worker Nodes: %s\n", formatHealthStatus(health.WorkersReady)))
+		
+		// Issues
+		if len(health.Issues) > 0 {
+			content.WriteString("\n🔴 Issues:\n")
+			for _, issue := range health.Issues {
+				content.WriteString(fmt.Sprintf("  • %s\n", issue))
+			}
+		}
+		
+		// Warnings
+		if len(health.Warnings) > 0 {
+			content.WriteString("\n⚠️  Warnings:\n")
+			for _, warning := range health.Warnings {
+				content.WriteString(fmt.Sprintf("  • %s\n", warning))
+			}
+		}
+		
+		// Recommendations
+		if !health.Healthy {
+			content.WriteString("\n📋 Recommendations:\n")
+			if !health.ControlPlaneReady {
+				content.WriteString("  • Check control plane pods and logs\n")
+				content.WriteString("  • Verify API server connectivity\n")
+			}
+			if !health.InfraReady {
+				content.WriteString("  • Check infrastructure provider status\n")
+				content.WriteString("  • Verify cloud resources are provisioned\n")
+			}
+			if !health.WorkersReady {
+				content.WriteString("  • Check machine status with 'capi_list_machines'\n")
+				content.WriteString("  • Review machine deployment events\n")
+			}
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
+
+// formatHealthStatus returns a formatted string for component health status
+func formatHealthStatus(ready bool) string {
+	if ready {
+		return "✅ Ready"
+	}
+	return "❌ Not Ready"
+}
+
 // createScaleClusterHandler creates a handler for scaling clusters
 func createScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
