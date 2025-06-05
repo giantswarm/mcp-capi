@@ -116,6 +116,21 @@ func (c *Client) ScaleControlPlane(ctx context.Context, namespace, name string, 
 	return nil
 }
 
+// ScaleCluster scales either control plane or worker nodes of a cluster
+func (c *Client) ScaleCluster(ctx context.Context, namespace, clusterName, target string, replicas int, machineDeploymentName string) error {
+	switch target {
+	case "controlplane":
+		return c.ScaleControlPlane(ctx, namespace, clusterName, int32(replicas))
+	case "workers":
+		if machineDeploymentName == "" {
+			return fmt.Errorf("machineDeployment name is required when scaling workers")
+		}
+		return c.ScaleMachineDeployment(ctx, namespace, machineDeploymentName, int32(replicas))
+	default:
+		return fmt.Errorf("invalid target: %s (must be 'controlplane' or 'workers')", target)
+	}
+}
+
 // ScaleMachineDeployment scales a MachineDeployment to the specified number of replicas
 func (c *Client) ScaleMachineDeployment(ctx context.Context, namespace, name string, replicas int32) error {
 	md, err := c.GetMachineDeployment(ctx, namespace, name)

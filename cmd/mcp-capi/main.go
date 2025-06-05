@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
@@ -88,6 +86,65 @@ func main() {
 
 	mcpServer.AddTool(listClustersTool, createListClustersHandler(serverCtx))
 
+	// Add CAPI get cluster tool
+	getClusterTool := mcp.NewTool(
+		"capi_get_cluster",
+		mcp.WithDescription("Get details of a specific CAPI cluster"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+	)
+
+	mcpServer.AddTool(getClusterTool, createGetClusterHandler(serverCtx))
+
+	// Add CAPI cluster status tool
+	clusterStatusTool := mcp.NewTool(
+		"capi_cluster_status",
+		mcp.WithDescription("Get detailed status of a CAPI cluster including conditions and provider status"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+	)
+
+	mcpServer.AddTool(clusterStatusTool, createClusterStatusHandler(serverCtx))
+
+	// Add CAPI scale cluster tool
+	scaleClusterTool := mcp.NewTool(
+		"capi_scale_cluster",
+		mcp.WithDescription("Scale control plane or worker nodes of a CAPI cluster"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace of the cluster"),
+		),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+		mcp.WithString("target",
+			mcp.Required(),
+			mcp.Description("What to scale: 'controlplane' or 'workers'"),
+		),
+		mcp.WithNumber("replicas",
+			mcp.Required(),
+			mcp.Description("Number of replicas to scale to"),
+		),
+		mcp.WithString("machineDeployment",
+			mcp.Description("Name of the machine deployment (required when target is 'workers')"),
+		),
+	)
+
+	mcpServer.AddTool(scaleClusterTool, createScaleClusterHandler(serverCtx))
+
 	// Add a simple test resource
 	testResource := mcp.NewResource(
 		"capi://test",
@@ -118,66 +175,5 @@ func main() {
 		}
 	default:
 		log.Fatalf("Unsupported transport: %s", transport)
-	}
-}
-
-func testToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	arguments := request.GetArguments()
-	message, ok := arguments["message"].(string)
-	if !ok {
-		return nil, fmt.Errorf("message argument is required and must be a string")
-	}
-
-	response := fmt.Sprintf("Echo from CAPI MCP Server: %s", message)
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: response,
-			},
-		},
-	}, nil
-}
-
-func testResourceHandler(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	return []mcp.ResourceContents{
-		mcp.TextResourceContents{
-			URI:      request.Params.URI,
-			MIMEType: "text/plain",
-			Text:     "This is a test resource from the CAPI MCP server.",
-		},
-	}, nil
-}
-
-// createListClustersHandler creates a handler for listing CAPI clusters
-func createListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, _ := arguments["namespace"].(string)
-
-		clusters, err := serverCtx.capiClient.ListClusters(ctx, namespace)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list clusters: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d clusters:\n\n", len(clusters.Items)))
-
-		for _, cluster := range clusters.Items {
-			status, _ := serverCtx.capiClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
-			if status != nil {
-				content.WriteString(capi.FormatClusterInfo(status))
-				content.WriteString("\n---\n\n")
-			}
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
 	}
 }
