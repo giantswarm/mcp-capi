@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Go Guidelines
+
+Ensure the following criteria for the GO language and tools are met:
+
+- Always verify that a new package installed via `go get` is the latest version. Use the web search to find out about it.

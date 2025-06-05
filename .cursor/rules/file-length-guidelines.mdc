@@ -1,0 +1,55 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## File Length Guidelines
+
+To maintain code readability and manageability, follow these guidelines for file sizes:
+
+### Target File Length
+- **Aim for files around 300 lines** of code (excluding comments and blank lines)
+- Files exceeding 500 lines should be considered for splitting
+- This file length limit is also relevant for all other files in this repo (docs, README, etc.)
+- Check the file length with `wc -l` before finishing a task
+
+### How to Split Large Files
+
+1. **Identify Logical Boundaries**
+   - Group related functions, types, and methods
+   - Look for distinct responsibilities or features
+   - Consider dependency relationships
+
+2. **Common Splitting Patterns**
+   - **By functionality**: `user.go` → `user_auth.go`, `user_profile.go`, `user_validation.go`
+   - **By layer**: `service.go` → `service_api.go`, `service_logic.go`, `service_db.go`
+   - **By type**: `types.go` → `types_request.go`, `types_response.go`, `types_domain.go`
+   - **Test files**: `service_test.go` → `service_unit_test.go`, `service_integration_test.go`, `service_mocks_test.go`
+
+3. **Naming Conventions**
+   - Use descriptive suffixes that indicate the file's purpose
+   - Maintain the base name for related files
+   - Examples:
+     - `orchestrator.go` → `orchestrator_lifecycle.go`, `orchestrator_dependencies.go`
+     - `kube.go` → `kube_portforward.go`, `kube_cluster.go`, `kube_context.go`
+
+4. **Refactoring Process**
+   - Use `git mv` or create new files with `edit_file`
+   - Move related code blocks together
+   - Update import statements as needed
+   - Run `goimports -w .` to fix imports
+   - Run `go fmt ./...` to ensure formatting
+   - Run `make test` to verify functionality
+
+5. **What to Keep Together**
+   - Interface definitions with their primary implementation
+   - Tightly coupled functions that share private helpers
+   - Small utility functions related to a type
+   - Constants and variables used by the functions in the file
+
+6. **Benefits of Smaller Files**
+   - Easier to navigate and understand
+   - Faster implementations with AI agents
+   - Reduces merge conflicts
+   - Better separation of concerns
+   - Easier to test individual components
