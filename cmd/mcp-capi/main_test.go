@@ -22,7 +22,7 @@ func TestTestToolHandler(t *testing.T) {
 
 func TestTestResourceHandler(t *testing.T) {
 	// For now, we'll skip the detailed tests since we don't have
-	// the exact structure of ReadResourceRequest  
+	// the exact structure of ReadResourceRequest
 	t.Skip("Skipping until we understand the exact ReadResourceRequest structure")
 }
 
@@ -31,4 +31,4 @@ func TestServerStartup(t *testing.T) {
 	// This is a basic smoke test to ensure the server setup doesn't panic
 	// The actual server startup is tested in main()
 	t.Log("Server startup test placeholder")
-} 
+}

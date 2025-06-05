@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
+	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -16,6 +18,11 @@ const (
 	serverName    = "mcp-capi"
 	serverVersion = "0.1.0"
 )
+
+// ServerContext holds shared resources for the server
+type ServerContext struct {
+	capiClient *capi.Client
+}
 
 func main() {
 	// Create context that cancels on interrupt
@@ -31,6 +38,23 @@ func main() {
 		cancel()
 	}()
 
+	// Initialize CAPI client
+	log.Println("Initializing CAPI client...")
+	capiClient, err := capi.NewClient("")
+	if err != nil {
+		log.Fatalf("Failed to create CAPI client: %v", err)
+	}
+
+	// Initialize providers
+	if err := capiClient.InitializeProviders(); err != nil {
+		log.Printf("Warning: Failed to initialize providers: %v", err)
+	}
+
+	// Create server context
+	serverCtx := &ServerContext{
+		capiClient: capiClient,
+	}
+
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		serverName,
@@ -45,13 +69,24 @@ func main() {
 	testTool := mcp.NewTool(
 		"capi_test",
 		mcp.WithDescription("Test tool to verify MCP server is working"),
-		mcp.WithString("message", 
-			mcp.Required(), 
+		mcp.WithString("message",
+			mcp.Required(),
 			mcp.Description("Test message to echo"),
 		),
 	)
 
 	mcpServer.AddTool(testTool, testToolHandler)
+
+	// Add CAPI list clusters tool
+	listClustersTool := mcp.NewTool(
+		"capi_list_clusters",
+		mcp.WithDescription("List all CAPI clusters"),
+		mcp.WithString("namespace",
+			mcp.Description("Namespace to filter clusters (optional, empty for all)"),
+		),
+	)
+
+	mcpServer.AddTool(listClustersTool, createListClustersHandler(serverCtx))
 
 	// Add a simple test resource
 	testResource := mcp.NewResource(
@@ -59,7 +94,7 @@ func main() {
 		"Test Resource",
 		mcp.WithMIMEType("text/plain"),
 	)
-	
+
 	mcpServer.AddResource(testResource, testResourceHandler)
 
 	// Start server based on transport type
@@ -112,4 +147,37 @@ func testResourceHandler(ctx context.Context, request mcp.ReadResourceRequest) (
 			Text:     "This is a test resource from the CAPI MCP server.",
 		},
 	}, nil
-} 
+}
+
+// createListClustersHandler creates a handler for listing CAPI clusters
+func createListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, _ := arguments["namespace"].(string)
+
+		clusters, err := serverCtx.capiClient.ListClusters(ctx, namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list clusters: %w", err)
+		}
+
+		var content strings.Builder
+		content.WriteString(fmt.Sprintf("Found %d clusters:\n\n", len(clusters.Items)))
+
+		for _, cluster := range clusters.Items {
+			status, _ := serverCtx.capiClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
+			if status != nil {
+				content.WriteString(capi.FormatClusterInfo(status))
+				content.WriteString("\n---\n\n")
+			}
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
