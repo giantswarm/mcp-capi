@@ -145,6 +145,36 @@ func main() {
 
 	mcpServer.AddTool(scaleClusterTool, createScaleClusterHandler(serverCtx))
 
+	// Add CAPI list machines tool
+	listMachinesTool := mcp.NewTool(
+		"capi_list_machines",
+		mcp.WithDescription("List CAPI machines with optional filtering by cluster"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace to list machines from"),
+		),
+		mcp.WithString("clusterName",
+			mcp.Description("Filter machines by cluster name (optional)"),
+		),
+	)
+
+	mcpServer.AddTool(listMachinesTool, createListMachinesHandler(serverCtx))
+
+	// Add CAPI list machine deployments tool
+	listMachineDeploymentsTool := mcp.NewTool(
+		"capi_list_machinedeployments",
+		mcp.WithDescription("List CAPI machine deployments (worker node pools)"),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace to list machine deployments from"),
+		),
+		mcp.WithString("clusterName",
+			mcp.Description("Filter machine deployments by cluster name (optional)"),
+		),
+	)
+
+	mcpServer.AddTool(listMachineDeploymentsTool, createListMachineDeploymentsHandler(serverCtx))
+
 	// Add a simple test resource
 	testResource := mcp.NewResource(
 		"capi://test",

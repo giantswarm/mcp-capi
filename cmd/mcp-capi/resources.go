@@ -15,4 +15,4 @@ func testResourceHandler(ctx context.Context, request mcp.ReadResourceRequest) (
 			Text:     "This is a test resource from the CAPI MCP server.",
 		},
 	}, nil
-} 
+}
