@@ -65,15 +65,50 @@ func main() {
 
 	// Add a simple test tool
 	testTool := mcp.NewTool(
-		"capi_test",
-		mcp.WithDescription("Test tool to verify MCP server is working"),
+		"test",
+		mcp.WithDescription("A simple test tool"),
 		mcp.WithString("message",
 			mcp.Required(),
-			mcp.Description("Test message to echo"),
+			mcp.Description("Message to echo back"),
 		),
 	)
 
 	mcpServer.AddTool(testTool, testToolHandler)
+
+	// Add CAPI create cluster tool
+	createClusterTool := mcp.NewTool(
+		"capi_create_cluster",
+		mcp.WithDescription("Create a new CAPI cluster (basic implementation)"),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the cluster"),
+		),
+		mcp.WithString("namespace",
+			mcp.Required(),
+			mcp.Description("Namespace for the cluster"),
+		),
+		mcp.WithString("provider",
+			mcp.Required(),
+			mcp.Description("Infrastructure provider (aws, azure, gcp, vsphere)"),
+		),
+		mcp.WithString("kubernetes_version",
+			mcp.Description("Kubernetes version (default: v1.29.0)"),
+		),
+		mcp.WithNumber("control_plane_count",
+			mcp.Description("Number of control plane nodes (default: 3)"),
+		),
+		mcp.WithNumber("worker_count",
+			mcp.Description("Number of worker nodes (default: 3)"),
+		),
+		mcp.WithString("region",
+			mcp.Description("Cloud provider region"),
+		),
+		mcp.WithString("instance_type",
+			mcp.Description("Instance type for nodes"),
+		),
+	)
+
+	mcpServer.AddTool(createClusterTool, createCreateClusterHandler(serverCtx))
 
 	// Add CAPI list clusters tool
 	listClustersTool := mcp.NewTool(

@@ -10,6 +10,109 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// createCreateClusterHandler creates a handler for creating new CAPI clusters
+func createCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+
+		// Required parameters
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name argument is required")
+		}
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, fmt.Errorf("namespace argument is required")
+		}
+		provider, ok := arguments["provider"].(string)
+		if !ok || provider == "" {
+			return nil, fmt.Errorf("provider argument is required")
+		}
+
+		// Validate provider
+		validProviders := []string{"aws", "azure", "gcp", "vsphere"}
+		isValidProvider := false
+		for _, vp := range validProviders {
+			if provider == vp {
+				isValidProvider = true
+				break
+			}
+		}
+		if !isValidProvider {
+			return nil, fmt.Errorf("invalid provider %s. Must be one of: %s", provider, strings.Join(validProviders, ", "))
+		}
+
+		// Optional parameters with defaults
+		kubernetesVersion, _ := arguments["kubernetes_version"].(string)
+		if kubernetesVersion == "" {
+			kubernetesVersion = "v1.29.0"
+		}
+
+		controlPlaneCount := int32(3)
+		if cpCount, ok := arguments["control_plane_count"].(float64); ok {
+			controlPlaneCount = int32(cpCount)
+		}
+
+		workerCount := int32(3)
+		if wCount, ok := arguments["worker_count"].(float64); ok {
+			workerCount = int32(wCount)
+		}
+
+		region, _ := arguments["region"].(string)
+		instanceType, _ := arguments["instance_type"].(string)
+
+		// Create cluster options
+		opts := capi.CreateClusterOptions{
+			Name:              name,
+			Namespace:         namespace,
+			InfraProvider:     provider,
+			KubernetesVersion: kubernetesVersion,
+			ControlPlaneCount: controlPlaneCount,
+			WorkerCount:       workerCount,
+			Region:            region,
+			InstanceType:      instanceType,
+		}
+
+		// Create the cluster
+		cluster, err := serverCtx.capiClient.CreateCluster(ctx, opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cluster: %w", err)
+		}
+
+		var content strings.Builder
+		content.WriteString(fmt.Sprintf("✅ Cluster '%s' creation initiated successfully!\n\n", name))
+		content.WriteString("Cluster Details:\n")
+		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Name))
+		content.WriteString(fmt.Sprintf("  Namespace: %s\n", cluster.Namespace))
+		content.WriteString(fmt.Sprintf("  Provider: %s\n", provider))
+		content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", kubernetesVersion))
+		content.WriteString(fmt.Sprintf("  Control Plane Nodes: %d\n", controlPlaneCount))
+		content.WriteString(fmt.Sprintf("  Worker Nodes: %d\n", workerCount))
+		if region != "" {
+			content.WriteString(fmt.Sprintf("  Region: %s\n", region))
+		}
+		if instanceType != "" {
+			content.WriteString(fmt.Sprintf("  Instance Type: %s\n", instanceType))
+		}
+		content.WriteString("\n⚠️  Note: This is a basic implementation that creates only the Cluster resource.\n")
+		content.WriteString("In a production setup, you would need to:\n")
+		content.WriteString("1. Create the infrastructure-specific cluster resource (e.g., AWSCluster)\n")
+		content.WriteString("2. Create the control plane (e.g., KubeadmControlPlane)\n")
+		content.WriteString("3. Create machine deployments for worker nodes\n")
+		content.WriteString("4. Configure networking, storage, and other cluster settings\n\n")
+		content.WriteString("Monitor cluster creation with: capi_cluster_status\n")
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
+
 // createListClustersHandler creates a handler for listing CAPI clusters
 func createListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

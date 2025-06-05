@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -302,4 +303,91 @@ func (c *Client) DeleteCluster(ctx context.Context, namespace, name string) erro
 	}
 
 	return nil
+}
+
+// CreateClusterOptions contains options for creating a new cluster
+type CreateClusterOptions struct {
+	Name              string
+	Namespace         string
+	InfraProvider     string
+	KubernetesVersion string
+	ControlPlaneCount int32
+	WorkerCount       int32
+	Region            string
+	InstanceType      string
+}
+
+// CreateCluster creates a new CAPI cluster with basic configuration
+func (c *Client) CreateCluster(ctx context.Context, opts CreateClusterOptions) (*clusterv1.Cluster, error) {
+	// For now, we'll create a basic cluster object
+	// In a real implementation, this would create all the necessary resources
+	// (Cluster, KubeadmControlPlane, MachineDeployment, etc.)
+
+	cluster := &clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
+			Labels: map[string]string{
+				"cluster.x-k8s.io/provider": opts.InfraProvider,
+			},
+		},
+		Spec: clusterv1.ClusterSpec{
+			ClusterNetwork: &clusterv1.ClusterNetwork{
+				Pods: &clusterv1.NetworkRanges{
+					CIDRBlocks: []string{"192.168.0.0/16"},
+				},
+				Services: &clusterv1.NetworkRanges{
+					CIDRBlocks: []string{"10.96.0.0/12"},
+				},
+			},
+			ControlPlaneRef: &corev1.ObjectReference{
+				APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
+				Kind:       "KubeadmControlPlane",
+				Name:       opts.Name + "-control-plane",
+			},
+			InfrastructureRef: &corev1.ObjectReference{
+				APIVersion: getInfraAPIVersion(opts.InfraProvider),
+				Kind:       getInfraKind(opts.InfraProvider),
+				Name:       opts.Name,
+			},
+		},
+	}
+
+	// Create the cluster
+	if err := c.ctrlClient.Create(ctx, cluster); err != nil {
+		return nil, fmt.Errorf("failed to create cluster: %w", err)
+	}
+
+	return cluster, nil
+}
+
+// Helper functions to map provider to API versions and kinds
+func getInfraAPIVersion(provider string) string {
+	switch provider {
+	case "aws":
+		return "infrastructure.cluster.x-k8s.io/v1beta2"
+	case "azure":
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	case "gcp":
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	case "vsphere":
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	default:
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	}
+}
+
+func getInfraKind(provider string) string {
+	switch provider {
+	case "aws":
+		return "AWSCluster"
+	case "azure":
+		return "AzureCluster"
+	case "gcp":
+		return "GCPCluster"
+	case "vsphere":
+		return "VSphereCluster"
+	default:
+		return "Cluster"
+	}
 }
