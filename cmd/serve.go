@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -48,6 +52,10 @@ Supports multiple transport types:
   - sse: Server-Sent Events over HTTP
   - streamable-http: Streamable HTTP transport`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Validate input parameters before starting server
+			if err := validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint); err != nil {
+				return fmt.Errorf("invalid configuration: %w", err)
+			}
 			return runServe(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint)
 		},
 	}
@@ -60,6 +68,89 @@ Supports multiple transport types:
 	cmd.Flags().StringVar(&httpEndpoint, "http-endpoint", "/mcp", "HTTP endpoint path (for streamable-http transport)")
 
 	return cmd
+}
+
+// validateServeFlags validates the input parameters for the serve command
+func validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint string) error {
+	// Validate transport type
+	validTransports := []string{"stdio", "sse", "streamable-http"}
+	isValidTransport := false
+	for _, valid := range validTransports {
+		if transport == valid {
+			isValidTransport = true
+			break
+		}
+	}
+	if !isValidTransport {
+		return fmt.Errorf("unsupported transport type: %s (supported: %s)", transport, strings.Join(validTransports, ", "))
+	}
+
+	// Validate HTTP address for non-stdio transports
+	if transport != "stdio" {
+		if err := validateHTTPAddr(httpAddr); err != nil {
+			return fmt.Errorf("invalid http-addr: %w", err)
+		}
+	}
+
+	// Validate endpoint paths
+	endpoints := map[string]string{
+		"sse-endpoint":     sseEndpoint,
+		"message-endpoint": messageEndpoint,
+		"http-endpoint":    httpEndpoint,
+	}
+	
+	for name, endpoint := range endpoints {
+		if err := validateEndpointPath(endpoint); err != nil {
+			return fmt.Errorf("invalid %s: %w", name, err)
+		}
+	}
+
+	return nil
+}
+
+// validateHTTPAddr validates HTTP address format
+func validateHTTPAddr(addr string) error {
+	if addr == "" {
+		return fmt.Errorf("address cannot be empty")
+	}
+
+	// Parse the address
+	host, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return fmt.Errorf("invalid address format: %w", err)
+	}
+
+	// Validate port
+	if portStr != "" {
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			return fmt.Errorf("invalid port number: %w", err)
+		}
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("port number must be between 1 and 65535, got: %d", port)
+		}
+	}
+
+	// Validate host (if specified)
+	if host != "" && net.ParseIP(host) == nil && host != "localhost" {
+		return fmt.Errorf("invalid host address: %s", host)
+	}
+
+	return nil
+}
+
+// validateEndpointPath validates HTTP endpoint paths
+func validateEndpointPath(path string) error {
+	if path == "" {
+		return fmt.Errorf("endpoint path cannot be empty")
+	}
+	if !strings.HasPrefix(path, "/") {
+		return fmt.Errorf("endpoint path must start with '/', got: %s", path)
+	}
+	if strings.Contains(path, " ") {
+		return fmt.Errorf("endpoint path cannot contain spaces, got: %s", path)
+	}
+	return nil
 }
 
 // runServe contains the main server logic with support for multiple transports
@@ -87,6 +178,7 @@ func runServe(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint st
 	// Initialize providers
 	if err := capiClient.InitializeProviders(); err != nil {
 		log.Printf("Warning: Failed to initialize providers: %v", err)
+		log.Printf("Server will continue but some provider-specific tools may not work")
 	}
 
 	// Create server context
@@ -120,6 +212,7 @@ func runServe(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint st
 	case "streamable-http":
 		return runStreamableHTTPServer(mcpServer, httpAddr, httpEndpoint, ctx)
 	default:
+		// This should never happen due to validation, but keep as safety net
 		return fmt.Errorf("unsupported transport type: %s (supported: stdio, sse, streamable-http)", transport)
 	}
 }
@@ -174,7 +267,7 @@ func runSSEServer(mcpSrv *mcpserver.MCPServer, addr, sseEndpoint, messageEndpoin
 	select {
 	case <-ctx.Done():
 		fmt.Println("Shutdown signal received, stopping SSE server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if err := sseServer.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("error shutting down SSE server: %w", err)
@@ -214,7 +307,7 @@ func runStreamableHTTPServer(mcpSrv *mcpserver.MCPServer, addr, endpoint string,
 	select {
 	case <-ctx.Done():
 		fmt.Println("Shutdown signal received, stopping HTTP server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("error shutting down HTTP server: %w", err)
