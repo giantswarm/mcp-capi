@@ -14,6 +14,9 @@ The MCP CAPI Server provides a bridge between AI assistants (like Claude, GPT, e
 - **Real-time Monitoring**: Watch cluster status changes and events
 - **Resource Discovery**: Browse CAPI resources through MCP resources
 - **Guided Workflows**: Interactive prompts for complex operations
+- **Multi-Transport Support**: Connect via stdio, Server-Sent Events (SSE), or Streamable HTTP
+- **Enhanced CLI**: Version management, self-update capability, and comprehensive help system
+- **Backwards Compatible**: Maintains compatibility with existing configurations and scripts
 
 ## Architecture
 
@@ -26,7 +29,7 @@ The MCP CAPI Server is built using:
 
 ### Prerequisites
 
-- Go 1.22 or later
+- Go 1.24.4 or later
 - Access to a CAPI management cluster
 - Kubeconfig configured for the management cluster
 
@@ -44,16 +47,156 @@ make build
 make run
 ```
 
-### Basic Usage
+### Self-Update
 
-The server can be run in different transport modes:
+The server includes a built-in self-update mechanism:
 
 ```bash
-# Stdio transport (default)
-./bin/mcp-capi
+mcp-capi self-update
+```
 
-# With environment variables
-MCP_TRANSPORT=stdio ./bin/mcp-capi
+## Usage
+
+### CLI Commands
+
+The MCP server provides several commands:
+
+```bash
+$ mcp-capi --help
+mcp-capi is a Model Context Protocol (MCP) server that provides
+tools for interacting with Cluster API (CAPI) clusters. It offers various capabilities
+including cluster management, machine operations, scaling, and infrastructure 
+provider management.
+
+When run without subcommands, it starts the MCP server (equivalent to 'mcp-capi serve').
+
+Usage:
+  mcp-capi [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  self-update Update mcp-capi to the latest version
+  serve       Start the MCP CAPI server
+  version     Print the version number of mcp-capi
+
+Flags:
+  -h, --help      help for mcp-capi
+  -v, --version   version for mcp-capi
+
+Use "mcp-capi [command] --help" for more information about a command.
+```
+
+### Basic Usage (Backwards Compatible)
+
+Start the MCP server with default settings using stdio transport:
+
+```bash
+# Both commands are equivalent and start the server
+mcp-capi
+mcp-capi serve
+```
+
+### Multi-Transport Support
+
+The server supports three transport types for different deployment scenarios:
+
+#### Standard I/O (Default)
+Best for MCP client integrations and development:
+
+```bash
+mcp-capi serve --transport stdio
+```
+
+#### Server-Sent Events (SSE)
+Ideal for web applications and browser-based clients:
+
+```bash
+mcp-capi serve --transport sse --http-addr :8080
+```
+
+#### Streamable HTTP
+Perfect for HTTP-based integrations and REST-like interactions:
+
+```bash
+mcp-capi serve --transport streamable-http --http-addr :8080
+```
+
+### Advanced Configuration Examples
+
+```bash
+# Run with SSE transport on custom port with custom endpoints
+mcp-capi serve \
+  --transport sse \
+  --http-addr :9090 \
+  --sse-endpoint /events \
+  --message-endpoint /messages
+
+# Run with streamable HTTP transport
+mcp-capi serve \
+  --transport streamable-http \
+  --http-addr :8080 \
+  --http-endpoint /api/mcp
+```
+
+### Version Management
+
+```bash
+# Check current version
+mcp-capi version
+mcp-capi --version
+
+# Update to latest version
+mcp-capi self-update
+```
+
+## Integration with AI Assistants
+
+This MCP server can be integrated with various AI assistants that support the Model Context Protocol:
+
+- **Cursor**: The server can be integrated with Cursor for AI-powered development
+- **VSCode Insiders**: Compatible with VSCode Insiders for enhanced coding assistance
+- **Claude Desktop**: Add the server to your Claude Desktop configuration
+- **Custom MCP Clients**: Use any MCP-compatible client to connect
+
+### Example MCP Client Configuration
+
+#### Standard I/O Transport (Recommended)
+```json
+{
+  "servers": {
+    "capi": {
+      "command": "/path/to/mcp-capi",
+      "env": {
+        "KUBECONFIG": "/path/to/kubeconfig"
+      }
+    }
+  }
+}
+```
+
+#### SSE Transport
+```json
+{
+  "servers": {
+    "capi": {
+      "url": "http://localhost:8080/sse",
+      "transport": "sse"
+    }
+  }
+}
+```
+
+#### Streamable HTTP Transport
+```json
+{
+  "servers": {
+    "capi": {
+      "url": "http://localhost:8080/mcp",
+      "transport": "http"
+    }
+  }
+}
 ```
 
 ## Available Tools
@@ -125,21 +268,75 @@ The server exposes CAPI data through MCP resources:
 - `capi://machines` - List of all machines
 - `capi://providers` - Available infrastructure providers
 
+## Configuration
+
+The server can be configured through environment variables:
+
+- `KUBECONFIG` - Path to kubeconfig file
+- `LOG_LEVEL` - Logging level (debug, info, warn, error)
+
+## Deployment
+
+### Docker
+
+You can run the server in a Docker container:
+
+```dockerfile
+FROM golang:1.24.4-alpine AS builder
+WORKDIR /app
+COPY . .
+RUN go build -o mcp-capi
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/mcp-capi .
+EXPOSE 8080
+CMD ["./mcp-capi", "serve", "--transport", "sse", "--http-addr", ":8080"]
+```
+
+### Systemd Service
+
+Create a systemd service for automatic startup:
+
+```ini
+[Unit]
+Description=MCP CAPI Server
+After=network.target
+
+[Service]
+Type=simple
+User=capi
+ExecStart=/usr/local/bin/mcp-capi serve
+Environment=KUBECONFIG=/etc/kubernetes/admin.conf
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ## Development
 
 ### Project Structure
 
 ```
 mcp-capi/
-├── cmd/mcp-capi/       # Main application entry point
-├── pkg/                # Public packages
-│   ├── capi/          # CAPI client and utilities
-│   ├── tools/         # MCP tool implementations
-│   ├── resources/     # MCP resource handlers
-│   └── prompts/       # MCP prompt definitions
-├── internal/           # Private packages
-├── docs/              # Documentation
-└── examples/          # Usage examples
+├── cmd/                    # Command implementations
+│   ├── root.go            # Root Cobra command
+│   ├── serve.go           # Server command with multi-transport support
+│   ├── version.go         # Version command
+│   ├── selfupdate.go      # Self-update command
+│   ├── doc.go             # Package documentation
+│   └── *.go               # Tool handlers and server logic
+├── pkg/                   # Public packages
+│   ├── capi/             # CAPI client and utilities
+│   ├── tools/            # MCP tool implementations
+│   ├── resources/        # MCP resource handlers
+│   └── prompts/          # MCP prompt definitions
+├── internal/             # Private packages
+├── docs/                 # Documentation
+└── examples/             # Usage examples
 ```
 
 ### Building
@@ -161,14 +358,6 @@ make test-coverage
 ### Contributing
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
-
-## Configuration
-
-The server can be configured through environment variables:
-
-- `KUBECONFIG` - Path to kubeconfig file
-- `MCP_TRANSPORT` - Transport type (stdio, sse, http)
-- `LOG_LEVEL` - Logging level (debug, info, warn, error)
 
 ## License
 
