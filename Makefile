@@ -1,128 +1,85 @@
-# Project variables
-PROJECT_NAME := mcp-capi
-BINARY_NAME := mcp-capi
-GO := go
-GOFLAGS := -v
-BUILD_DIR := bin
-DIST_DIR := dist
+# DO NOT EDIT. Generated with:
+#
+#    devctl
+#
+#    https://github.com/giantswarm/devctl/blob/6a704f7e2a8b0f09e82b5bab88f17971af849711/pkg/gen/input/makefile/internal/file/Makefile.template
+#
 
-# Version information
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+# include Makefile.*.mk (commented out as these files don't exist)
 
-# Build flags
-LDFLAGS := -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildTime=$(BUILD_TIME)
+##@ General
 
-# Default target
-.PHONY: all
-all: build
+# The help target prints out all targets with their descriptions organized
+# beneath their categories. The categories are represented by '##@' and the
+# target descriptions by '##'. The awk commands is responsible for reading the
+# entire set of makefiles included in this invocation, looking for lines of the
+# file as xyz: ## something, and then pretty-format the target and help. Then,
+# if there's a line with ##@ something, that gets pretty-printed as a category.
+# More info on the usage of ANSI control characters for terminal formatting:
+# https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
+# More info on the awk command:
+# http://linuxcommand.org/lc3_adv_awk.php
 
-# Build the binary
-.PHONY: build
-build:
-	@echo "Building $(BINARY_NAME)..."
-	@mkdir -p $(BUILD_DIR)
-	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/mcp-capi
-
-# Run the server
-.PHONY: run
-run: build
-	@echo "Running $(BINARY_NAME)..."
-	./$(BUILD_DIR)/$(BINARY_NAME)
-
-# Run tests
-.PHONY: test
-test:
-	@echo "Running tests..."
-	$(GO) test $(GOFLAGS) ./...
-
-# Run tests with coverage
-.PHONY: test-coverage
-test-coverage:
-	@echo "Running tests with coverage..."
-	$(GO) test -coverprofile=coverage.out ./...
-	$(GO) tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-
-# Run linter
-.PHONY: lint
-lint:
-	@echo "Running linter..."
-	@if ! command -v golangci-lint &> /dev/null; then \
-		echo "golangci-lint not found. Installing..."; \
-		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
-	fi
-	golangci-lint run
-
-# Format code
-.PHONY: fmt
-fmt:
-	@echo "Formatting code..."
-	$(GO) fmt ./...
-
-# Run go mod tidy
-.PHONY: tidy
-tidy:
-	@echo "Tidying dependencies..."
-	$(GO) mod tidy
-
-# Clean build artifacts
-.PHONY: clean
-clean:
-	@echo "Cleaning build artifacts..."
-	@rm -rf $(BUILD_DIR) $(DIST_DIR) coverage.out coverage.html
-
-# Install the binary
-.PHONY: install
-install: build
-	@echo "Installing $(BINARY_NAME)..."
-	$(GO) install ./cmd/mcp-capi
-
-# Create release builds for multiple platforms
-.PHONY: release
-release:
-	@echo "Building releases..."
-	@mkdir -p $(DIST_DIR)
-	# Linux AMD64
-	GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(BINARY_NAME)-linux-amd64 ./cmd/mcp-capi
-	# Linux ARM64
-	GOOS=linux GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(BINARY_NAME)-linux-arm64 ./cmd/mcp-capi
-	# Darwin AMD64
-	GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/mcp-capi
-	# Darwin ARM64
-	GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(BINARY_NAME)-darwin-arm64 ./cmd/mcp-capi
-	# Windows AMD64
-	GOOS=windows GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/mcp-capi
-
-# Development setup
-.PHONY: setup
-setup:
-	@echo "Setting up development environment..."
-	$(GO) mod download
-	@echo "Installing development tools..."
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	$(GO) install golang.org/x/tools/cmd/goimports@latest
-
-# Generate code (if needed in the future)
-.PHONY: generate
-generate:
-	@echo "Generating code..."
-	$(GO) generate ./...
-
-# Show help
 .PHONY: help
-help:
-	@echo "Available targets:"
-	@echo "  make build         - Build the binary"
-	@echo "  make run           - Build and run the server"
-	@echo "  make test          - Run tests"
-	@echo "  make test-coverage - Run tests with coverage"
-	@echo "  make lint          - Run linter"
-	@echo "  make fmt           - Format code"
-	@echo "  make tidy          - Tidy dependencies"
-	@echo "  make clean         - Clean build artifacts"
-	@echo "  make install       - Install the binary"
-	@echo "  make release       - Build releases for multiple platforms"
-	@echo "  make setup         - Setup development environment"
-	@echo "  make help          - Show this help message" 
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z%\\\/_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+##@ Build
+
+.PHONY: build
+build: ## Build the binary for the current platform
+	go build -o mcp-capi
+
+.PHONY: install
+install: build ## Install the binary
+	mv mcp-capi $(GOPATH)/bin/mcp-capi
+
+##@ Release
+
+.PHONY: release-dry-run
+release-dry-run: ## Test the release process without publishing
+	goreleaser release --snapshot --clean --skip=announce,publish,validate
+
+.PHONY: release-local
+release-local: ## Create a release locally
+	goreleaser release --clean
+
+##@ Development
+
+.PHONY: lint-yaml
+lint-yaml: ## Run YAML linter
+	@echo "Running YAML linter..."
+	@# Exclude zz_generated files
+	@yamllint .github/workflows/auto-release.yaml .github/workflows/ci.yaml .goreleaser.yaml
+
+.PHONY: check
+check: lint-yaml ## Run YAML linter
+
+##@ Testing
+
+.PHONY: test
+test: ## Run go test and go vet
+	@echo "Running Go tests (with NO_COLOR=true)..."
+	@NO_COLOR=true go test -cover ./...
+	@echo "Running go vet..."
+	@go vet ./...
+
+# Note: These targets require Docker and 'act' to be installed.
+# See: https://github.com/nektos/act#installation
+
+.PHONY: test-ci-pr
+test-ci-pr: ## Run 'act' to simulate CI checks for a pull request
+	@echo "Simulating CI workflow (pull_request event)..."
+	@act pull_request --job check
+
+.PHONY: test-ci-push
+test-ci-push: ## Run 'act' to simulate CI checks for a push to main
+	@echo "Simulating CI workflow (push event)..."
+	@act push --job check
+
+.PHONY: test-auto-release
+test-auto-release: ## Run 'act' to simulate the auto-release workflow
+	@echo "Simulating Auto-Release workflow (merged pull_request event)..."
+	@echo "NOTE: Requires 'merged_pr_event.json' in the project root."
+	@echo "NOTE: Git push steps within the workflow are expected to fail locally."
+	@act pull_request --job auto_release --eventpath merged_pr_event.json
