@@ -1,18 +1,8 @@
-package main
+package cmd
 
 import (
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 )
-
-// mockCallToolRequest creates a mock CallToolRequest for testing
-func mockCallToolRequest(args map[string]interface{}) mcp.CallToolRequest {
-	var req mcp.CallToolRequest
-	// We'll use a simple mock that provides GetArguments() method
-	// The actual structure depends on mcp-go implementation
-	return req
-}
 
 func TestTestToolHandler(t *testing.T) {
 	// For now, we'll skip the detailed tests since we don't have
