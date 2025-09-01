@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/creativeprojects/go-selfupdate v1.5.1
 	github.com/mark3labs/mcp-go v0.38.0
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.0
 	k8s.io/api v0.34.0
 	k8s.io/apimachinery v0.34.0
 	k8s.io/client-go v0.34.0
@@ -60,7 +60,7 @@ require (
 	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/spf13/cast v1.9.2 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.8 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
