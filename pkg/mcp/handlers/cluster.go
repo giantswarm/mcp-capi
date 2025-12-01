@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 // createCreateClusterHandler creates a handler for creating new CAPI clusters
-func createCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 
@@ -74,7 +74,7 @@ func createCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		// Create the cluster
-		cluster, err := serverCtx.capiClient.CreateCluster(ctx, opts)
+		cluster, err := serverCtx.CapiClient.CreateCluster(ctx, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cluster: %w", err)
 		}
@@ -114,12 +114,12 @@ func createCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createListClustersHandler creates a handler for listing CAPI clusters
-func createListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 
-		clusters, err := serverCtx.capiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CapiClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -128,7 +128,7 @@ func createListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		content.WriteString(fmt.Sprintf("Found %d clusters:\n\n", len(clusters.Items)))
 
 		for _, cluster := range clusters.Items {
-			status, _ := serverCtx.capiClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
+			status, _ := serverCtx.CapiClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
 			if status != nil {
 				content.WriteString(capi.FormatClusterInfo(status))
 				content.WriteString("\n---\n\n")
@@ -147,7 +147,7 @@ func createListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 }
 
 // createGetClusterHandler creates a handler for getting a specific cluster
-func createGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -159,7 +159,7 @@ func createGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		status, err := serverCtx.capiClient.GetClusterStatus(ctx, namespace, name)
+		status, err := serverCtx.CapiClient.GetClusterStatus(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster status: %w", err)
 		}
@@ -179,7 +179,7 @@ func createGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 }
 
 // createClusterStatusHandler creates a handler for getting detailed cluster status
-func createClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -191,7 +191,7 @@ func createClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		status, err := serverCtx.capiClient.GetClusterStatus(ctx, namespace, name)
+		status, err := serverCtx.CapiClient.GetClusterStatus(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster status: %w", err)
 		}
@@ -211,7 +211,7 @@ func createClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createClusterHealthHandler creates a handler for checking cluster health
-func createClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -223,7 +223,7 @@ func createClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		health, err := serverCtx.capiClient.GetClusterHealth(ctx, namespace, name)
+		health, err := serverCtx.CapiClient.GetClusterHealth(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster health: %w", err)
 		}
@@ -296,7 +296,7 @@ func formatHealthStatus(ready bool) string {
 }
 
 // createScaleClusterHandler creates a handler for scaling clusters
-func createScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -317,7 +317,7 @@ func createScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		}
 		machineDeployment, _ := arguments["machineDeployment"].(string)
 
-		err := serverCtx.capiClient.ScaleCluster(ctx, namespace, name, target, int(replicas), machineDeployment)
+		err := serverCtx.CapiClient.ScaleCluster(ctx, namespace, name, target, int(replicas), machineDeployment)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scale cluster: %w", err)
 		}
@@ -334,7 +334,7 @@ func createScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 }
 
 // createGetKubeconfigHandler creates a handler for retrieving cluster kubeconfig
-func createGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -346,7 +346,7 @@ func createGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		kubeconfig, err := serverCtx.capiClient.GetKubeconfig(ctx, namespace, name)
+		kubeconfig, err := serverCtx.CapiClient.GetKubeconfig(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
@@ -372,7 +372,7 @@ func createGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createPauseClusterHandler creates a handler for pausing cluster reconciliation
-func createPauseClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreatePauseClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -384,7 +384,7 @@ func createPauseClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		err := serverCtx.capiClient.PauseCluster(ctx, namespace, name)
+		err := serverCtx.CapiClient.PauseCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pause cluster: %w", err)
 		}
@@ -409,7 +409,7 @@ func createPauseClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 }
 
 // createResumeClusterHandler creates a handler for resuming cluster reconciliation
-func createResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -421,7 +421,7 @@ func createResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		err := serverCtx.capiClient.ResumeCluster(ctx, namespace, name)
+		err := serverCtx.CapiClient.ResumeCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resume cluster: %w", err)
 		}
@@ -446,7 +446,7 @@ func createResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createDeleteClusterHandler creates a handler for deleting a cluster
-func createDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -460,7 +460,7 @@ func createDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		force, _ := arguments["force"].(bool)
 
 		// Get cluster status first to show what will be deleted
-		status, err := serverCtx.capiClient.GetClusterStatus(ctx, namespace, name)
+		status, err := serverCtx.CapiClient.GetClusterStatus(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster status: %w", err)
 		}
@@ -495,7 +495,7 @@ func createDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		// Proceed with deletion
-		err = serverCtx.capiClient.DeleteCluster(ctx, namespace, name)
+		err = serverCtx.CapiClient.DeleteCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to delete cluster: %w", err)
 		}
@@ -519,7 +519,7 @@ func createDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createUpgradeClusterHandler creates a handler for upgrading cluster Kubernetes version
-func createUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -542,7 +542,7 @@ func createUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 		}
 
 		// Get current cluster status
-		status, err := serverCtx.capiClient.GetClusterStatus(ctx, namespace, name)
+		status, err := serverCtx.CapiClient.GetClusterStatus(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster status: %w", err)
 		}
@@ -562,7 +562,7 @@ func createUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 			UpgradeWorkers: upgradeWorkers,
 		}
 
-		if err := serverCtx.capiClient.UpgradeCluster(ctx, opts); err != nil {
+		if err := serverCtx.CapiClient.UpgradeCluster(ctx, opts); err != nil {
 			return nil, fmt.Errorf("failed to upgrade cluster: %w", err)
 		}
 
@@ -597,7 +597,7 @@ func createUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 }
 
 // createUpdateClusterHandler creates a handler for updating cluster metadata
-func createUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -636,7 +636,7 @@ func createUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			Annotations: annotationMap,
 		}
 
-		cluster, err := serverCtx.capiClient.UpdateCluster(ctx, opts)
+		cluster, err := serverCtx.CapiClient.UpdateCluster(ctx, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update cluster: %w", err)
 		}
@@ -701,7 +701,7 @@ func createUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createMoveClusterHandler creates a handler for moving clusters between management clusters
-func createMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -727,7 +727,7 @@ func createMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		// Get move instructions/manifest
-		manifest, err := serverCtx.capiClient.MoveCluster(ctx, opts)
+		manifest, err := serverCtx.CapiClient.MoveCluster(ctx, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to prepare cluster move: %w", err)
 		}
@@ -786,7 +786,7 @@ func createMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 }
 
 // createBackupClusterHandler creates a handler for backing up cluster configurations
-func createBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -812,7 +812,7 @@ func createBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			OutputFormat:   outputFormat,
 		}
 
-		backup, err := serverCtx.capiClient.BackupCluster(ctx, opts)
+		backup, err := serverCtx.CapiClient.BackupCluster(ctx, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cluster backup: %w", err)
 		}

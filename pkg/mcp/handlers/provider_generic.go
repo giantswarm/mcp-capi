@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 )
 
 // createListInfrastructureProvidersHandler creates a handler for listing available infrastructure providers
-func createListInfrastructureProvidersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateListInfrastructureProvidersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// In a real implementation, this would discover installed providers
 		// For now, we'll return a static list of commonly available providers
@@ -67,7 +67,7 @@ func createListInfrastructureProvidersHandler(serverCtx *ServerContext) server.T
 }
 
 // createGetProviderConfigHandler creates a handler for getting provider configuration
-func createGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		provider, ok := arguments["provider"].(string)

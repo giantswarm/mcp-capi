@@ -16,6 +16,7 @@ const (
 	ProviderAzure   Provider = "azure"
 	ProviderGCP     Provider = "gcp"
 	ProviderVSphere Provider = "vsphere"
+	ProviderVCD     Provider = "vcd"
 	ProviderUnknown Provider = "unknown"
 )
 
@@ -55,6 +56,8 @@ func (c *Client) GetProviderForCluster(ctx context.Context, namespace, clusterNa
 		return ProviderGCP, nil
 	case "VSphereCluster":
 		return ProviderVSphere, nil
+	case "VCDCluster":
+		return ProviderVCD, nil
 	default:
 		return ProviderUnknown, nil
 	}

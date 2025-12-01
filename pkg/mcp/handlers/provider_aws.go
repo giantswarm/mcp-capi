@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"context"
@@ -13,13 +13,13 @@ import (
 // AWS Provider Tools
 
 // createAWSListClustersHandler lists AWS clusters
-func createAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.capiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CapiClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -41,7 +41,7 @@ func createAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CapiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderAWS {
 					content.WriteString("  Provider: AWS (confirmed)\n")
 				}
@@ -68,7 +68,7 @@ func createAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 }
 
 // createAWSGetClusterHandler gets details of an AWS cluster
-func createAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -81,7 +81,7 @@ func createAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.capiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CapiClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}
@@ -146,7 +146,7 @@ func createAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createAWSGetMachineTemplateHandler gets AWS machine templates
-func createAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -174,7 +174,7 @@ func createAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 
 			// In a real implementation, we would list AWSMachineTemplate resources
 			// For now, we'll check for machine deployments and their templates
-			mds, err := serverCtx.capiClient.ListMachineDeployments(ctx, namespace, "")
+			mds, err := serverCtx.CapiClient.ListMachineDeployments(ctx, namespace, "")
 			if err != nil {
 				return nil, fmt.Errorf("failed to list machine deployments: %w", err)
 			}
@@ -207,7 +207,7 @@ func createAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 // Placeholder handlers for provider-specific operations
 
 // createAWSCreateClusterHandler creates AWS-specific cluster configuration
-func createAWSCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAWSCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
 		content.WriteString("AWS Cluster Creation (Placeholder)\n\n")
@@ -235,7 +235,7 @@ func createAWSCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerF
 }
 
 // createAWSUpdateVPCHandler updates AWS VPC configuration
-func createAWSUpdateVPCHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAWSUpdateVPCHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
 		content.WriteString("AWS VPC Update (Placeholder)\n\n")
@@ -259,7 +259,7 @@ func createAWSUpdateVPCHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 }
 
 // createAWSManageSecurityGroupsHandler manages AWS security groups
-func createAWSManageSecurityGroupsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAWSManageSecurityGroupsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
 		content.WriteString("AWS Security Groups Management (Placeholder)\n\n")

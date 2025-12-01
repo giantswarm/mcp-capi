@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"context"
@@ -14,13 +14,13 @@ import (
 // vSphere Provider Tools
 
 // createVSphereListClustersHandler lists vSphere clusters
-func createVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.capiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CapiClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -41,7 +41,7 @@ func createVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CapiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderVSphere {
 					content.WriteString("  Provider: vSphere (confirmed)\n")
 				}
@@ -68,7 +68,7 @@ func createVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 }
 
 // createVSphereGetClusterHandler gets details of a vSphere cluster
-func createVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -81,7 +81,7 @@ func createVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.capiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CapiClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}
@@ -121,7 +121,7 @@ func createVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 }
 
 // createVSphereManageVMsHandler manages vSphere VMs
-func createVSphereManageVMsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateVSphereManageVMsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
 		content.WriteString("vSphere VM Management (Placeholder)\n\n")
