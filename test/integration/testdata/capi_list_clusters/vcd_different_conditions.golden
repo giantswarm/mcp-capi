@@ -1,0 +1,44 @@
+Found 3 clusters:
+
+Cluster: test-clusters/vcd-healthy
+Phase: 
+Ready: true
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  ControlPlaneReady: True (ControlPlaneInitialized)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/vcd-provisioning
+Phase: 
+Ready: false
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (WaitingForControlPlane)
+  ControlPlaneReady: False (ScalingUp)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/vcd-unhealthy
+Phase: 
+Ready: false
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (ClusterNotReady)
+  ControlPlaneReady: False (ControlPlaneUnhealthy)
+  InfrastructureReady: False (WaitingForInfrastructure)
+
+---
+

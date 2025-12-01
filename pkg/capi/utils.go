@@ -156,7 +156,9 @@ func FormatClusterInfo(status *ClusterStatus) string {
 	return sb.String()
 }
 
-// isConditionTrue checks if a condition with the given type is True
+// isConditionTrue checks if a condition with the given type has status True.
+// This is a v1beta1-compatible helper that replaces the conditions.IsTrue utility
+// which now requires v1beta2 types.
 func isConditionTrue(conditions clusterv1.Conditions, conditionType clusterv1.ConditionType) bool {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {

@@ -1107,11 +1107,13 @@ func (c *Client) GetNodeStatus(ctx context.Context, opts NodeOperationOptions) (
 	return node, nil
 }
 
-// isControlPlaneMachine checks if a machine is a control plane machine by looking at its labels
+// isControlPlaneMachine checks if a machine is a control plane machine.
+// This is a v1beta1-compatible helper that replaces util.IsControlPlaneMachine
+// which now requires v1beta2 types.
 func isControlPlaneMachine(machine *clusterv1.Machine) bool {
 	if machine.Labels == nil {
 		return false
 	}
-	_, ok := machine.Labels[clusterv1.MachineControlPlaneLabel]
-	return ok
+	_, exists := machine.Labels[clusterv1.MachineControlPlaneLabel]
+	return exists
 }

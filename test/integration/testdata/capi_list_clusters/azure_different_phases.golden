@@ -1,0 +1,47 @@
+Found 5 clusters:
+
+Cluster: test-clusters/azure-deleting
+Phase: Deleting
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/azure-failed
+Phase: Failed
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/azure-pending
+Phase: Pending
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/azure-provisioned
+Phase: Provisioned
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/azure-provisioning
+Phase: Provisioning
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+

@@ -5,6 +5,8 @@
 #    https://github.com/giantswarm/devctl/blob/6a704f7e2a8b0f09e82b5bab88f17971af849711/pkg/gen/input/makefile/internal/file/Makefile.template
 #
 
+# include Makefile.*.mk (commented out as these files don't exist)
+
 # CAPI version to use for downloading CRDs
 export CAPI_VERSION ?= v1.11.2
 
@@ -23,7 +25,8 @@ export CAPVCD_VERSION ?= v1.3.2
 # CAPG (GCP provider) version to use for downloading CRDs
 export CAPG_VERSION ?= v1.10.0
 
-# include Makefile.*.mk (commented out as these files don't exist)
+# Kubernetes version to use for envtest binaries
+ENVTEST_K8S_VERSION ?= 1.33.0
 
 ##@ General
 
@@ -43,6 +46,22 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z%\\\/_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Setup
+
+.PHONY: setup-envtest
+setup-envtest: ## Install setup-envtest tool and download envtest binaries
+	@if ! command -v setup-envtest &> /dev/null; then \
+		echo "Installing setup-envtest..."; \
+		go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest; \
+	fi
+	@echo "Setting up envtest binaries..."
+	@setup-envtest use -p path $(ENVTEST_K8S_VERSION) > /dev/null
+
+.PHONY: setup-ginkgo
+setup-ginkgo: ## Install ginkgo test framework
+	@if ! command -v ginkgo &> /dev/null; then \
+		echo "Installing ginkgo..."; \
+		go install github.com/onsi/ginkgo/v2/ginkgo@latest; \
+	fi
 
 .PHONY: download-crds
 download-crds: ## Download all CRDs from upstream
@@ -100,17 +119,41 @@ lint-yaml: ## Run YAML linter
 	@# Exclude zz_generated files
 	@yamllint .github/workflows/auto-release.yaml .github/workflows/ci.yaml .goreleaser.yaml
 
+.PHONY: lint
+lint: ## Run golangci-lint
+	@echo "Running golangci-lint..."
+	@golangci-lint run ./...
+
 .PHONY: check
-check: lint-yaml ## Run YAML linter
+check: lint-yaml lint ## Run all linters (YAML + Go)
 
 ##@ Testing
 
 .PHONY: test
-test: ## Run go test and go vet
-	@echo "Running Go tests (with NO_COLOR=true)..."
-	@NO_COLOR=true go test -cover ./...
-	@echo "Running go vet..."
-	@go vet ./...
+test: setup-envtest setup-ginkgo ## Run all tests (unit + integration)
+	@echo "Running all tests..."
+	@KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
+	NO_COLOR=true ginkgo run -p ./...
+
+.PHONY: test-coverage
+test-coverage: setup-envtest setup-ginkgo ## Run all tests with coverage
+	@echo "Running all tests with coverage..."
+	@KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
+	NO_COLOR=true ginkgo run -p \
+		--cover \
+		--coverprofile=coverage.out \
+		--covermode=atomic \
+		--coverpkg=./... \
+		./...
+
+.PHONY: test-single
+test-single: setup-envtest setup-ginkgo ## Run a single test (use FOCUS="pattern" or FOCUS_FILE="path")
+	@echo "Running focused test..."
+	@KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
+	NO_COLOR=true ginkgo run \
+		$(if $(FOCUS),--focus="$(FOCUS)") \
+		$(if $(FOCUS_FILE),--focus-file="$(FOCUS_FILE)") \
+		./...
 
 # Note: These targets require Docker and 'act' to be installed.
 # See: https://github.com/nektos/act#installation

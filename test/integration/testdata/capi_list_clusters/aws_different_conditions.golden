@@ -1,0 +1,44 @@
+Found 3 clusters:
+
+Cluster: test-clusters/aws-healthy
+Phase: 
+Ready: true
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  ControlPlaneReady: True (ControlPlaneInitialized)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/aws-provisioning
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (WaitingForControlPlane)
+  ControlPlaneReady: False (ScalingUp)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/aws-unhealthy
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (ClusterNotReady)
+  ControlPlaneReady: False (ControlPlaneUnhealthy)
+  InfrastructureReady: False (WaitingForInfrastructure)
+
+---
+

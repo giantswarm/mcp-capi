@@ -1,0 +1,20 @@
+Found 2 clusters:
+
+Cluster: nonexistent-ns-1/nonexistent-cluster-1
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: nonexistent-ns-2/nonexistent-cluster-2
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+

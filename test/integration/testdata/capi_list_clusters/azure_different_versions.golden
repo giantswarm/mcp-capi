@@ -1,0 +1,20 @@
+Found 2 clusters:
+
+Cluster: test-clusters/azure-v128
+Phase: 
+Ready: false
+Provider: azure
+Version: v1.28.0
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/azure-v129
+Phase: 
+Ready: false
+Provider: azure
+Version: v1.29.0
+Machines: 0/0 ready
+
+---
+

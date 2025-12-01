@@ -1,0 +1,47 @@
+Found 5 clusters:
+
+Cluster: test-clusters/gcp-deleting
+Phase: Deleting
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/gcp-failed
+Phase: Failed
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/gcp-pending
+Phase: Pending
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/gcp-provisioned
+Phase: Provisioned
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/gcp-provisioning
+Phase: Provisioning
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+---
+

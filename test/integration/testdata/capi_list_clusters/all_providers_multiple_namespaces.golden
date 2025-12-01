@@ -1,0 +1,137 @@
+Found 15 clusters:
+
+Cluster: provider-ns-1/aws-cluster-1
+Phase: Provisioned
+Ready: false
+Provider: aws
+Version: v1.28.0
+Machines: 3/3 ready
+
+---
+
+Cluster: provider-ns-1/aws-cluster-2
+Phase: Provisioning
+Ready: false
+Provider: aws
+Version: v1.29.0
+Machines: 2/4 ready
+
+---
+
+Cluster: provider-ns-1/azure-cluster-1
+Phase: Provisioned
+Ready: false
+Provider: azure
+Version: v1.28.0
+Machines: 5/5 ready
+
+---
+
+Cluster: provider-ns-1/azure-cluster-2
+Phase: Pending
+Ready: false
+Provider: azure
+Version: v1.30.0
+Machines: 0/3 ready
+
+---
+
+Cluster: provider-ns-1/gcp-cluster-1
+Phase: Provisioned
+Ready: false
+Provider: gcp
+Version: v1.29.0
+Machines: 4/4 ready
+
+---
+
+Cluster: provider-ns-2/gcp-cluster-2
+Phase: Deleting
+Ready: false
+Provider: gcp
+Version: v1.28.0
+Machines: 2/2 ready
+
+---
+
+Cluster: provider-ns-2/vcd-cluster-1
+Phase: Provisioned
+Ready: false
+Provider: vcd
+Version: v1.30.0
+Machines: 3/3 ready
+
+---
+
+Cluster: provider-ns-2/vcd-cluster-2
+Phase: Provisioning
+Ready: false
+Provider: vcd
+Version: v1.29.0
+Machines: 1/5 ready
+
+---
+
+Cluster: provider-ns-2/vsphere-cluster-1
+Phase: Provisioned
+Ready: false
+Provider: vsphere
+Version: v1.29.0
+Machines: 6/6 ready
+
+---
+
+Cluster: provider-ns-2/vsphere-cluster-2
+Phase: Failed
+Ready: false
+Provider: vsphere
+Version: v1.28.0
+Machines: 0/4 ready
+
+---
+
+Cluster: provider-ns-3/aws-cluster-3
+Phase: Failed
+Ready: false
+Provider: aws
+Version: v1.27.0
+Machines: 0/2 ready
+
+---
+
+Cluster: provider-ns-3/azure-cluster-3
+Phase: Provisioned
+Ready: false
+Provider: azure
+Version: v1.29.0
+Machines: 4/4 ready
+
+---
+
+Cluster: provider-ns-3/gcp-cluster-3
+Phase: Pending
+Ready: false
+Provider: gcp
+Version: v1.30.0
+Machines: 0/6 ready
+
+---
+
+Cluster: provider-ns-3/vcd-cluster-3
+Phase: Deleting
+Ready: false
+Provider: vcd
+Version: v1.29.0
+Machines: 2/2 ready
+
+---
+
+Cluster: provider-ns-3/vsphere-cluster-3
+Phase: Provisioning
+Ready: false
+Provider: vsphere
+Version: v1.28.0
+Machines: 3/5 ready
+
+---
+
