@@ -6,9 +6,9 @@ require (
 	github.com/creativeprojects/go-selfupdate v1.5.1
 	github.com/mark3labs/mcp-go v0.43.1
 	github.com/spf13/cobra v1.10.1
-	k8s.io/api v0.34.0
-	k8s.io/apimachinery v0.34.0
-	k8s.io/client-go v0.34.0
+	k8s.io/api v0.34.2
+	k8s.io/apimachinery v0.34.2
+	k8s.io/client-go v0.34.2
 	sigs.k8s.io/cluster-api v1.10.4
 	sigs.k8s.io/controller-runtime v0.22.0
 )
