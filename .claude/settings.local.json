@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go get:*)",
+      "Bash(go doc:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(go list:*)",
+      "Bash(go version:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(gofmt:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(git mv:*)",
+      "Bash(make build:*)",
+      "Bash(make lint:*)",
+      "Bash(make help:*)",
+      "Bash(make test:*)",
+      "Bash(UPDATE_GOLDEN=true make test:*)",
+      "WebSearch",
+      "Skill(write-go-code)",
+      "Bash(golangci-lint run:*)",
+      "WebFetch(domain:pkg.go.dev)",
+      "WebFetch(domain:github.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
