@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 // testToolHandler handles the test tool
-func testToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func TestToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	arguments := request.GetArguments()
 	message, ok := arguments["message"].(string)
 	if !ok {

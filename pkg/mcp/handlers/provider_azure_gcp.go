@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"context"
@@ -13,13 +13,13 @@ import (
 // Azure Provider Tools
 
 // createAzureListClustersHandler lists Azure clusters
-func createAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.capiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -41,7 +41,7 @@ func createAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandler
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderAzure {
 					content.WriteString("  Provider: Azure (confirmed)\n")
 				}
@@ -68,7 +68,7 @@ func createAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandler
 }
 
 // createAzureGetClusterHandler gets details of an Azure cluster
-func createAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -81,7 +81,7 @@ func createAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.capiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}
@@ -122,7 +122,7 @@ func createAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFu
 }
 
 // createAzureManageResourceGroupHandler manages Azure resource groups
-func createAzureManageResourceGroupHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAzureManageResourceGroupHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
 		content.WriteString("Azure Resource Group Management (Placeholder)\n\n")
@@ -147,7 +147,7 @@ func createAzureManageResourceGroupHandler(serverCtx *ServerContext) server.Tool
 }
 
 // createAzureNetworkConfigHandler configures Azure networking
-func createAzureNetworkConfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateAzureNetworkConfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
 		content.WriteString("Azure Network Configuration (Placeholder)\n\n")
@@ -177,13 +177,13 @@ func createAzureNetworkConfigHandler(serverCtx *ServerContext) server.ToolHandle
 // GCP Provider Tools
 
 // createGCPListClustersHandler lists GCP clusters
-func createGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.capiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -205,7 +205,7 @@ func createGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderGCP {
 					content.WriteString("  Provider: GCP (confirmed)\n")
 				}
@@ -232,7 +232,7 @@ func createGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 }
 
 // createGCPGetClusterHandler gets details of a GCP cluster
-func createGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -245,7 +245,7 @@ func createGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.capiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}
@@ -286,7 +286,7 @@ func createGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createGCPManageNetworkHandler manages GCP networks
-func createGCPManageNetworkHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGCPManageNetworkHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
 		content.WriteString("GCP Network Management (Placeholder)\n\n")

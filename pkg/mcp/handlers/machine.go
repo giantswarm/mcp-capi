@@ -1,4 +1,4 @@
-package cmd
+package handlers
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 
 // createListMachinesHandler creates a handler for listing CAPI machines
-func createListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -21,7 +21,7 @@ func createListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		}
 		clusterName, _ := arguments["clusterName"].(string)
 
-		machines, err := serverCtx.capiClient.ListMachines(ctx, namespace, clusterName)
+		machines, err := serverCtx.CAPIClient.ListMachines(ctx, namespace, clusterName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machines: %w", err)
 		}
@@ -69,7 +69,7 @@ func createListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 }
 
 // createListMachineDeploymentsHandler creates a handler for listing CAPI machine deployments
-func createListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -78,7 +78,7 @@ func createListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 		}
 		clusterName, _ := arguments["clusterName"].(string)
 
-		mds, err := serverCtx.capiClient.ListMachineDeployments(ctx, namespace, clusterName)
+		mds, err := serverCtx.CAPIClient.ListMachineDeployments(ctx, namespace, clusterName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machine deployments: %w", err)
 		}
@@ -121,7 +121,7 @@ func createListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 }
 
 // createGetMachineHandler creates a handler for getting detailed machine information
-func createGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -133,7 +133,7 @@ func createGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		machine, err := serverCtx.capiClient.GetMachine(ctx, namespace, name)
+		machine, err := serverCtx.CAPIClient.GetMachine(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get machine: %w", err)
 		}
@@ -210,7 +210,7 @@ func createGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 }
 
 // createDeleteMachineHandler creates a handler for deleting CAPI machines
-func createDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -225,7 +225,7 @@ func createDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		force, _ := arguments["force"].(bool)
 
 		// Delete the machine
-		err := serverCtx.capiClient.DeleteMachine(ctx, capi.DeleteMachineOptions{
+		err := serverCtx.CAPIClient.DeleteMachine(ctx, capi.DeleteMachineOptions{
 			Namespace: namespace,
 			Name:      name,
 			Force:     force,
@@ -255,7 +255,7 @@ func createDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createRemediateMachineHandler creates a handler for triggering machine remediation
-func createRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -268,13 +268,13 @@ func createRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 		}
 
 		// Get current machine status first
-		machine, err := serverCtx.capiClient.GetMachine(ctx, namespace, name)
+		machine, err := serverCtx.CAPIClient.GetMachine(ctx, namespace, name)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get machine: %v", err)), nil
 		}
 
 		// Trigger remediation
-		err = serverCtx.capiClient.RemediateMachine(ctx, capi.RemediateMachineOptions{
+		err = serverCtx.CAPIClient.RemediateMachine(ctx, capi.RemediateMachineOptions{
 			Namespace: namespace,
 			Name:      name,
 		})
@@ -311,7 +311,7 @@ func createRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 }
 
 // createCreateMachineDeploymentHandler creates a handler for creating new machine deployments
-func createCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -357,7 +357,7 @@ func createCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		}
 
 		// Create the machine deployment
-		md, err := serverCtx.capiClient.CreateMachineDeployment(ctx, capi.CreateMachineDeploymentOptions{
+		md, err := serverCtx.CAPIClient.CreateMachineDeployment(ctx, capi.CreateMachineDeploymentOptions{
 			Namespace:   namespace,
 			Name:        name,
 			ClusterName: clusterName,
@@ -409,7 +409,7 @@ func createCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 }
 
 // createScaleMachineDeploymentHandler creates a handler for scaling machine deployments
-func createScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -428,7 +428,7 @@ func createScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 		replicas := int32(replicasFloat)
 
 		// Get current state
-		list, err := serverCtx.capiClient.ListMachineDeployments(ctx, namespace, "")
+		list, err := serverCtx.CAPIClient.ListMachineDeployments(ctx, namespace, "")
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get machine deployment: %v", err)), nil
 		}
@@ -450,7 +450,7 @@ func createScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 		}
 
 		// Scale the machine deployment
-		err = serverCtx.capiClient.ScaleMachineDeployment(ctx, namespace, name, replicas)
+		err = serverCtx.CAPIClient.ScaleMachineDeployment(ctx, namespace, name, replicas)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to scale machine deployment: %v", err)), nil
 		}
@@ -493,7 +493,7 @@ func createScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 }
 
 // createUpdateMachineDeploymentHandler creates a handler for updating machine deployment configuration
-func createUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -549,7 +549,7 @@ func createUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		}
 
 		// Update the machine deployment
-		md, err := serverCtx.capiClient.UpdateMachineDeployment(ctx, opts)
+		md, err := serverCtx.CAPIClient.UpdateMachineDeployment(ctx, opts)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update machine deployment: %v", err)), nil
 		}
@@ -591,7 +591,7 @@ func createUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 }
 
 // createRolloutMachineDeploymentHandler creates a handler for triggering machine deployment rollout
-func createRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -606,7 +606,7 @@ func createRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 		reason, _ := arguments["reason"].(string)
 
 		// Trigger the rollout
-		err := serverCtx.capiClient.RolloutMachineDeployment(ctx, capi.RolloutMachineDeploymentOptions{
+		err := serverCtx.CAPIClient.RolloutMachineDeployment(ctx, capi.RolloutMachineDeploymentOptions{
 			Namespace: namespace,
 			Name:      name,
 			Reason:    reason,
@@ -644,7 +644,7 @@ func createRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 }
 
 // createListMachineSetsHandler creates a handler for listing machine sets
-func createListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -653,7 +653,7 @@ func createListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		}
 		clusterName, _ := arguments["clusterName"].(string)
 
-		machineSets, err := serverCtx.capiClient.ListMachineSets(ctx, namespace, clusterName)
+		machineSets, err := serverCtx.CAPIClient.ListMachineSets(ctx, namespace, clusterName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machine sets: %w", err)
 		}
@@ -702,7 +702,7 @@ func createListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFu
 }
 
 // createGetMachineSetHandler creates a handler for getting machine set details
-func createGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
@@ -714,7 +714,7 @@ func createGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		ms, err := serverCtx.capiClient.GetMachineSet(ctx, namespace, name)
+		ms, err := serverCtx.CAPIClient.GetMachineSet(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get machine set: %w", err)
 		}
@@ -792,7 +792,7 @@ func createGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 }
 
 // createDrainNodeHandler creates a handler for draining nodes
-func createDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 
@@ -823,7 +823,7 @@ func createDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		// Drain the node
-		err := serverCtx.capiClient.DrainNode(ctx, opts)
+		err := serverCtx.CAPIClient.DrainNode(ctx, opts)
 		if err != nil {
 			// Check if it's our placeholder error
 			if strings.Contains(err.Error(), "has been cordoned") {
@@ -878,7 +878,7 @@ func createDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 }
 
 // createCordonNodeHandler creates a handler for cordoning/uncordoning nodes
-func createCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 
@@ -900,7 +900,7 @@ func createCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		opts.Uncordon, _ = arguments["uncordon"].(bool)
 
 		// Cordon/uncordon the node
-		err := serverCtx.capiClient.CordonNode(ctx, opts)
+		err := serverCtx.CAPIClient.CordonNode(ctx, opts)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update node: %v", err)), nil
 		}
@@ -937,7 +937,7 @@ func createCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 }
 
 // createNodeStatusHandler creates a handler for getting node status
-func createNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 
@@ -958,7 +958,7 @@ func createNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		opts.NodeName = nodeName
 
 		// Get node status
-		node, err := serverCtx.capiClient.GetNodeStatus(ctx, opts)
+		node, err := serverCtx.CAPIClient.GetNodeStatus(ctx, opts)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get node status: %v", err)), nil
 		}

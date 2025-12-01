@@ -109,6 +109,12 @@ func (c *Client) GetCtrlClient() client.Client {
 	return c.ctrlClient
 }
 
+// SetClients sets the Kubernetes and controller-runtime clients (for testing)
+func (c *Client) SetClients(k8sClient kubernetes.Interface, ctrlClient client.Client) {
+	c.k8sClient = k8sClient
+	c.ctrlClient = ctrlClient
+}
+
 // ListClusters lists all CAPI clusters in the given namespace
 func (c *Client) ListClusters(ctx context.Context, namespace string) (*clusterv1.ClusterList, error) {
 	clusterList := &clusterv1.ClusterList{}
