@@ -10,14 +10,14 @@ import (
 // It provides access to the CAPI client and other shared resources needed
 // by handler functions.
 type ServerContext struct {
-	// CapiClient is the CAPI client used for cluster operations
-	CapiClient *capi.Client
+	// CAPIClient is the CAPI client used for cluster operations
+	CAPIClient *capi.Client
 }
 
 // NewServerContext creates a new ServerContext with the given CAPI client
 func NewServerContext(capiClient *capi.Client) *ServerContext {
 	return &ServerContext{
-		CapiClient: capiClient,
+		CAPIClient: capiClient,
 	}
 }
 

@@ -19,7 +19,7 @@ func CreateAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandler
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.CapiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -41,7 +41,7 @@ func CreateAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandler
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.CapiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderAzure {
 					content.WriteString("  Provider: Azure (confirmed)\n")
 				}
@@ -81,7 +81,7 @@ func CreateAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.CapiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}
@@ -183,7 +183,7 @@ func CreateGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.CapiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -205,7 +205,7 @@ func CreateGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.CapiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderGCP {
 					content.WriteString("  Provider: GCP (confirmed)\n")
 				}
@@ -245,7 +245,7 @@ func CreateGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.CapiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}

@@ -20,7 +20,7 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.CapiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -41,7 +41,7 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.CapiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderVSphere {
 					content.WriteString("  Provider: vSphere (confirmed)\n")
 				}
@@ -81,7 +81,7 @@ func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.CapiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}

@@ -21,7 +21,7 @@ func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		}
 		clusterName, _ := arguments["clusterName"].(string)
 
-		machines, err := serverCtx.CapiClient.ListMachines(ctx, namespace, clusterName)
+		machines, err := serverCtx.CAPIClient.ListMachines(ctx, namespace, clusterName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machines: %w", err)
 		}
@@ -78,7 +78,7 @@ func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 		}
 		clusterName, _ := arguments["clusterName"].(string)
 
-		mds, err := serverCtx.CapiClient.ListMachineDeployments(ctx, namespace, clusterName)
+		mds, err := serverCtx.CAPIClient.ListMachineDeployments(ctx, namespace, clusterName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machine deployments: %w", err)
 		}
@@ -133,7 +133,7 @@ func CreateGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		machine, err := serverCtx.CapiClient.GetMachine(ctx, namespace, name)
+		machine, err := serverCtx.CAPIClient.GetMachine(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get machine: %w", err)
 		}
@@ -225,7 +225,7 @@ func CreateDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		force, _ := arguments["force"].(bool)
 
 		// Delete the machine
-		err := serverCtx.CapiClient.DeleteMachine(ctx, capi.DeleteMachineOptions{
+		err := serverCtx.CAPIClient.DeleteMachine(ctx, capi.DeleteMachineOptions{
 			Namespace: namespace,
 			Name:      name,
 			Force:     force,
@@ -268,13 +268,13 @@ func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 		}
 
 		// Get current machine status first
-		machine, err := serverCtx.CapiClient.GetMachine(ctx, namespace, name)
+		machine, err := serverCtx.CAPIClient.GetMachine(ctx, namespace, name)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get machine: %v", err)), nil
 		}
 
 		// Trigger remediation
-		err = serverCtx.CapiClient.RemediateMachine(ctx, capi.RemediateMachineOptions{
+		err = serverCtx.CAPIClient.RemediateMachine(ctx, capi.RemediateMachineOptions{
 			Namespace: namespace,
 			Name:      name,
 		})
@@ -357,7 +357,7 @@ func CreateCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		}
 
 		// Create the machine deployment
-		md, err := serverCtx.CapiClient.CreateMachineDeployment(ctx, capi.CreateMachineDeploymentOptions{
+		md, err := serverCtx.CAPIClient.CreateMachineDeployment(ctx, capi.CreateMachineDeploymentOptions{
 			Namespace:   namespace,
 			Name:        name,
 			ClusterName: clusterName,
@@ -428,7 +428,7 @@ func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 		replicas := int32(replicasFloat)
 
 		// Get current state
-		list, err := serverCtx.CapiClient.ListMachineDeployments(ctx, namespace, "")
+		list, err := serverCtx.CAPIClient.ListMachineDeployments(ctx, namespace, "")
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get machine deployment: %v", err)), nil
 		}
@@ -450,7 +450,7 @@ func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 		}
 
 		// Scale the machine deployment
-		err = serverCtx.CapiClient.ScaleMachineDeployment(ctx, namespace, name, replicas)
+		err = serverCtx.CAPIClient.ScaleMachineDeployment(ctx, namespace, name, replicas)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to scale machine deployment: %v", err)), nil
 		}
@@ -549,7 +549,7 @@ func CreateUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		}
 
 		// Update the machine deployment
-		md, err := serverCtx.CapiClient.UpdateMachineDeployment(ctx, opts)
+		md, err := serverCtx.CAPIClient.UpdateMachineDeployment(ctx, opts)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update machine deployment: %v", err)), nil
 		}
@@ -606,7 +606,7 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 		reason, _ := arguments["reason"].(string)
 
 		// Trigger the rollout
-		err := serverCtx.CapiClient.RolloutMachineDeployment(ctx, capi.RolloutMachineDeploymentOptions{
+		err := serverCtx.CAPIClient.RolloutMachineDeployment(ctx, capi.RolloutMachineDeploymentOptions{
 			Namespace: namespace,
 			Name:      name,
 			Reason:    reason,
@@ -653,7 +653,7 @@ func CreateListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		}
 		clusterName, _ := arguments["clusterName"].(string)
 
-		machineSets, err := serverCtx.CapiClient.ListMachineSets(ctx, namespace, clusterName)
+		machineSets, err := serverCtx.CAPIClient.ListMachineSets(ctx, namespace, clusterName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machine sets: %w", err)
 		}
@@ -714,7 +714,7 @@ func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("name argument is required")
 		}
 
-		ms, err := serverCtx.CapiClient.GetMachineSet(ctx, namespace, name)
+		ms, err := serverCtx.CAPIClient.GetMachineSet(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get machine set: %w", err)
 		}
@@ -823,7 +823,7 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		// Drain the node
-		err := serverCtx.CapiClient.DrainNode(ctx, opts)
+		err := serverCtx.CAPIClient.DrainNode(ctx, opts)
 		if err != nil {
 			// Check if it's our placeholder error
 			if strings.Contains(err.Error(), "has been cordoned") {
@@ -900,7 +900,7 @@ func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		opts.Uncordon, _ = arguments["uncordon"].(bool)
 
 		// Cordon/uncordon the node
-		err := serverCtx.CapiClient.CordonNode(ctx, opts)
+		err := serverCtx.CAPIClient.CordonNode(ctx, opts)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update node: %v", err)), nil
 		}
@@ -958,7 +958,7 @@ func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		opts.NodeName = nodeName
 
 		// Get node status
-		node, err := serverCtx.CapiClient.GetNodeStatus(ctx, opts)
+		node, err := serverCtx.CAPIClient.GetNodeStatus(ctx, opts)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get node status: %v", err)), nil
 		}

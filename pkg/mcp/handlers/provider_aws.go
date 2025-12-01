@@ -19,7 +19,7 @@ func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.CapiClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -41,7 +41,7 @@ func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
 
 				// Try to get provider information
-				provider, _ := serverCtx.CapiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderAWS {
 					content.WriteString("  Provider: AWS (confirmed)\n")
 				}
@@ -81,7 +81,7 @@ func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.CapiClient.GetCluster(ctx, namespace, name)
+		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}
@@ -174,7 +174,7 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 
 			// In a real implementation, we would list AWSMachineTemplate resources
 			// For now, we'll check for machine deployments and their templates
-			mds, err := serverCtx.CapiClient.ListMachineDeployments(ctx, namespace, "")
+			mds, err := serverCtx.CAPIClient.ListMachineDeployments(ctx, namespace, "")
 			if err != nil {
 				return nil, fmt.Errorf("failed to list machine deployments: %w", err)
 			}
