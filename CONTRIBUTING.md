@@ -54,7 +54,9 @@ make lint
 - Write unit tests for new functions
 - Update existing tests when modifying functionality
 - Aim for >80% code coverage
-- Run `make test-coverage` to check coverage
+- Run `make test` for all tests (unit and integration)
+- Generate HTML coverage reports with: `go tool cover -html=coverage-integration.out`
+- See [test/README.md](test/README.md) for detailed testing and coverage instructions
 
 ## Submitting Changes
 

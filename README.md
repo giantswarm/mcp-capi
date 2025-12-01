@@ -348,11 +348,12 @@ make build
 # Build for multiple platforms
 make release
 
-# Run tests
+# Run all tests (unit + integration)
 make test
 
-# Run with coverage
-make test-coverage
+# Run a single test by pattern or file
+make test-single FOCUS="test pattern"
+make test-single FOCUS_FILE="path/to/test_file.go"
 ```
 
 ### Downloading CRDs
