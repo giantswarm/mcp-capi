@@ -355,6 +355,30 @@ make test
 make test-coverage
 ```
 
+### Downloading CRDs
+
+The project includes make targets to download Custom Resource Definitions (CRDs) from upstream CAPI providers:
+
+```bash
+# Download all CRDs from all providers
+make download-crds
+
+# Download CRDs for specific providers
+make download-capi-crds   # Core CAPI CRDs
+make download-capa-crds   # AWS provider CRDs
+make download-capz-crds   # Azure provider CRDs
+make download-capv-crds   # vSphere provider CRDs
+make download-capvcd-crds # Cloud Director provider CRDs
+make download-capg-crds   # GCP provider CRDs
+```
+
+You can override the default versions by setting environment variables:
+
+```bash
+# Example: Download CAPI CRDs for a specific version
+CAPI_VERSION=v1.11.2 make download-capi-crds
+```
+
 ### Contributing
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.

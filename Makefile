@@ -5,6 +5,24 @@
 #    https://github.com/giantswarm/devctl/blob/6a704f7e2a8b0f09e82b5bab88f17971af849711/pkg/gen/input/makefile/internal/file/Makefile.template
 #
 
+# CAPI version to use for downloading CRDs
+export CAPI_VERSION ?= v1.11.2
+
+# CAPA (AWS provider) version to use for downloading CRDs
+export CAPA_VERSION ?= v2.9.2
+
+# CAPZ (Azure provider) version to use for downloading CRDs
+export CAPZ_VERSION ?= v1.21.1
+
+# CAPV (vSphere provider) version to use for downloading CRDs
+export CAPV_VERSION ?= v1.14.0
+
+# CAPVCD (Cloud Director provider) version to use for downloading CRDs
+export CAPVCD_VERSION ?= v1.3.2
+
+# CAPG (GCP provider) version to use for downloading CRDs
+export CAPG_VERSION ?= v1.10.0
+
 # include Makefile.*.mk (commented out as these files don't exist)
 
 ##@ General
@@ -23,6 +41,36 @@
 .PHONY: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z%\\\/_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+##@ Setup
+
+.PHONY: download-crds
+download-crds: ## Download all CRDs from upstream
+	@./scripts/download-crds.sh --all
+
+.PHONY: download-capi-crds
+download-capi-crds: ## Download CAPI CRDs (use CAPI_VERSION to override)
+	@./scripts/download-crds.sh capi
+
+.PHONY: download-capa-crds
+download-capa-crds: ## Download CAPA CRDs (use CAPA_VERSION to override)
+	@./scripts/download-crds.sh capa
+
+.PHONY: download-capz-crds
+download-capz-crds: ## Download CAPZ CRDs (use CAPZ_VERSION to override)
+	@./scripts/download-crds.sh capz
+
+.PHONY: download-capv-crds
+download-capv-crds: ## Download CAPV CRDs (use CAPV_VERSION to override)
+	@./scripts/download-crds.sh capv
+
+.PHONY: download-capvcd-crds
+download-capvcd-crds: ## Download CAPVCD CRDs (use CAPVCD_VERSION to override)
+	@./scripts/download-crds.sh capvcd
+
+.PHONY: download-capg-crds
+download-capg-crds: ## Download CAPG CRDs (use CAPG_VERSION to override)
+	@./scripts/download-crds.sh capg
 
 ##@ Build
 
