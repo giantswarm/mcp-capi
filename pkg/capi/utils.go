@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	corev1 "k8s.io/api/core/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
 )
 
 // ClusterStatus represents the status of a CAPI cluster
@@ -36,7 +36,7 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 		Name:              cluster.Name,
 		Namespace:         cluster.Namespace,
 		Phase:             string(cluster.Status.Phase),
-		Ready:             conditions.IsTrue(cluster, clusterv1.ReadyCondition),
+		Ready:             isConditionTrue(cluster.Status.Conditions, clusterv1.ReadyCondition),
 		ControlPlaneReady: cluster.Status.ControlPlaneReady,
 		InfraReady:        cluster.Status.InfrastructureReady,
 		Conditions:        cluster.Status.Conditions,
@@ -82,7 +82,7 @@ func (c *Client) IsClusterReady(ctx context.Context, namespace, name string) (bo
 		return false, err
 	}
 
-	return conditions.IsTrue(cluster, clusterv1.ReadyCondition), nil
+	return isConditionTrue(cluster.Status.Conditions, clusterv1.ReadyCondition), nil
 }
 
 // WaitForClusterReady waits for a cluster to become ready
@@ -107,7 +107,7 @@ func GetMachinePhase(machine *clusterv1.Machine) string {
 	}
 
 	// Check conditions
-	if conditions.IsTrue(machine, clusterv1.ReadyCondition) {
+	if isConditionTrue(machine.Status.Conditions, clusterv1.ReadyCondition) {
 		return "Running"
 	}
 
@@ -154,4 +154,14 @@ func FormatClusterInfo(status *ClusterStatus) string {
 	}
 
 	return sb.String()
+}
+
+// isConditionTrue checks if a condition with the given type is True
+func isConditionTrue(conditions clusterv1.Conditions, conditionType clusterv1.ConditionType) bool {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
