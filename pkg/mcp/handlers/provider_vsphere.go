@@ -8,7 +8,7 @@ import (
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // vSphere Provider Tools

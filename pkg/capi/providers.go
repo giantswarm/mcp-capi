@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

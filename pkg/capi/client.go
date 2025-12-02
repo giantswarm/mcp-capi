@@ -16,9 +16,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -212,7 +211,7 @@ func (c *Client) DeleteMachine(ctx context.Context, opts DeleteMachineOptions) e
 		}
 
 		// Check if it's a control plane machine with only one replica
-		if util.IsControlPlaneMachine(machine) {
+		if isControlPlaneMachine(machine) {
 			// This is a simplified check - in production you'd want to check the actual replica count
 			return fmt.Errorf("cannot delete control plane machine %s without force=true", machine.Name)
 		}
@@ -1106,4 +1105,13 @@ func (c *Client) GetNodeStatus(ctx context.Context, opts NodeOperationOptions) (
 	}
 
 	return node, nil
+}
+
+// isControlPlaneMachine checks if a machine is a control plane machine by looking at its labels
+func isControlPlaneMachine(machine *clusterv1.Machine) bool {
+	if machine.Labels == nil {
+		return false
+	}
+	_, ok := machine.Labels[clusterv1.MachineControlPlaneLabel]
+	return ok
 }
