@@ -70,3 +70,6 @@ tasks/
 # Build artifacts
 build/
 bin/ mcp-capi
+
+# Test temp directory (envtest artifacts, Go build cache)
+.tmp/

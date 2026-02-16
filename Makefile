@@ -28,6 +28,15 @@ export CAPG_VERSION ?= v1.10.0
 # Kubernetes version to use for envtest binaries
 ENVTEST_K8S_VERSION ?= 1.33.0
 
+# Maximum parallel test processes for envtest-based integration tests.
+# Each test spins up its own envtest (etcd + apiserver), so unbounded
+# parallelism (-p) can exhaust /tmp (often a small tmpfs) or hit port/resource limits.
+TEST_PROCS ?= 4
+
+# Temporary directory for test artifacts (envtest sockets, Go build cache, etc.).
+# Defaults to .tmp/ in the project root to avoid filling a small /tmp tmpfs.
+export TEST_TMPDIR := $(CURDIR)/.tmp
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -132,14 +141,18 @@ check: lint-yaml lint ## Run all linters (YAML + Go)
 .PHONY: test
 test: setup-envtest setup-ginkgo ## Run all tests (unit + integration)
 	@echo "Running all tests..."
-	@KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
-	NO_COLOR=true ginkgo run -p ./...
+	@mkdir -p $(TEST_TMPDIR)
+	@TMPDIR=$(TEST_TMPDIR) \
+	KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
+	NO_COLOR=true ginkgo run --procs=$(TEST_PROCS) ./...
 
 .PHONY: test-coverage
 test-coverage: setup-envtest setup-ginkgo ## Run all tests with coverage
 	@echo "Running all tests with coverage..."
-	@KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
-	NO_COLOR=true ginkgo run -p \
+	@mkdir -p $(TEST_TMPDIR)
+	@TMPDIR=$(TEST_TMPDIR) \
+	KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
+	NO_COLOR=true ginkgo run --procs=$(TEST_PROCS) \
 		--cover \
 		--coverprofile=coverage.out \
 		--covermode=atomic \
@@ -149,7 +162,9 @@ test-coverage: setup-envtest setup-ginkgo ## Run all tests with coverage
 .PHONY: test-single
 test-single: setup-envtest setup-ginkgo ## Run a single test (use FOCUS="pattern" or FOCUS_FILE="path")
 	@echo "Running focused test..."
-	@KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
+	@mkdir -p $(TEST_TMPDIR)
+	@TMPDIR=$(TEST_TMPDIR) \
+	KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
 	NO_COLOR=true ginkgo run \
 		$(if $(FOCUS),--focus="$(FOCUS)") \
 		$(if $(FOCUS_FILE),--focus-file="$(FOCUS_FILE)") \
