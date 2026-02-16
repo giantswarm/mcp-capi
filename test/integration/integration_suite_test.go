@@ -1,13 +1,15 @@
 package integration_test
 
 import (
+	"os"
 	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/giantswarm/mcp-capi/test/harness"
 )
 
-func TestIntegration(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Integration Suite")
+func TestMain(m *testing.M) {
+	harness.InitManager()
+	code := m.Run()
+	harness.ShutdownManager()
+	os.Exit(code)
 }

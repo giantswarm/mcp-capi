@@ -2,19 +2,21 @@ package integration_test
 
 import (
 	"fmt"
-
-	. "github.com/onsi/ginkgo/v2"
+	"testing"
 
 	"github.com/giantswarm/mcp-capi/test/harness"
 )
 
 var providers = []string{"aws", "azure", "gcp", "vsphere", "vcd", "nonexistent"}
 
-var _ = Describe("capi_list_clusters", func() {
-	It("lists multiple clusters", func() {
+func TestCapiListClusters(t *testing.T) {
+	t.Parallel()
+
+	t.Run("lists multiple clusters", func(t *testing.T) {
+		t.Parallel()
 		namespace := "test-clusters"
 
-		harness.New(GinkgoT()).
+		harness.New(t).
 			CreateNamespace(namespace).
 			CreateClusters(namespace, "test-cluster-1", "test-cluster-2", "test-cluster-3").
 			ToolCall("capi_list_clusters").
@@ -23,10 +25,11 @@ var _ = Describe("capi_list_clusters", func() {
 			Execute()
 	})
 
-	It("lists clusters with metadata", func() {
+	t.Run("lists clusters with metadata", func(t *testing.T) {
+		t.Parallel()
 		namespace := "test-clusters"
 
-		harness.New(GinkgoT()).
+		harness.New(t).
 			CreateNamespace(namespace).
 			CreateClusters(namespace, "test-cluster-1", "test-cluster-2", "test-cluster-3").
 			ToolCall("capi_list_clusters").
@@ -35,11 +38,12 @@ var _ = Describe("capi_list_clusters", func() {
 			Execute()
 	})
 
-	It("filters clusters by namespace", func() {
+	t.Run("filters clusters by namespace", func(t *testing.T) {
+		t.Parallel()
 		namespace := "test-clusters"
 		otherNamespace := "other-clusters"
 
-		harness.New(GinkgoT()).
+		harness.New(t).
 			CreateNamespace(namespace).
 			CreateClusters(namespace, "cluster-in-test-ns").
 			CreateNamespace(otherNamespace).
@@ -53,10 +57,11 @@ var _ = Describe("capi_list_clusters", func() {
 			Execute()
 	})
 
-	It("handles empty namespace", func() {
+	t.Run("handles empty namespace", func(t *testing.T) {
+		t.Parallel()
 		namespace := "test-clusters"
 
-		harness.New(GinkgoT()).
+		harness.New(t).
 			CreateNamespace(namespace).
 			ToolCall("capi_list_clusters").
 			WithArg("namespace", namespace).
@@ -64,12 +69,13 @@ var _ = Describe("capi_list_clusters", func() {
 			Execute()
 	})
 
-	It("lists clusters across all namespaces", func() {
+	t.Run("lists clusters across all namespaces", func(t *testing.T) {
+		t.Parallel()
 		namespace := "test-clusters"
 		namespace1 := "multi-ns-1"
 		namespace2 := "multi-ns-2"
 
-		harness.New(GinkgoT()).
+		harness.New(t).
 			CreateNamespace(namespace).
 			CreateClusters(namespace, "cluster-ns1").
 			CreateNamespace(namespace1).
@@ -83,11 +89,10 @@ var _ = Describe("capi_list_clusters", func() {
 	})
 
 	for _, provider := range providers {
-		provider := provider // capture loop variable
-
-		It(fmt.Sprintf("lists %s clusters from same namespace", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters from same namespace", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster-1").WithProvider(provider).Create().
 				Cluster(namespace, provider+"-cluster-2").WithProvider(provider).Create().
@@ -97,10 +102,11 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters from different namespaces", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters from different namespaces", provider), func(t *testing.T) {
+			t.Parallel()
 			ns1 := provider + "-ns-1"
 			ns2 := provider + "-ns-2"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(ns1).
 				Cluster(ns1, provider+"-cluster-1").WithProvider(provider).Create().
 				CreateNamespace(ns2).
@@ -111,9 +117,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with different phases", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with different phases", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-pending").WithProvider(provider).WithPhase("Pending").Create().
 				Cluster(namespace, provider+"-provisioning").WithProvider(provider).WithPhase("Provisioning").Create().
@@ -126,9 +133,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with different versions", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with different versions", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-v128").WithProvider(provider).WithVersion("v1.28.0").Create().
 				Cluster(namespace, provider+"-v129").WithProvider(provider).WithVersion("v1.29.0").Create().
@@ -138,9 +146,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with partial machine readiness", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with partial machine readiness", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-partial").WithProvider(provider).WithMachines(2, 1).Create().
 				ToolCall("capi_list_clusters").
@@ -149,9 +158,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with all machines ready", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with all machines ready", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-all-ready").WithProvider(provider).WithMachines(3, 3).Create().
 				ToolCall("capi_list_clusters").
@@ -160,9 +170,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with no machines ready", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with no machines ready", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-none-ready").WithProvider(provider).WithMachines(5, 0).Create().
 				ToolCall("capi_list_clusters").
@@ -171,9 +182,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with version from control plane", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with version from control plane", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster-1").
 				WithProvider(provider).
@@ -189,9 +201,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s cluster with version precedence over control plane", provider), func() {
+		t.Run(fmt.Sprintf("lists %s cluster with version precedence over control plane", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster").
 				WithProvider(provider).
@@ -204,9 +217,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with different conditions", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with different conditions", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				// Cluster 1: All conditions True (healthy cluster)
 				Cluster(namespace, provider+"-healthy").WithProvider(provider).
@@ -232,9 +246,10 @@ var _ = Describe("capi_list_clusters", func() {
 				Execute()
 		})
 
-		It(fmt.Sprintf("lists %s clusters with all properties", provider), func() {
+		t.Run(fmt.Sprintf("lists %s clusters with all properties", provider), func(t *testing.T) {
+			t.Parallel()
 			namespace := "test-clusters"
-			harness.New(GinkgoT()).
+			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster-1").WithProvider(provider).WithPhase("Provisioned").WithVersion("v1.28.0").WithMachines(3, 3).
 					WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
@@ -256,15 +271,15 @@ var _ = Describe("capi_list_clusters", func() {
 				AssertContent(provider + "_multiple_all_properties.golden").
 				Execute()
 		})
-
 	}
 
-	It("lists clusters with all providers across multiple namespaces", func() {
+	t.Run("lists clusters with all providers across multiple namespaces", func(t *testing.T) {
+		t.Parallel()
 		namespace1 := "provider-ns-1"
 		namespace2 := "provider-ns-2"
 		namespace3 := "provider-ns-3"
 
-		harness.New(GinkgoT()).
+		harness.New(t).
 			// Namespace 1: 5 clusters (AWS x2, Azure x2, GCP x1)
 			CreateNamespace(namespace1).
 			Cluster(namespace1, "aws-cluster-1").WithProvider("aws").WithPhase("Provisioned").WithVersion("v1.28.0").WithMachines(3, 3).Create().
@@ -292,4 +307,4 @@ var _ = Describe("capi_list_clusters", func() {
 			AssertContent("all_providers_multiple_namespaces.golden").
 			Execute()
 	})
-})
+}

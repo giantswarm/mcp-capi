@@ -3,11 +3,15 @@ package harness
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
+	"github.com/giantswarm/k8senv"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -16,57 +20,92 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
-	ctrl "sigs.k8s.io/controller-runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-const kubeconfigContextName = "envtest"
+const (
+	kubeconfigContextName = "k8senv"
+	acquireTimeout        = 5 * time.Minute
+)
 
-// testEnv wraps envtest (a local Kubernetes API server) for integration testing.
+// mgr is the package-level k8senv manager singleton.
+var mgr k8senv.Manager
+
+// InitManager initializes the k8senv manager with CAPI CRDs.
+// Must be called once from TestMain before any tests run.
+func InitManager() {
+	// Silence k8senv logs during tests
+	k8senv.SetLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	crdPath, err := getCRDPath()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get CRD path: %v", err))
+	}
+
+	mgr = k8senv.NewManager(
+		k8senv.WithCRDDir(crdPath),
+		k8senv.WithPoolSize(4),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	if err := mgr.Initialize(ctx); err != nil {
+		panic(fmt.Sprintf("failed to initialize k8senv: %v", err))
+	}
+}
+
+// ShutdownManager stops the k8senv manager and releases all resources.
+// Should be called from TestMain after all tests complete.
+func ShutdownManager() {
+	if mgr != nil {
+		if err := mgr.Shutdown(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to shutdown k8senv: %v\n", err)
+		}
+	}
+}
+
+// testEnv wraps a k8senv instance (a local Kubernetes API server) for integration testing.
 // It provides methods to create test resources (namespaces, clusters) and manages
 // the lifecycle of the test environment.
 type testEnv struct {
 	t              TestingT
-	env            *envtest.Environment
+	inst           k8senv.Instance
 	k8sClient      kubernetes.Interface
 	ctrlClient     client.Client
 	kubeconfigPath string
 }
 
-// newTestEnv initializes envtest with CAPI CRDs
+// newTestEnv acquires a k8senv instance and sets up clients for integration testing.
 func newTestEnv(t TestingT) *testEnv {
 	t.Helper()
 
-	// Create envtest environment with CRD directory
-	// This will load all CAPI CRDs from the crds/ directory
-	// Use 'make download-crds' to fetch the latest CRDs from upstream
-	// Silence controller-runtime logs during tests
-	ctrl.SetLogger(zap.New(zap.WriteTo(io.Discard)))
+	// Acquire an instance from the pool
+	ctx, cancel := context.WithTimeout(context.Background(), acquireTimeout)
+	defer cancel()
 
-	env := &envtest.Environment{
-		CRDDirectoryPaths:     []string{getCRDPath(t)},
-		ErrorIfCRDPathMissing: true,
-	}
-
-	// Start the test environment
-	cfg, err := env.Start()
+	inst, err := mgr.Acquire(ctx)
 	if err != nil {
-		t.Fatalf("failed to start test environment: %v", err)
+		t.Fatalf("failed to acquire k8senv instance: %v", err)
 	}
 
 	// Cleanup on failure - t.Fatalf() triggers deferred functions via runtime.Goexit()
 	success := false
 	defer func() {
 		if !success {
-			if stopErr := env.Stop(); stopErr != nil {
-				t.Logf("failed to stop environment during cleanup: %v", stopErr)
+			if releaseErr := inst.Release(true); releaseErr != nil {
+				t.Logf("failed to release instance during cleanup: %v", releaseErr)
 			}
 		}
 	}()
+
+	// Get rest.Config from the instance
+	cfg, err := inst.Config()
+	if err != nil {
+		t.Fatalf("failed to get k8senv config: %v", err)
+	}
 
 	// Create a dedicated scheme to avoid mutating the global scheme
 	// This ensures thread-safety when tests run in parallel
@@ -94,7 +133,7 @@ func newTestEnv(t TestingT) *testEnv {
 	}
 
 	// Write kubeconfig to temp file managed by t.TempDir()
-	kubeconfigPath := filepath.Join(t.TempDir(), "envtest.kubeconfig")
+	kubeconfigPath := filepath.Join(t.TempDir(), "k8senv.kubeconfig")
 	if err := writeKubeconfig(cfg, kubeconfigPath); err != nil {
 		t.Fatalf("failed to write kubeconfig: %v", err)
 	}
@@ -102,7 +141,7 @@ func newTestEnv(t TestingT) *testEnv {
 	success = true
 	return &testEnv{
 		t:              t,
-		env:            env,
+		inst:           inst,
 		k8sClient:      k8sClient,
 		ctrlClient:     ctrlClient,
 		kubeconfigPath: kubeconfigPath,
@@ -115,26 +154,26 @@ func newTestEnv(t TestingT) *testEnv {
 //   - CRDs directory: crds/
 //
 // If this file is moved, the relative path calculation must be updated.
-func getCRDPath(t TestingT) string {
-	t.Helper()
+func getCRDPath() (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
-		t.Fatalf("failed to get current file path from runtime.Caller")
+		return "", errors.New("failed to get current file path from runtime.Caller")
 	}
 	crdPath := filepath.Join(filepath.Dir(currentFile), "..", "..", "crds")
 	if _, err := os.Stat(crdPath); os.IsNotExist(err) {
-		t.Fatalf("CRD directory does not exist: %s (run 'make download-crds' to fetch CRDs)", crdPath)
+		return "", fmt.Errorf("CRD directory does not exist: %s (run 'make download-crds' to fetch CRDs)", crdPath)
 	}
-	return crdPath
+	return crdPath, nil
 }
 
-// teardown stops the envtest environment and cleans up resources.
+// teardown releases the k8senv instance.
+// Uses clean=true to fully stop processes and guarantee isolation between tests.
 // Note: kubeconfig cleanup is handled automatically by t.TempDir().
 func (te *testEnv) teardown() {
 	te.t.Helper()
-	if te.env != nil {
-		if err := te.env.Stop(); err != nil {
-			te.t.Errorf("failed to stop test environment: %v", err)
+	if te.inst != nil {
+		if err := te.inst.Release(true); err != nil {
+			te.t.Errorf("failed to release k8senv instance: %v", err)
 		}
 	}
 }

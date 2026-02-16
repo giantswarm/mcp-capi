@@ -38,7 +38,7 @@ func New(t TestingT) *Harness {
 }
 
 // Execute runs all queued operations.
-// It initializes the test environment (envtest, MCP server/client) and
+// It initializes the test environment (k8senv, MCP server/client) and
 // executes each operation in order.
 // Returns the harness for chaining.
 func (h *Harness) Execute() *Harness {

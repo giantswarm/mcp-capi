@@ -5,9 +5,8 @@ This guide covers the testing approach for the MCP CAPI server project.
 ## Overview
 
 The project uses:
-- **Ginkgo v2** - BDD-style test framework
-- **Gomega** - Matcher library for assertions
-- **envtest** - Local Kubernetes API server (no real cluster needed)
+- **Go standard testing** - `go test` with `t.Run` subtests and `t.Parallel`
+- **k8senv** - Local Kubernetes API server backed by kine (no real cluster needed)
 - **Golden files** - Snapshot-based output verification
 - **Custom test harness** - Fluent API for integration tests
 
@@ -25,7 +24,7 @@ test/
 │   ├── testenv.go                  # Kubernetes environment setup
 │   └── testing.go                  # TestingT interface
 └── integration/                    # Integration tests
-    ├── integration_suite_test.go   # Ginkgo suite setup
+    ├── integration_suite_test.go   # TestMain setup
     ├── capi_list_clusters_test.go  # Tool tests
     └── testdata/                   # Golden files
         └── capi_list_clusters/
@@ -57,6 +56,9 @@ make test
 # Run tests with coverage (generates coverage.out)
 make test-coverage
 
+# Run a single test by pattern
+make test-single FOCUS="lists_multiple_clusters"
+
 # Simulate CI locally
 make test-ci-pr       # Pull request checks
 make test-ci-push     # Push to main checks
@@ -69,6 +71,7 @@ make test-auto-release # Auto-release workflow (requires merged_pr_event.json)
 |----------|---------|
 | `UPDATE_GOLDEN=true` | Regenerate golden files |
 | `NO_COLOR=true` | Disable colored output (automatically set by `make test`) |
+| `TEST_PARALLEL=N` | Maximum parallel test goroutines (default: 4) |
 
 ## Writing Integration Tests
 
@@ -78,28 +81,31 @@ Integration tests use a fluent API provided by the test harness. Here's a typica
 package integration_test
 
 import (
-    . "github.com/onsi/ginkgo/v2"
+    "testing"
     "github.com/giantswarm/mcp-capi/test/harness"
 )
 
-var _ = Describe("capi_list_clusters", func() {
-    It("lists multiple clusters", func() {
+func TestCapiListClusters(t *testing.T) {
+    t.Parallel()
+
+    t.Run("lists multiple clusters", func(t *testing.T) {
+        t.Parallel()
         namespace := "test-clusters"
 
-        harness.New(GinkgoT()).
+        harness.New(t).
             CreateNamespace(namespace).
             CreateClusters(namespace, "cluster-1", "cluster-2").
             ToolCall("capi_list_clusters").
             WithArg("namespace", namespace).
-            AssertContent("testdata/capi_list_clusters/multiple.golden").
+            AssertContent("multiple.golden").
             Execute()
     })
-})
+}
 ```
 
 ### How It Works
 
-1. `harness.New(GinkgoT())` - Creates an isolated test environment
+1. `harness.New(t)` - Creates an isolated test environment
 2. `CreateNamespace/CreateClusters` - Queues resource creation
 3. `ToolCall("tool_name")` - Starts a tool call builder
 4. `WithArg(key, value)` - Adds arguments to the tool call
@@ -114,7 +120,7 @@ Use the `Cluster()` builder with `WithProvider()` to create provider-specific cl
 
 ```go
 // Create an AWS cluster
-harness.New(GinkgoT()).
+harness.New(t).
     Cluster(namespace, "my-cluster").
         WithProvider("aws").
         Create().
@@ -210,7 +216,7 @@ harness.New(t)                           // Create new harness
 The ClusterBuilder provides fine-grained control over cluster properties:
 
 ```go
-harness.New(GinkgoT()).
+harness.New(t).
     CreateNamespace(namespace).
     Cluster(namespace, "my-cluster").
         WithProvider("aws").
@@ -226,7 +232,7 @@ harness.New(GinkgoT()).
         Create().
     ToolCall("capi_list_clusters").
     WithArg("namespace", namespace).
-    AssertContent("testdata/my_test.golden").
+    AssertContent("my_test.golden").
     Execute()
 ```
 
@@ -258,8 +264,9 @@ harness.New(GinkgoT()).
 
 2. **Write test using harness**:
    ```go
-   It("describes the scenario", func() {
-       harness.New(GinkgoT()).
+   t.Run("describes the scenario", func(t *testing.T) {
+       t.Parallel()
+       harness.New(t).
            // Setup resources
            // Call tool
            // Assert output

@@ -433,27 +433,33 @@ Expect(value).To(Not(BeEmpty()))
 
 **Fluent API for Test Setup:**
 
-This project uses a fluent API pattern for readable, chainable test setup:
+This project uses a fluent API pattern for readable, chainable test setup with standard Go tests:
 
 ```go
-var _ = Describe("capi_list_clusters", func() {
-    It("lists clusters in namespace", func() {
-        harness.New(GinkgoT()).
+func TestCapiListClusters(t *testing.T) {
+    t.Parallel()
+
+    t.Run("lists clusters in namespace", func(t *testing.T) {
+        t.Parallel()
+        harness.New(t).
             CreateNamespace("test-ns").
             CreateClusters("test-ns", "cluster-1", "cluster-2").
             ToolCall("capi_list_clusters").
             WithArg("namespace", "test-ns").
-            AssertContent("testdata/expected.golden")
+            AssertContent("expected.golden").
+            Execute()
     })
 
-    It("handles empty namespace", func() {
-        harness.New(GinkgoT()).
+    t.Run("handles empty namespace", func(t *testing.T) {
+        t.Parallel()
+        harness.New(t).
             CreateNamespace("empty-ns").
             ToolCall("capi_list_clusters").
             WithArg("namespace", "empty-ns").
-            AssertContent("testdata/empty.golden")
+            AssertContent("empty.golden").
+            Execute()
     })
-})
+}
 ```
 
 **Golden File Testing:**
@@ -464,7 +470,7 @@ Compare output against expected files for format consistency:
 // Compare actual output against golden file
 h.ToolCall("tool_name").
     WithArg("key", "value").
-    AssertContent("testdata/scenario.golden")
+    AssertContent("scenario.golden")
 
 // Update golden files when output intentionally changes:
 // UPDATE_GOLDEN=true make test
@@ -472,62 +478,51 @@ h.ToolCall("tool_name").
 
 Golden files live in `testdata/` directories and should be committed to version control.
 
-**envtest for Kubernetes API Testing:**
+**k8senv for Kubernetes API Testing:**
 
-Use controller-runtime's envtest for realistic Kubernetes API testing:
+Use k8senv for realistic Kubernetes API testing with kine-backed API servers:
 
 ```go
-var _ = Describe("Kubernetes Integration", func() {
-    var (
-        h      *harness.Harness
-        client client.Client
-    )
+// TestMain initializes the k8senv manager (pool of API servers)
+func TestMain(m *testing.M) {
+    harness.InitManager()
+    code := m.Run()
+    harness.ShutdownManager()
+    os.Exit(code)
+}
 
-    BeforeEach(func() {
-        h = harness.New(GinkgoT())
-        client = h.Client()
+func TestKubernetesIntegration(t *testing.T) {
+    t.Parallel()
+
+    t.Run("creates cluster resource", func(t *testing.T) {
+        t.Parallel()
+        harness.New(t).
+            CreateNamespace("test-ns").
+            CreateCluster("test-ns", "test-cluster").
+            ToolCall("capi_list_clusters").
+            WithArg("namespace", "test-ns").
+            AssertContent("cluster_created.golden").
+            Execute()
     })
-
-    It("creates cluster resource", func() {
-        cluster := &clusterv1.Cluster{
-            ObjectMeta: metav1.ObjectMeta{
-                Name:      "test-cluster",
-                Namespace: "default",
-            },
-            Spec: clusterv1.ClusterSpec{
-                // ...
-            },
-        }
-
-        err := client.Create(context.Background(), cluster)
-        Expect(err).NotTo(HaveOccurred())
-
-        // Verify creation
-        var fetched clusterv1.Cluster
-        err = client.Get(context.Background(),
-            types.NamespacedName{Name: "test-cluster", Namespace: "default"},
-            &fetched)
-        Expect(err).NotTo(HaveOccurred())
-        Expect(fetched.Name).To(Equal("test-cluster"))
-    })
-})
+}
 ```
 
 **Test Isolation Patterns:**
 
-Each test gets isolated resources to prevent interference:
+Each test gets an isolated k8senv instance from the pool, preventing interference:
 
 ```go
-var _ = Describe("Isolated Tests", func() {
-    It("uses unique namespace per test", func() {
-        // harness.New creates unique namespace per test
-        h := harness.New(GinkgoT())
-
-        // Resources created here are isolated
-        h.CreateClusters(h.Namespace(), "cluster-1")
-
-        // Cleanup happens automatically via DeferCleanup
-    })
+t.Run("uses isolated API server per test", func(t *testing.T) {
+    t.Parallel()
+    // harness.New acquires a k8senv instance from the pool
+    // Each instance has its own kube-apiserver + kine
+    // Resources created here are fully isolated
+    harness.New(t).
+        CreateNamespace("test-ns").
+        CreateClusters("test-ns", "cluster-1").
+        // ...
+        Execute()
+    // Instance is released back to pool on cleanup
 })
 ```
 </project_patterns>

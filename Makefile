@@ -25,15 +25,12 @@ export CAPVCD_VERSION ?= v1.3.2
 # CAPG (GCP provider) version to use for downloading CRDs
 export CAPG_VERSION ?= v1.10.0
 
-# Kubernetes version to use for envtest binaries
-ENVTEST_K8S_VERSION ?= 1.33.0
+# Maximum parallel test goroutines within each test binary.
+# Each parallel subtest acquires its own k8senv instance (kine + apiserver),
+# so this controls the peak number of concurrent API servers.
+TEST_PARALLEL ?= 4
 
-# Maximum parallel test processes for envtest-based integration tests.
-# Each test spins up its own envtest (etcd + apiserver), so unbounded
-# parallelism (-p) can exhaust /tmp (often a small tmpfs) or hit port/resource limits.
-TEST_PROCS ?= 4
-
-# Temporary directory for test artifacts (envtest sockets, Go build cache, etc.).
+# Temporary directory for test artifacts (Go build cache, k8senv data, etc.).
 # Defaults to .tmp/ in the project root to avoid filling a small /tmp tmpfs.
 export TEST_TMPDIR := $(CURDIR)/.tmp
 
@@ -55,22 +52,6 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z%\\\/_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Setup
-
-.PHONY: setup-envtest
-setup-envtest: ## Install setup-envtest tool and download envtest binaries
-	@if ! command -v setup-envtest &> /dev/null; then \
-		echo "Installing setup-envtest..."; \
-		go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest; \
-	fi
-	@echo "Setting up envtest binaries..."
-	@setup-envtest use -p path $(ENVTEST_K8S_VERSION) > /dev/null
-
-.PHONY: setup-ginkgo
-setup-ginkgo: ## Install ginkgo test framework
-	@if ! command -v ginkgo &> /dev/null; then \
-		echo "Installing ginkgo..."; \
-		go install github.com/onsi/ginkgo/v2/ginkgo@latest; \
-	fi
 
 .PHONY: download-crds
 download-crds: ## Download all CRDs from upstream
@@ -139,35 +120,30 @@ check: lint-yaml lint ## Run all linters (YAML + Go)
 ##@ Testing
 
 .PHONY: test
-test: setup-envtest setup-ginkgo ## Run all tests (unit + integration)
+test: ## Run all tests (unit + integration)
 	@echo "Running all tests..."
 	@mkdir -p $(TEST_TMPDIR)
 	@TMPDIR=$(TEST_TMPDIR) \
-	KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
-	NO_COLOR=true ginkgo run --procs=$(TEST_PROCS) ./...
+	NO_COLOR=true go test -parallel=$(TEST_PARALLEL) -count=1 ./...
 
 .PHONY: test-coverage
-test-coverage: setup-envtest setup-ginkgo ## Run all tests with coverage
+test-coverage: ## Run all tests with coverage
 	@echo "Running all tests with coverage..."
 	@mkdir -p $(TEST_TMPDIR)
 	@TMPDIR=$(TEST_TMPDIR) \
-	KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
-	NO_COLOR=true ginkgo run --procs=$(TEST_PROCS) \
-		--cover \
-		--coverprofile=coverage.out \
-		--covermode=atomic \
-		--coverpkg=./... \
+	NO_COLOR=true go test -parallel=$(TEST_PARALLEL) -count=1 \
+		-coverprofile=coverage.out \
+		-covermode=atomic \
+		-coverpkg=./... \
 		./...
 
 .PHONY: test-single
-test-single: setup-envtest setup-ginkgo ## Run a single test (use FOCUS="pattern" or FOCUS_FILE="path")
+test-single: ## Run a single test (use FOCUS="pattern")
 	@echo "Running focused test..."
 	@mkdir -p $(TEST_TMPDIR)
 	@TMPDIR=$(TEST_TMPDIR) \
-	KUBEBUILDER_ASSETS=$$(setup-envtest use -p path $(ENVTEST_K8S_VERSION)) \
-	NO_COLOR=true ginkgo run \
-		$(if $(FOCUS),--focus="$(FOCUS)") \
-		$(if $(FOCUS_FILE),--focus-file="$(FOCUS_FILE)") \
+	NO_COLOR=true go test -parallel=$(TEST_PARALLEL) -count=1 \
+		-run "$(FOCUS)" \
 		./...
 
 # Note: These targets require Docker and 'act' to be installed.

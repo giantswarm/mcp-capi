@@ -1,9 +1,9 @@
 // Package harness provides utilities for integration testing the MCP CAPI server.
 //
 // The primary type is [Harness], which sets up an isolated test environment
-// including envtest (a local Kubernetes API server), MCP server, and MCP client
-// using stdio transport. The harness is automatically cleaned up when the
-// test completes.
+// including k8senv (a local Kubernetes API server backed by kine), MCP server,
+// and MCP client using stdio transport. The harness is automatically cleaned up
+// when the test completes.
 //
 // # Lazy Execution Model
 //

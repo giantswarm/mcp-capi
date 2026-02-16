@@ -1,7 +1,7 @@
 package harness
 
 // TestingT is an interface that abstracts the testing framework.
-// It is satisfied by both *testing.T and ginkgo.GinkgoT().
+// It is satisfied by *testing.T and any compatible test framework.
 //
 // This interface defines only the methods actually used by the harness,
 // allowing the harness to work with any compatible test framework.
