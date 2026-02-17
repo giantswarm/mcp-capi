@@ -124,14 +124,15 @@ test: ## Run all tests (unit + integration)
 	@echo "Running all tests..."
 	@mkdir -p $(TEST_TMPDIR)
 	@TMPDIR=$(TEST_TMPDIR) \
-	NO_COLOR=true go test -parallel=$(TEST_PARALLEL) -count=1 ./...
+	# NO_COLOR=true gotestsum -- -parallel=$(TEST_PARALLEL) -count=1 ./...
+	NO_COLOR=true gotestsum -- -parallel=$(TEST_PARALLEL) -count=1 ./...
 
 .PHONY: test-coverage
 test-coverage: ## Run all tests with coverage
 	@echo "Running all tests with coverage..."
 	@mkdir -p $(TEST_TMPDIR)
 	@TMPDIR=$(TEST_TMPDIR) \
-	NO_COLOR=true go test -parallel=$(TEST_PARALLEL) -count=1 \
+	NO_COLOR=true gotestsum -- -parallel=$(TEST_PARALLEL) -count=1 \
 		-coverprofile=coverage.out \
 		-covermode=atomic \
 		-coverpkg=./... \
@@ -142,7 +143,7 @@ test-single: ## Run a single test (use FOCUS="pattern")
 	@echo "Running focused test..."
 	@mkdir -p $(TEST_TMPDIR)
 	@TMPDIR=$(TEST_TMPDIR) \
-	NO_COLOR=true go test -parallel=$(TEST_PARALLEL) -count=1 \
+	NO_COLOR=true gotestsum -- -parallel=$(TEST_PARALLEL) -count=1 \
 		-run "$(FOCUS)" \
 		./...
 

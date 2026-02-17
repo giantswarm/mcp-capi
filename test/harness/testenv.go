@@ -3,12 +3,14 @@ package harness
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/giantswarm/k8senv"
@@ -44,9 +46,16 @@ func InitManager() {
 		panic(fmt.Sprintf("failed to get CRD path: %v", err))
 	}
 
+	poolSize := runtime.GOMAXPROCS(0) // same default as testing.parallel
+	if f := flag.Lookup("test.parallel"); f != nil {
+		if n, err := strconv.Atoi(f.Value.String()); err == nil && n > 0 {
+			poolSize = n
+		}
+	}
+
 	mgr = k8senv.NewManager(
 		k8senv.WithCRDDir(crdPath),
-		k8senv.WithPoolSize(4),
+		k8senv.WithPoolSize(poolSize),
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -95,7 +104,7 @@ func newTestEnv(t TestingT) *testEnv {
 	success := false
 	defer func() {
 		if !success {
-			if releaseErr := inst.Release(true); releaseErr != nil {
+			if releaseErr := inst.Release(false); releaseErr != nil {
 				t.Logf("failed to release instance during cleanup: %v", releaseErr)
 			}
 		}
@@ -172,7 +181,7 @@ func getCRDPath() (string, error) {
 func (te *testEnv) teardown() {
 	te.t.Helper()
 	if te.inst != nil {
-		if err := te.inst.Release(true); err != nil {
+		if err := te.inst.Release(false); err != nil {
 			te.t.Errorf("failed to release k8senv instance: %v", err)
 		}
 	}
