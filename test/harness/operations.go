@@ -82,31 +82,15 @@ func (op *clusterBuilderOp) execute(ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating cluster '%s/%s' (provider=%s, phase=%s, version=%s)", op.namespace, op.name, op.provider, op.phase, op.version)
 
-	// Create the cluster based on provider
-	switch op.provider {
-	case "aws":
-		ec.k8sEnv.createAWSCluster(ec.ctx, op.namespace, op.name)
-	case "azure":
-		ec.k8sEnv.createAzureCluster(ec.ctx, op.namespace, op.name)
-	case "gcp":
-		ec.k8sEnv.createGCPCluster(ec.ctx, op.namespace, op.name)
-	case "vsphere":
-		ec.k8sEnv.createVSphereCluster(ec.ctx, op.namespace, op.name)
-	case "vcd":
-		ec.k8sEnv.createVCDCluster(ec.ctx, op.namespace, op.name)
-	default:
-		ec.k8sEnv.createCluster(ec.ctx, op.namespace, op.name)
-	}
-
-	// Set phase if specified
-	if op.phase != "" {
-		ec.k8sEnv.setClusterPhase(ec.ctx, op.namespace, op.name, op.phase)
-	}
-
-	// Set version if specified
-	if op.version != "" {
-		ec.k8sEnv.setClusterVersion(ec.ctx, op.namespace, op.name, op.version)
-	}
+	// Create the cluster with all spec fields and status in minimal API calls
+	ec.k8sEnv.createClusterFull(ec.ctx, clusterCreateOptions{
+		namespace:  op.namespace,
+		name:       op.name,
+		provider:   op.provider,
+		phase:      op.phase,
+		version:    op.version,
+		conditions: op.conditions,
+	})
 
 	// Create machines if specified
 	for i := 0; i < op.totalMachines; i++ {
@@ -120,11 +104,6 @@ func (op *clusterBuilderOp) execute(ec *executionContext) {
 		kcpName := op.name + "-control-plane"
 		ec.k8sEnv.createKubeadmControlPlane(ec.ctx, op.namespace, kcpName, op.controlPlane.version, op.controlPlane.replicas)
 		ec.k8sEnv.setClusterControlPlaneRef(ec.ctx, op.namespace, op.name, kcpName)
-	}
-
-	// Set conditions if specified
-	if len(op.conditions) > 0 {
-		ec.k8sEnv.setClusterConditions(ec.ctx, op.namespace, op.name, op.conditions)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // createCreateClusterHandler creates a handler for creating new CAPI clusters
@@ -124,11 +125,27 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
 
+		// Bulk fetch all machines in the namespace to avoid N+1 queries
+		allMachines, err := serverCtx.CAPIClient.ListMachines(ctx, namespace, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list machines: %w", err)
+		}
+
+		// Group machines by cluster name
+		machinesByCluster := make(map[string][]clusterv1.Machine)
+		for _, m := range allMachines.Items {
+			clusterName := m.Labels[clusterv1.ClusterNameLabel]
+			key := m.Namespace + "/" + clusterName
+			machinesByCluster[key] = append(machinesByCluster[key], m)
+		}
+
 		var content strings.Builder
 		content.WriteString(fmt.Sprintf("Found %d clusters:\n\n", len(clusters.Items)))
 
-		for _, cluster := range clusters.Items {
-			status, _ := serverCtx.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
+		for i := range clusters.Items {
+			cluster := &clusters.Items[i]
+			key := cluster.Namespace + "/" + cluster.Name
+			status, _ := serverCtx.CAPIClient.GetClusterStatusFromList(ctx, cluster, machinesByCluster[key])
 			if status != nil {
 				content.WriteString(capi.FormatClusterInfo(status))
 				content.WriteString("\n---\n\n")

@@ -75,6 +75,49 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 	return status, nil
 }
 
+// GetClusterStatusFromList computes status for an already-fetched cluster using
+// pre-fetched machines. This avoids the per-cluster Get and ListMachines calls
+// that GetClusterStatus performs, making it suitable for bulk listing.
+func (c *Client) GetClusterStatusFromList(ctx context.Context, cluster *clusterv1.Cluster, machines []clusterv1.Machine) (*ClusterStatus, error) {
+	status := &ClusterStatus{
+		Name:              cluster.Name,
+		Namespace:         cluster.Namespace,
+		Phase:             string(cluster.Status.Phase),
+		Ready:             isConditionTrue(cluster.Status.Conditions, clusterv1.ReadyCondition),
+		ControlPlaneReady: cluster.Status.ControlPlaneReady,
+		InfraReady:        cluster.Status.InfrastructureReady,
+		Conditions:        cluster.Status.Conditions,
+	}
+
+	// Get version from cluster spec
+	if cluster.Spec.Topology != nil && cluster.Spec.Topology.Version != "" {
+		status.Version = cluster.Spec.Topology.Version
+	}
+
+	// Get provider information (pure function, no API call)
+	status.Provider = DetermineProvider(cluster)
+
+	// Count machines from pre-fetched slice
+	status.TotalMachines = len(machines)
+	for _, machine := range machines {
+		if machine.Status.NodeRef != nil {
+			status.ReadyMachines++
+		}
+	}
+
+	// Get control plane version if available
+	if cluster.Spec.ControlPlaneRef != nil && status.Version == "" {
+		if cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
+			kcp, err := c.GetKubeadmControlPlane(ctx, cluster.Namespace, cluster.Spec.ControlPlaneRef.Name)
+			if err == nil && kcp.Spec.Version != "" {
+				status.Version = kcp.Spec.Version
+			}
+		}
+	}
+
+	return status, nil
+}
+
 // IsClusterReady checks if a cluster is fully ready
 func (c *Client) IsClusterReady(ctx context.Context, namespace, name string) (bool, error) {
 	cluster, err := c.GetCluster(ctx, namespace, name)

@@ -56,6 +56,7 @@ func InitManager() {
 	mgr = k8senv.NewManager(
 		k8senv.WithCRDDir(crdPath),
 		k8senv.WithPoolSize(poolSize),
+		k8senv.WithReleaseStrategy(k8senv.ReleaseClean),
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -104,7 +105,7 @@ func newTestEnv(t TestingT) *testEnv {
 	success := false
 	defer func() {
 		if !success {
-			if releaseErr := inst.Release(false); releaseErr != nil {
+			if releaseErr := inst.Release(); releaseErr != nil {
 				t.Logf("failed to release instance during cleanup: %v", releaseErr)
 			}
 		}
@@ -181,7 +182,7 @@ func getCRDPath() (string, error) {
 func (te *testEnv) teardown() {
 	te.t.Helper()
 	if te.inst != nil {
-		if err := te.inst.Release(false); err != nil {
+		if err := te.inst.Release(); err != nil {
 			te.t.Errorf("failed to release k8senv instance: %v", err)
 		}
 	}
@@ -378,6 +379,106 @@ func (te *testEnv) createGCPCluster(ctx context.Context, namespace, name string)
 
 	if err := te.ctrlClient.Create(ctx, cluster); err != nil {
 		te.t.Fatalf("failed to create GCP cluster %s/%s: %v", namespace, name, err)
+	}
+}
+
+// clusterCreateOptions holds all parameters for creating a fully-configured cluster
+// in minimal API calls.
+type clusterCreateOptions struct {
+	namespace  string
+	name       string
+	provider   string
+	version    string
+	phase      string
+	conditions []clusterv1.Condition
+}
+
+// createClusterFull creates a fully-configured CAPI Cluster in minimal API calls.
+// It sets InfrastructureRef and Topology on the initial Create (avoiding Get+Update),
+// and combines phase + conditions into a single Status().Update() when both are present.
+func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOptions) {
+	te.t.Helper()
+
+	cluster := &clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.name,
+			Namespace: opts.namespace,
+			Labels: map[string]string{
+				clusterv1.ClusterNameLabel: opts.name,
+			},
+		},
+		Spec: clusterv1.ClusterSpec{
+			ClusterNetwork: &clusterv1.ClusterNetwork{
+				Pods: &clusterv1.NetworkRanges{
+					CIDRBlocks: []string{"192.168.0.0/16"},
+				},
+			},
+		},
+	}
+
+	// Set infrastructure ref before Create based on provider
+	switch opts.provider {
+	case "aws":
+		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
+			Kind:       "AWSCluster",
+			Name:       opts.name,
+			Namespace:  opts.namespace,
+		}
+	case "azure":
+		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			Kind:       "AzureCluster",
+			Name:       opts.name,
+			Namespace:  opts.namespace,
+		}
+	case "gcp":
+		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			Kind:       "GCPCluster",
+			Name:       opts.name,
+			Namespace:  opts.namespace,
+		}
+	case "vsphere":
+		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			Kind:       "VSphereCluster",
+			Name:       opts.name,
+			Namespace:  opts.namespace,
+		}
+	case "vcd":
+		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			Kind:       "VCDCluster",
+			Name:       opts.name,
+			Namespace:  opts.namespace,
+		}
+	}
+
+	// Set version via Topology before Create (avoids Get+Update round-trip)
+	if opts.version != "" {
+		cluster.Spec.Topology = &clusterv1.Topology{
+			Class:   "default",
+			Version: opts.version,
+		}
+	}
+
+	if err := te.ctrlClient.Create(ctx, cluster); err != nil {
+		te.t.Fatalf("failed to create cluster %s/%s: %v", opts.namespace, opts.name, err)
+	}
+
+	// Combine phase + conditions into a single Status().Update() when possible
+	needsStatusUpdate := opts.phase != "" || len(opts.conditions) > 0
+	if needsStatusUpdate {
+		if opts.phase != "" {
+			cluster.Status.Phase = opts.phase
+		}
+		if len(opts.conditions) > 0 {
+			cluster.Status.Conditions = opts.conditions
+		}
+		if err := te.ctrlClient.Status().Update(ctx, cluster); err != nil {
+			te.t.Fatalf("failed to update status on cluster %s/%s: %v", opts.namespace, opts.name, err)
+		}
 	}
 }
 

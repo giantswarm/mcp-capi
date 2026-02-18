@@ -149,8 +149,9 @@ func (c *Client) GetCluster(ctx context.Context, namespace, name string) (*clust
 func (c *Client) ListMachines(ctx context.Context, namespace, clusterName string) (*clusterv1.MachineList, error) {
 	machineList := &clusterv1.MachineList{}
 
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
+	opts := []client.ListOption{}
+	if namespace != "" {
+		opts = append(opts, client.InNamespace(namespace))
 	}
 
 	if clusterName != "" {

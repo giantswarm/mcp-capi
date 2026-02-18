@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,6 +36,30 @@ func (c *Client) InitializeProviders() error {
 	return nil
 }
 
+// DetermineProvider returns the infrastructure provider for a cluster based on
+// its InfrastructureRef.Kind. Unlike GetProviderForCluster, this is a pure
+// function that requires no API call.
+func DetermineProvider(cluster *clusterv1.Cluster) Provider {
+	if cluster.Spec.InfrastructureRef == nil {
+		return ProviderUnknown
+	}
+
+	switch cluster.Spec.InfrastructureRef.Kind {
+	case "AWSCluster":
+		return ProviderAWS
+	case "AzureCluster":
+		return ProviderAzure
+	case "GCPCluster":
+		return ProviderGCP
+	case "VSphereCluster":
+		return ProviderVSphere
+	case "VCDCluster":
+		return ProviderVCD
+	default:
+		return ProviderUnknown
+	}
+}
+
 // GetProviderForCluster determines which infrastructure provider a cluster is using
 func (c *Client) GetProviderForCluster(ctx context.Context, namespace, clusterName string) (Provider, error) {
 	cluster, err := c.GetCluster(ctx, namespace, clusterName)
@@ -42,25 +67,7 @@ func (c *Client) GetProviderForCluster(ctx context.Context, namespace, clusterNa
 		return ProviderUnknown, err
 	}
 
-	if cluster.Spec.InfrastructureRef == nil {
-		return ProviderUnknown, fmt.Errorf("cluster has no infrastructure reference")
-	}
-
-	// Determine provider based on the infrastructure reference kind
-	switch cluster.Spec.InfrastructureRef.Kind {
-	case "AWSCluster":
-		return ProviderAWS, nil
-	case "AzureCluster":
-		return ProviderAzure, nil
-	case "GCPCluster":
-		return ProviderGCP, nil
-	case "VSphereCluster":
-		return ProviderVSphere, nil
-	case "VCDCluster":
-		return ProviderVCD, nil
-	default:
-		return ProviderUnknown, nil
-	}
+	return DetermineProvider(cluster), nil
 }
 
 // GetKubeadmControlPlane retrieves the KubeadmControlPlane for a cluster

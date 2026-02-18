@@ -4,7 +4,7 @@ go 1.25.4
 
 require (
 	github.com/creativeprojects/go-selfupdate v1.5.2
-	github.com/giantswarm/k8senv v0.0.0-20260216200117-1879d667a248
+	github.com/giantswarm/k8senv v0.0.0-20260218100755-b568af3b124e
 	github.com/google/go-cmp v0.7.0
 	github.com/mark3labs/mcp-go v0.44.0
 	github.com/spf13/cobra v1.10.2
