@@ -56,7 +56,7 @@ func InitManager() {
 	mgr = k8senv.NewManager(
 		k8senv.WithCRDDir(crdPath),
 		k8senv.WithPoolSize(poolSize),
-		k8senv.WithReleaseStrategy(k8senv.ReleaseClean),
+		k8senv.WithReleaseStrategy(k8senv.ReleasePurge),
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
