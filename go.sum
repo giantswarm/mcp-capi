@@ -31,8 +31,8 @@ github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHk
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
 github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
-github.com/giantswarm/k8senv v0.0.0-20260218184014-58a26bc7f3cf h1:nwtfL7fwnvRtaw23OYJXmuwKXBypiOxj0lCHVRkJL+4=
-github.com/giantswarm/k8senv v0.0.0-20260218184014-58a26bc7f3cf/go.mod h1:8hj5bydd3A3xWs0iU21gToJ+xJMuDmfTiLnDiHrLCAA=
+github.com/giantswarm/k8senv v0.0.0-20260219075236-096a706c5acc h1:cN3SlPSsucM0YZyAPV0rMI74OM5dSuBixnI+THoj1zw=
+github.com/giantswarm/k8senv v0.0.0-20260219075236-096a706c5acc/go.mod h1:8hj5bydd3A3xWs0iU21gToJ+xJMuDmfTiLnDiHrLCAA=
 github.com/go-fed/httpsig v1.1.0 h1:9M+hb0jkEICD8/cAiNqEB66R87tTINszBRTjwjQzWcI=
 github.com/go-fed/httpsig v1.1.0/go.mod h1:RCMrTZvN1bJYtofsG4rd5NaO5obxQ5xBkdiS7xsT7bM=
 github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=
