@@ -1,0 +1,17 @@
+Found 3 machines:
+
+Machine: test-clusters/healthy-cluster-machine-0
+  Cluster: healthy-cluster
+  Node: healthy-cluster-machine-0-node
+  Ready: false
+
+Machine: test-clusters/healthy-cluster-machine-1
+  Cluster: healthy-cluster
+  Node: healthy-cluster-machine-1-node
+  Ready: false
+
+Machine: test-clusters/healthy-cluster-machine-2
+  Cluster: healthy-cluster
+  Node: healthy-cluster-machine-2-node
+  Ready: false
+

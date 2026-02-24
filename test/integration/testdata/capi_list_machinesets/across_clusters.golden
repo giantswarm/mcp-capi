@@ -1,0 +1,14 @@
+Found 2 machine sets:
+
+MachineSet: test-clusters/ms-c1
+  Cluster: cluster-1
+  Replicas: 3
+  Ready: 3/3
+  Available: 3
+
+MachineSet: test-clusters/ms-c2
+  Cluster: cluster-2
+  Replicas: 5
+  Ready: 4/5
+  Available: 4
+

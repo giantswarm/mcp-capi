@@ -49,6 +49,23 @@ func (op *namespaceOp) describe() string {
 	return fmt.Sprintf("create namespace %q", op.name)
 }
 
+// secretOp creates a Kubernetes Secret resource.
+type secretOp struct {
+	namespace string
+	name      string
+	data      map[string][]byte
+}
+
+func (op *secretOp) execute(ec *executionContext) {
+	ec.t.Helper()
+	ec.t.Logf("creating secret '%s' in namespace '%s'", op.name, op.namespace)
+	ec.k8sEnv.createSecret(ec.ctx, op.namespace, op.name, op.data)
+}
+
+func (op *secretOp) describe() string {
+	return fmt.Sprintf("create secret %q in namespace %q", op.name, op.namespace)
+}
+
 // clusterOp creates a CAPI Cluster resource.
 type clusterOp struct {
 	namespace string
@@ -130,6 +147,119 @@ func (op *clusterBuilderOp) describe() string {
 		desc += fmt.Sprintf(" (machines: %d/%d ready)", op.readyMachines, op.totalMachines)
 	}
 	return desc
+}
+
+// nodeBuilderOp creates a Kubernetes Node resource with optional properties.
+type nodeBuilderOp struct {
+	name          string
+	providerID    string
+	unschedulable bool
+	conditions    []nodeCondition
+	addresses     []nodeAddress
+	taints        []nodeTaint
+	capacity      nodeResources
+	allocatable   nodeResources
+	nodeInfo      nodeInfoConfig
+}
+
+func (op *nodeBuilderOp) execute(ec *executionContext) {
+	ec.t.Helper()
+	ec.t.Logf("creating node '%s'", op.name)
+	ec.k8sEnv.createNode(ec.ctx, nodeCreateOptions{
+		name:          op.name,
+		providerID:    op.providerID,
+		unschedulable: op.unschedulable,
+		conditions:    op.conditions,
+		addresses:     op.addresses,
+		taints:        op.taints,
+		capacity:      op.capacity,
+		allocatable:   op.allocatable,
+		nodeInfo:      op.nodeInfo,
+	})
+}
+
+func (op *nodeBuilderOp) describe() string {
+	desc := fmt.Sprintf("create node %q", op.name)
+	if op.unschedulable {
+		desc += " (cordoned)"
+	}
+	return desc
+}
+
+// machineDeploymentOp creates a CAPI MachineDeployment resource.
+type machineDeploymentOp struct {
+	namespace         string
+	name              string
+	clusterName       string
+	replicas          int
+	version           string
+	phase             string
+	statusReplicas    int
+	readyReplicas     int
+	updatedReplicas   int
+	availableReplicas int
+}
+
+func (op *machineDeploymentOp) execute(ec *executionContext) {
+	ec.t.Helper()
+	ec.t.Logf("creating MachineDeployment '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
+	ec.k8sEnv.createMachineDeployment(ec.ctx, machineDeploymentCreateOptions{
+		namespace:         op.namespace,
+		name:              op.name,
+		clusterName:       op.clusterName,
+		replicas:          op.replicas,
+		version:           op.version,
+		phase:             op.phase,
+		statusReplicas:    op.statusReplicas,
+		readyReplicas:     op.readyReplicas,
+		updatedReplicas:   op.updatedReplicas,
+		availableReplicas: op.availableReplicas,
+	})
+}
+
+func (op *machineDeploymentOp) describe() string {
+	return fmt.Sprintf("create MachineDeployment %q in namespace %q for cluster %q", op.name, op.namespace, op.clusterName)
+}
+
+// machineSetOp creates a CAPI MachineSet resource.
+type machineSetOp struct {
+	namespace         string
+	name              string
+	clusterName       string
+	replicas          int
+	version           string
+	statusReplicas    int
+	readyReplicas     int
+	availableReplicas int
+	infraRefKind      string
+	infraRefName      string
+	bootstrapKind     string
+	bootstrapName     string
+	ownerMDName       string
+}
+
+func (op *machineSetOp) execute(ec *executionContext) {
+	ec.t.Helper()
+	ec.t.Logf("creating MachineSet '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
+	ec.k8sEnv.createMachineSet(ec.ctx, machineSetCreateOptions{
+		namespace:         op.namespace,
+		name:              op.name,
+		clusterName:       op.clusterName,
+		replicas:          op.replicas,
+		version:           op.version,
+		statusReplicas:    op.statusReplicas,
+		readyReplicas:     op.readyReplicas,
+		availableReplicas: op.availableReplicas,
+		infraRefKind:      op.infraRefKind,
+		infraRefName:      op.infraRefName,
+		bootstrapKind:     op.bootstrapKind,
+		bootstrapName:     op.bootstrapName,
+		ownerMDName:       op.ownerMDName,
+	})
+}
+
+func (op *machineSetOp) describe() string {
+	return fmt.Sprintf("create MachineSet %q in namespace %q for cluster %q", op.name, op.namespace, op.clusterName)
 }
 
 // toolCallOp executes an MCP tool call.

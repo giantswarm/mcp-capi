@@ -1,0 +1,14 @@
+Found 2 machine deployments:
+
+MachineDeployment: test-clusters/md-1
+  Cluster: test-cluster
+  Replicas: 3
+  Status: 3 ready / 0 updated / 3 available
+  Kubernetes Version: v1.29.0
+
+MachineDeployment: test-clusters/md-2
+  Cluster: test-cluster
+  Replicas: 2
+  Status: 1 ready / 0 updated / 1 available
+  Kubernetes Version: v1.28.0
+

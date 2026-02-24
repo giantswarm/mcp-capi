@@ -150,6 +150,18 @@ func (h *Harness) CreateNamespace(name string) *Harness {
 	return h
 }
 
+// CreateSecret queues creation of a Kubernetes secret in the given namespace.
+// The data map contains the secret's key-value pairs.
+func (h *Harness) CreateSecret(namespace, name string, data map[string][]byte) *Harness {
+	h.t.Helper()
+	h.operations = append(h.operations, &secretOp{
+		namespace: namespace,
+		name:      name,
+		data:      data,
+	})
+	return h
+}
+
 // controlPlaneConfig holds the configuration for a control plane resource.
 type controlPlaneConfig struct {
 	kind     string // e.g., "KubeadmControlPlane"
@@ -345,6 +357,348 @@ func (cb *ClusterBuilder) Create() *Harness {
 		customCPRef:    cb.customCPRef,
 	})
 	return cb.harness
+}
+
+// MachineDeploymentBuilder provides a fluent API for building MachineDeployment resources.
+type MachineDeploymentBuilder struct {
+	harness           *Harness
+	namespace         string
+	name              string
+	clusterName       string
+	replicas          int
+	version           string
+	phase             string
+	statusReplicas    int
+	readyReplicas     int
+	updatedReplicas   int
+	availableReplicas int
+}
+
+// MachineDeployment starts a new MachineDeployment builder.
+func (h *Harness) MachineDeployment(namespace, name string) *MachineDeploymentBuilder {
+	return &MachineDeploymentBuilder{
+		harness:   h,
+		namespace: namespace,
+		name:      name,
+		replicas:  1,
+	}
+}
+
+// ForCluster sets the cluster name for this MachineDeployment.
+func (mdb *MachineDeploymentBuilder) ForCluster(clusterName string) *MachineDeploymentBuilder {
+	mdb.clusterName = clusterName
+	return mdb
+}
+
+// WithReplicas sets the desired replica count.
+func (mdb *MachineDeploymentBuilder) WithReplicas(replicas int) *MachineDeploymentBuilder {
+	mdb.replicas = replicas
+	return mdb
+}
+
+// WithVersion sets the Kubernetes version.
+func (mdb *MachineDeploymentBuilder) WithVersion(version string) *MachineDeploymentBuilder {
+	mdb.version = version
+	return mdb
+}
+
+// WithPhase sets the phase on the MachineDeployment status.
+func (mdb *MachineDeploymentBuilder) WithPhase(phase string) *MachineDeploymentBuilder {
+	mdb.phase = phase
+	return mdb
+}
+
+// WithStatus sets the status replica counts.
+func (mdb *MachineDeploymentBuilder) WithStatus(total, ready, updated, available int) *MachineDeploymentBuilder {
+	mdb.statusReplicas = total
+	mdb.readyReplicas = ready
+	mdb.updatedReplicas = updated
+	mdb.availableReplicas = available
+	return mdb
+}
+
+// Create queues the MachineDeployment creation and returns to the harness.
+func (mdb *MachineDeploymentBuilder) Create() *Harness {
+	mdb.harness.t.Helper()
+	mdb.harness.operations = append(mdb.harness.operations, &machineDeploymentOp{
+		namespace:         mdb.namespace,
+		name:              mdb.name,
+		clusterName:       mdb.clusterName,
+		replicas:          mdb.replicas,
+		version:           mdb.version,
+		phase:             mdb.phase,
+		statusReplicas:    mdb.statusReplicas,
+		readyReplicas:     mdb.readyReplicas,
+		updatedReplicas:   mdb.updatedReplicas,
+		availableReplicas: mdb.availableReplicas,
+	})
+	return mdb.harness
+}
+
+// MachineSetBuilder provides a fluent API for building MachineSet resources.
+type MachineSetBuilder struct {
+	harness           *Harness
+	namespace         string
+	name              string
+	clusterName       string
+	replicas          int
+	version           string
+	statusReplicas    int
+	readyReplicas     int
+	availableReplicas int
+	infraRefKind      string
+	infraRefName      string
+	bootstrapKind     string
+	bootstrapName     string
+	ownerMDName       string
+}
+
+// MachineSet starts a new MachineSet builder.
+func (h *Harness) MachineSet(namespace, name string) *MachineSetBuilder {
+	return &MachineSetBuilder{
+		harness:   h,
+		namespace: namespace,
+		name:      name,
+		replicas:  1,
+	}
+}
+
+// ForCluster sets the cluster name for this MachineSet.
+func (msb *MachineSetBuilder) ForCluster(clusterName string) *MachineSetBuilder {
+	msb.clusterName = clusterName
+	return msb
+}
+
+// WithReplicas sets the desired replica count.
+func (msb *MachineSetBuilder) WithReplicas(replicas int) *MachineSetBuilder {
+	msb.replicas = replicas
+	return msb
+}
+
+// WithVersion sets the Kubernetes version.
+func (msb *MachineSetBuilder) WithVersion(version string) *MachineSetBuilder {
+	msb.version = version
+	return msb
+}
+
+// WithStatus sets the status replica counts.
+func (msb *MachineSetBuilder) WithStatus(total, ready, available int) *MachineSetBuilder {
+	msb.statusReplicas = total
+	msb.readyReplicas = ready
+	msb.availableReplicas = available
+	return msb
+}
+
+// WithInfraRef sets the infrastructure reference.
+func (msb *MachineSetBuilder) WithInfraRef(kind, name string) *MachineSetBuilder {
+	msb.infraRefKind = kind
+	msb.infraRefName = name
+	return msb
+}
+
+// WithBootstrapRef sets the bootstrap config reference.
+func (msb *MachineSetBuilder) WithBootstrapRef(kind, name string) *MachineSetBuilder {
+	msb.bootstrapKind = kind
+	msb.bootstrapName = name
+	return msb
+}
+
+// OwnedBy sets the owner MachineDeployment name.
+func (msb *MachineSetBuilder) OwnedBy(mdName string) *MachineSetBuilder {
+	msb.ownerMDName = mdName
+	return msb
+}
+
+// Create queues the MachineSet creation and returns to the harness.
+func (msb *MachineSetBuilder) Create() *Harness {
+	msb.harness.t.Helper()
+	msb.harness.operations = append(msb.harness.operations, &machineSetOp{
+		namespace:         msb.namespace,
+		name:              msb.name,
+		clusterName:       msb.clusterName,
+		replicas:          msb.replicas,
+		version:           msb.version,
+		statusReplicas:    msb.statusReplicas,
+		readyReplicas:     msb.readyReplicas,
+		availableReplicas: msb.availableReplicas,
+		infraRefKind:      msb.infraRefKind,
+		infraRefName:      msb.infraRefName,
+		bootstrapKind:     msb.bootstrapKind,
+		bootstrapName:     msb.bootstrapName,
+		ownerMDName:       msb.ownerMDName,
+	})
+	return msb.harness
+}
+
+// NodeBuilder provides a fluent API for building Kubernetes Node resources with custom properties.
+type NodeBuilder struct {
+	harness       *Harness
+	name          string
+	providerID    string
+	unschedulable bool
+	conditions    []nodeCondition
+	addresses     []nodeAddress
+	taints        []nodeTaint
+	capacity      nodeResources
+	allocatable   nodeResources
+	nodeInfo      nodeInfoConfig
+}
+
+// nodeCondition holds a node condition configuration.
+type nodeCondition struct {
+	condType string
+	status   string
+	reason   string
+	message  string
+}
+
+// nodeAddress holds a node address configuration.
+type nodeAddress struct {
+	addrType string
+	address  string
+}
+
+// nodeTaint holds a node taint configuration.
+type nodeTaint struct {
+	key    string
+	value  string
+	effect string
+}
+
+// nodeResources holds resource quantities for a node.
+type nodeResources struct {
+	cpu    string
+	memory string
+	pods   string
+}
+
+// nodeInfoConfig holds node system information.
+type nodeInfoConfig struct {
+	os                      string
+	osImage                 string
+	kernelVersion           string
+	containerRuntimeVersion string
+	kubeletVersion          string
+	architecture            string
+}
+
+// Node starts a new node builder with sensible defaults.
+func (h *Harness) Node(name string) *NodeBuilder {
+	return &NodeBuilder{
+		harness: h,
+		name:    name,
+		nodeInfo: nodeInfoConfig{
+			os:                      "linux",
+			osImage:                 "Ubuntu 22.04.3 LTS",
+			kernelVersion:           "5.15.0-91-generic",
+			containerRuntimeVersion: "containerd://1.7.2",
+			kubeletVersion:          "v1.29.0",
+			architecture:            "amd64",
+		},
+		capacity: nodeResources{
+			cpu:    "4",
+			memory: "8Gi",
+			pods:   "110",
+		},
+		allocatable: nodeResources{
+			cpu:    "3500m",
+			memory: "7Gi",
+			pods:   "110",
+		},
+	}
+}
+
+// WithProviderID sets the provider ID on the node.
+func (nb *NodeBuilder) WithProviderID(providerID string) *NodeBuilder {
+	nb.providerID = providerID
+	return nb
+}
+
+// WithUnschedulable sets the node as unschedulable (cordoned).
+func (nb *NodeBuilder) WithUnschedulable(unschedulable bool) *NodeBuilder {
+	nb.unschedulable = unschedulable
+	return nb
+}
+
+// NodeConditionBuilder provides a fluent API for configuring a node condition.
+type NodeConditionBuilder struct {
+	nodeBuilder *NodeBuilder
+	condType    string
+	status      string
+	reason      string
+	message     string
+}
+
+// WithCondition starts configuring a condition for this node.
+func (nb *NodeBuilder) WithCondition(condType string) *NodeConditionBuilder {
+	return &NodeConditionBuilder{
+		nodeBuilder: nb,
+		condType:    condType,
+	}
+}
+
+// Status sets the condition status ("True", "False", "Unknown").
+func (ncb *NodeConditionBuilder) Status(status string) *NodeConditionBuilder {
+	ncb.status = status
+	return ncb
+}
+
+// Reason sets the reason for this condition.
+func (ncb *NodeConditionBuilder) Reason(reason string) *NodeConditionBuilder {
+	ncb.reason = reason
+	return ncb
+}
+
+// Message sets the message for this condition.
+func (ncb *NodeConditionBuilder) Message(message string) *NodeConditionBuilder {
+	ncb.message = message
+	return ncb
+}
+
+// Done returns to the NodeBuilder to continue configuration.
+func (ncb *NodeConditionBuilder) Done() *NodeBuilder {
+	ncb.nodeBuilder.conditions = append(ncb.nodeBuilder.conditions, nodeCondition{
+		condType: ncb.condType,
+		status:   ncb.status,
+		reason:   ncb.reason,
+		message:  ncb.message,
+	})
+	return ncb.nodeBuilder
+}
+
+// WithAddress adds an address to the node.
+func (nb *NodeBuilder) WithAddress(addrType, address string) *NodeBuilder {
+	nb.addresses = append(nb.addresses, nodeAddress{addrType: addrType, address: address})
+	return nb
+}
+
+// WithTaint adds a taint to the node.
+func (nb *NodeBuilder) WithTaint(key, value, effect string) *NodeBuilder {
+	nb.taints = append(nb.taints, nodeTaint{key: key, value: value, effect: effect})
+	return nb
+}
+
+// WithKubeletVersion sets the kubelet version.
+func (nb *NodeBuilder) WithKubeletVersion(version string) *NodeBuilder {
+	nb.nodeInfo.kubeletVersion = version
+	return nb
+}
+
+// Create queues the node creation operation and returns to the harness.
+func (nb *NodeBuilder) Create() *Harness {
+	nb.harness.t.Helper()
+	nb.harness.operations = append(nb.harness.operations, &nodeBuilderOp{
+		name:          nb.name,
+		providerID:    nb.providerID,
+		unschedulable: nb.unschedulable,
+		conditions:    nb.conditions,
+		addresses:     nb.addresses,
+		taints:        nb.taints,
+		capacity:      nb.capacity,
+		allocatable:   nb.allocatable,
+		nodeInfo:      nb.nodeInfo,
+	})
+	return nb.harness
 }
 
 // ToolCall provides a fluent API for MCP tool call testing.

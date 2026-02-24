@@ -1,0 +1,8 @@
+Found 1 machine sets in cluster cluster-a:
+
+MachineSet: test-clusters/ms-a
+  Cluster: cluster-a
+  Replicas: 3
+  Ready: 3/3
+  Available: 3
+

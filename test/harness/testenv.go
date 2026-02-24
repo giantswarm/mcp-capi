@@ -15,6 +15,7 @@ import (
 
 	"github.com/giantswarm/k8senv"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -199,6 +200,22 @@ func (te *testEnv) createNamespace(ctx context.Context, name string) {
 
 	if err := te.ctrlClient.Create(ctx, ns); err != nil {
 		te.t.Fatalf("failed to create namespace %s: %v", name, err)
+	}
+}
+
+// createSecret creates a Kubernetes Secret resource.
+func (te *testEnv) createSecret(ctx context.Context, namespace, name string, data map[string][]byte) {
+	te.t.Helper()
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: data,
+	}
+
+	if err := te.ctrlClient.Create(ctx, secret); err != nil {
+		te.t.Fatalf("failed to create secret %s/%s: %v", namespace, name, err)
 	}
 }
 
@@ -653,6 +670,287 @@ func (te *testEnv) setClusterControlPlaneRefCustom(ctx context.Context, namespac
 	}
 	if err := te.ctrlClient.Update(ctx, cluster); err != nil {
 		te.t.Fatalf("failed to set ControlPlaneRef on cluster %s/%s: %v", namespace, clusterName, err)
+	}
+}
+
+// createMachineDeployment creates a CAPI MachineDeployment resource for the given cluster.
+func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDeploymentCreateOptions) {
+	te.t.Helper()
+
+	replicas := int32(opts.replicas)
+	md := &clusterv1.MachineDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.name,
+			Namespace: opts.namespace,
+			Labels: map[string]string{
+				clusterv1.ClusterNameLabel: opts.clusterName,
+			},
+		},
+		Spec: clusterv1.MachineDeploymentSpec{
+			ClusterName: opts.clusterName,
+			Replicas:    &replicas,
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"machinedeployment": opts.name,
+				},
+			},
+			Template: clusterv1.MachineTemplateSpec{
+				ObjectMeta: clusterv1.ObjectMeta{
+					Labels: map[string]string{
+						"machinedeployment":                  opts.name,
+						clusterv1.ClusterNameLabel:           opts.clusterName,
+						clusterv1.MachineDeploymentNameLabel: opts.name,
+					},
+				},
+				Spec: clusterv1.MachineSpec{
+					ClusterName: opts.clusterName,
+					Bootstrap: clusterv1.Bootstrap{
+						DataSecretName: ptr("bootstrap-secret"),
+					},
+				},
+			},
+		},
+	}
+
+	if opts.version != "" {
+		md.Spec.Template.Spec.Version = &opts.version
+	}
+
+	if err := te.ctrlClient.Create(ctx, md); err != nil {
+		te.t.Fatalf("failed to create MachineDeployment %s/%s: %v", opts.namespace, opts.name, err)
+	}
+
+	// Update status if needed
+	needsStatusUpdate := opts.phase != "" || opts.readyReplicas > 0 || opts.updatedReplicas > 0 || opts.availableReplicas > 0 || opts.statusReplicas > 0
+	if needsStatusUpdate {
+		if opts.phase != "" {
+			md.Status.Phase = opts.phase
+		}
+		md.Status.Replicas = int32(opts.statusReplicas)
+		md.Status.ReadyReplicas = int32(opts.readyReplicas)
+		md.Status.UpdatedReplicas = int32(opts.updatedReplicas)
+		md.Status.AvailableReplicas = int32(opts.availableReplicas)
+		if err := te.ctrlClient.Status().Update(ctx, md); err != nil {
+			te.t.Fatalf("failed to update status on MachineDeployment %s/%s: %v", opts.namespace, opts.name, err)
+		}
+	}
+}
+
+// machineDeploymentCreateOptions holds parameters for creating a MachineDeployment.
+type machineDeploymentCreateOptions struct {
+	namespace         string
+	name              string
+	clusterName       string
+	replicas          int
+	version           string
+	phase             string
+	statusReplicas    int
+	readyReplicas     int
+	updatedReplicas   int
+	availableReplicas int
+}
+
+// createMachineSet creates a CAPI MachineSet resource for the given cluster.
+func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOptions) {
+	te.t.Helper()
+
+	replicas := int32(opts.replicas)
+	ms := &clusterv1.MachineSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.name,
+			Namespace: opts.namespace,
+			Labels: map[string]string{
+				clusterv1.ClusterNameLabel: opts.clusterName,
+			},
+		},
+		Spec: clusterv1.MachineSetSpec{
+			ClusterName: opts.clusterName,
+			Replicas:    &replicas,
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"machineset": opts.name,
+				},
+			},
+			Template: clusterv1.MachineTemplateSpec{
+				ObjectMeta: clusterv1.ObjectMeta{
+					Labels: map[string]string{
+						"machineset":               opts.name,
+						clusterv1.ClusterNameLabel: opts.clusterName,
+					},
+				},
+				Spec: clusterv1.MachineSpec{
+					ClusterName: opts.clusterName,
+					Bootstrap: clusterv1.Bootstrap{
+						DataSecretName: ptr("bootstrap-secret"),
+					},
+				},
+			},
+		},
+	}
+
+	if opts.version != "" {
+		ms.Spec.Template.Spec.Version = &opts.version
+	}
+
+	if opts.infraRefKind != "" {
+		ms.Spec.Template.Spec.InfrastructureRef = corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			Kind:       opts.infraRefKind,
+			Name:       opts.infraRefName,
+		}
+	}
+
+	if opts.bootstrapKind != "" {
+		ms.Spec.Template.Spec.Bootstrap.ConfigRef = &corev1.ObjectReference{
+			APIVersion: "bootstrap.cluster.x-k8s.io/v1beta1",
+			Kind:       opts.bootstrapKind,
+			Name:       opts.bootstrapName,
+		}
+	}
+
+	if opts.ownerMDName != "" {
+		isController := true
+		ms.OwnerReferences = []metav1.OwnerReference{
+			{
+				APIVersion: "cluster.x-k8s.io/v1beta1",
+				Kind:       "MachineDeployment",
+				Name:       opts.ownerMDName,
+				UID:        "test-uid",
+				Controller: &isController,
+			},
+		}
+	}
+
+	if err := te.ctrlClient.Create(ctx, ms); err != nil {
+		te.t.Fatalf("failed to create MachineSet %s/%s: %v", opts.namespace, opts.name, err)
+	}
+
+	// Update status if needed
+	needsStatusUpdate := opts.statusReplicas > 0 || opts.readyReplicas > 0 || opts.availableReplicas > 0
+	if needsStatusUpdate {
+		ms.Status.Replicas = int32(opts.statusReplicas)
+		ms.Status.ReadyReplicas = int32(opts.readyReplicas)
+		ms.Status.AvailableReplicas = int32(opts.availableReplicas)
+		if err := te.ctrlClient.Status().Update(ctx, ms); err != nil {
+			te.t.Fatalf("failed to update status on MachineSet %s/%s: %v", opts.namespace, opts.name, err)
+		}
+	}
+}
+
+// machineSetCreateOptions holds parameters for creating a MachineSet.
+type machineSetCreateOptions struct {
+	namespace         string
+	name              string
+	clusterName       string
+	replicas          int
+	version           string
+	statusReplicas    int
+	readyReplicas     int
+	availableReplicas int
+	infraRefKind      string
+	infraRefName      string
+	bootstrapKind     string
+	bootstrapName     string
+	ownerMDName       string
+}
+
+// nodeCreateOptions holds all parameters for creating a fully-configured Kubernetes Node.
+type nodeCreateOptions struct {
+	name          string
+	providerID    string
+	unschedulable bool
+	conditions    []nodeCondition
+	addresses     []nodeAddress
+	taints        []nodeTaint
+	capacity      nodeResources
+	allocatable   nodeResources
+	nodeInfo      nodeInfoConfig
+}
+
+// createNode creates a Kubernetes Node resource with the given configuration.
+func (te *testEnv) createNode(ctx context.Context, opts nodeCreateOptions) {
+	te.t.Helper()
+
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: opts.name,
+		},
+		Spec: corev1.NodeSpec{
+			Unschedulable: opts.unschedulable,
+		},
+	}
+
+	if opts.providerID != "" {
+		node.Spec.ProviderID = opts.providerID
+	}
+
+	// Set taints
+	for _, taint := range opts.taints {
+		node.Spec.Taints = append(node.Spec.Taints, corev1.Taint{
+			Key:    taint.key,
+			Value:  taint.value,
+			Effect: corev1.TaintEffect(taint.effect),
+		})
+	}
+
+	if err := te.ctrlClient.Create(ctx, node); err != nil {
+		te.t.Fatalf("failed to create node %s: %v", opts.name, err)
+	}
+
+	// Update status (conditions, addresses, capacity, allocatable, nodeInfo)
+	node.Status.NodeInfo = corev1.NodeSystemInfo{
+		OperatingSystem:         opts.nodeInfo.os,
+		OSImage:                 opts.nodeInfo.osImage,
+		KernelVersion:           opts.nodeInfo.kernelVersion,
+		ContainerRuntimeVersion: opts.nodeInfo.containerRuntimeVersion,
+		KubeletVersion:          opts.nodeInfo.kubeletVersion,
+		Architecture:            opts.nodeInfo.architecture,
+	}
+
+	// Set conditions
+	for _, cond := range opts.conditions {
+		node.Status.Conditions = append(node.Status.Conditions, corev1.NodeCondition{
+			Type:    corev1.NodeConditionType(cond.condType),
+			Status:  corev1.ConditionStatus(cond.status),
+			Reason:  cond.reason,
+			Message: cond.message,
+		})
+	}
+
+	// Set addresses
+	for _, addr := range opts.addresses {
+		node.Status.Addresses = append(node.Status.Addresses, corev1.NodeAddress{
+			Type:    corev1.NodeAddressType(addr.addrType),
+			Address: addr.address,
+		})
+	}
+
+	// Set capacity
+	node.Status.Capacity = corev1.ResourceList{}
+	if opts.capacity.cpu != "" {
+		node.Status.Capacity[corev1.ResourceCPU] = resource.MustParse(opts.capacity.cpu)
+	}
+	if opts.capacity.memory != "" {
+		node.Status.Capacity[corev1.ResourceMemory] = resource.MustParse(opts.capacity.memory)
+	}
+	if opts.capacity.pods != "" {
+		node.Status.Capacity[corev1.ResourcePods] = resource.MustParse(opts.capacity.pods)
+	}
+
+	// Set allocatable
+	node.Status.Allocatable = corev1.ResourceList{}
+	if opts.allocatable.cpu != "" {
+		node.Status.Allocatable[corev1.ResourceCPU] = resource.MustParse(opts.allocatable.cpu)
+	}
+	if opts.allocatable.memory != "" {
+		node.Status.Allocatable[corev1.ResourceMemory] = resource.MustParse(opts.allocatable.memory)
+	}
+	if opts.allocatable.pods != "" {
+		node.Status.Allocatable[corev1.ResourcePods] = resource.MustParse(opts.allocatable.pods)
+	}
+
+	if err := te.ctrlClient.Status().Update(ctx, node); err != nil {
+		te.t.Fatalf("failed to update status on node %s: %v", opts.name, err)
 	}
 }
 
