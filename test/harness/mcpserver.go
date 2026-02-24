@@ -65,7 +65,7 @@ func initializeMCPServer(t TestingT, kubeconfigPath string, input io.Reader, out
 			default:
 			}
 		case <-time.After(serverShutdownTimeout):
-			t.Error("Timeout waiting for server shutdown")
+			t.Error("timeout waiting for server shutdown")
 		}
 	})
 }
