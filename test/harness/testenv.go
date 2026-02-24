@@ -537,8 +537,7 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 	}
 
 	// Update status if needed
-	needsStatusUpdate := opts.hasStatus || opts.phase != "" || opts.readyReplicas > 0 || opts.updatedReplicas > 0 || opts.availableReplicas > 0 || opts.statusReplicas > 0
-	if needsStatusUpdate {
+	if opts.needsStatusUpdate() {
 		if opts.phase != "" {
 			md.Status.Phase = opts.phase
 		}
@@ -566,6 +565,12 @@ type machineDeploymentCreateOptions struct {
 	readyReplicas     int
 	updatedReplicas   int
 	availableReplicas int
+}
+
+// needsStatusUpdate reports whether any status fields are set that require
+// a Status().Update() call after MachineDeployment creation.
+func (o *machineDeploymentCreateOptions) needsStatusUpdate() bool {
+	return o.hasStatus || o.phase != "" || o.readyReplicas > 0 || o.updatedReplicas > 0 || o.availableReplicas > 0 || o.statusReplicas > 0
 }
 
 // createMachineSet creates a CAPI MachineSet resource for the given cluster.
@@ -658,8 +663,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 	}
 
 	// Update status if needed
-	needsStatusUpdate := opts.statusReplicas > 0 || opts.readyReplicas > 0 || opts.availableReplicas > 0 || opts.failureReason != "" || opts.failureMessage != "" || len(opts.conditions) > 0
-	if needsStatusUpdate {
+	if opts.needsStatusUpdate() {
 		ms.Status.Replicas = int32(opts.statusReplicas)
 		ms.Status.ReadyReplicas = int32(opts.readyReplicas)
 		ms.Status.AvailableReplicas = int32(opts.availableReplicas)
@@ -706,6 +710,12 @@ type machineSetCreateOptions struct {
 	conditions        []machineSetCondition
 	failureReason     string
 	failureMessage    string
+}
+
+// needsStatusUpdate reports whether any status fields are set that require
+// a Status().Update() call after MachineSet creation.
+func (o *machineSetCreateOptions) needsStatusUpdate() bool {
+	return o.statusReplicas > 0 || o.readyReplicas > 0 || o.availableReplicas > 0 || o.failureReason != "" || o.failureMessage != "" || len(o.conditions) > 0
 }
 
 // nodeCreateOptions holds all parameters for creating a fully-configured Kubernetes Node.
@@ -825,6 +835,12 @@ type machineCustomCreateOptions struct {
 	addresses     []machineAddress
 }
 
+// needsStatusUpdate reports whether any status fields are set that require
+// a Status().Update() call after Machine creation.
+func (o *machineCustomCreateOptions) needsStatusUpdate() bool {
+	return o.phase != "" || o.nodeRefName != "" || len(o.conditions) > 0 || len(o.addresses) > 0
+}
+
 // createMachineCustom creates a CAPI Machine resource with fine-grained field control.
 func (te *testEnv) createMachineCustom(ctx context.Context, opts machineCustomCreateOptions) {
 	te.t.Helper()
@@ -872,8 +888,7 @@ func (te *testEnv) createMachineCustom(ctx context.Context, opts machineCustomCr
 		te.t.Fatalf("failed to create Machine %s/%s: %v", opts.namespace, opts.name, err)
 	}
 
-	needsStatusUpdate := opts.phase != "" || opts.nodeRefName != "" || len(opts.conditions) > 0 || len(opts.addresses) > 0
-	if needsStatusUpdate {
+	if opts.needsStatusUpdate() {
 		if opts.phase != "" {
 			machine.Status.Phase = opts.phase
 		}
