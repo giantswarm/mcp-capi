@@ -77,7 +77,16 @@ func InitManager() error {
 		// Pool size matches GOMAXPROCS, which is also the default for
 		// go test -parallel. Override via HARNESS_POOL_SIZE env var.
 		poolSize := runtime.GOMAXPROCS(0)
-		if v, err := strconv.Atoi(os.Getenv("HARNESS_POOL_SIZE")); err == nil && v > 0 {
+		if raw := os.Getenv("HARNESS_POOL_SIZE"); raw != "" {
+			v, err := strconv.Atoi(raw)
+			if err != nil {
+				mgrErr = fmt.Errorf("invalid HARNESS_POOL_SIZE %q: %w", raw, err)
+				return
+			}
+			if v <= 0 {
+				mgrErr = fmt.Errorf("invalid HARNESS_POOL_SIZE %q: must be a positive integer", raw)
+				return
+			}
 			poolSize = v
 		}
 
