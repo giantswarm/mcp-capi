@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 // operation represents a single deferred operation in the lazy execution model.
@@ -224,7 +226,15 @@ func (op *toolCallOp) execute(ctx context.Context, ec *executionContext) {
 }
 
 func (op *toolCallOp) describe() string {
-	return fmt.Sprintf("call MCP tool %q", op.toolName)
+	if len(op.args) == 0 {
+		return fmt.Sprintf("call MCP tool %q", op.toolName)
+	}
+	keys := make([]string, 0, len(op.args))
+	for k := range op.args {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return fmt.Sprintf("call MCP tool %q with args [%s]", op.toolName, strings.Join(keys, ", "))
 }
 
 // assertContentOp compares the last tool call result with a golden file.
