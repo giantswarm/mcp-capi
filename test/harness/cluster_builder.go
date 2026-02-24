@@ -50,6 +50,7 @@ func (cb *ClusterBuilder) WithProvider(provider string) *ClusterBuilder {
 // WithPhase sets the cluster phase to apply after creation.
 func (cb *ClusterBuilder) WithPhase(phase string) *ClusterBuilder {
 	cb.phase = phase
+	cb.hasStatus = true
 	return cb
 }
 
@@ -88,12 +89,14 @@ func (cb *ClusterBuilder) WithControlPlaneRef(kind, name string) *ClusterBuilder
 // WithControlPlaneReady explicitly sets the ControlPlaneReady status field on the cluster.
 func (cb *ClusterBuilder) WithControlPlaneReady(ready bool) *ClusterBuilder {
 	cb.controlPlaneReady = &ready
+	cb.hasStatus = true
 	return cb
 }
 
 // WithInfraReady explicitly sets the InfrastructureReady status field on the cluster.
 func (cb *ClusterBuilder) WithInfraReady(ready bool) *ClusterBuilder {
 	cb.infraReady = &ready
+	cb.hasStatus = true
 	return cb
 }
 

@@ -34,6 +34,7 @@ func (mb *MachineBuilder) ForCluster(clusterName string) *MachineBuilder {
 // WithPhase sets the machine phase.
 func (mb *MachineBuilder) WithPhase(phase string) *MachineBuilder {
 	mb.phase = phase
+	mb.hasStatus = true
 	return mb
 }
 
@@ -52,6 +53,7 @@ func (mb *MachineBuilder) WithProviderID(providerID string) *MachineBuilder {
 // WithNodeRef sets the NodeRef (makes the machine "ready").
 func (mb *MachineBuilder) WithNodeRef(nodeName string) *MachineBuilder {
 	mb.nodeRefName = nodeName
+	mb.hasStatus = true
 	return mb
 }
 
@@ -83,6 +85,7 @@ func (mb *MachineBuilder) WithCondition(condType string) *simpleConditionBuilder
 // WithAddress adds an address to the machine status.
 func (mb *MachineBuilder) WithAddress(addrType, address string) *MachineBuilder {
 	mb.addresses = append(mb.addresses, machineAddress{addrType: addrType, address: address})
+	mb.hasStatus = true
 	return mb
 }
 

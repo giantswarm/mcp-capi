@@ -299,12 +299,13 @@ type clusterCreateOptions struct {
 	customInfraRef    *customRef // custom InfrastructureRef (overrides provider)
 	controlPlaneReady *bool      // explicit ControlPlaneReady status
 	infraReady        *bool      // explicit InfrastructureReady status
+	hasStatus         bool       // explicit flag to trigger status update even with zero values
 }
 
 // needsStatusUpdate reports whether any status fields are set that require
 // a Status().Update() call after cluster creation.
 func (o *clusterCreateOptions) needsStatusUpdate() bool {
-	return o.phase != "" || len(o.conditions) > 0 || o.controlPlaneReady != nil || o.infraReady != nil
+	return o.hasStatus || o.phase != "" || len(o.conditions) > 0 || o.controlPlaneReady != nil || o.infraReady != nil
 }
 
 // providerInfraRef returns the APIVersion and Kind for a provider's infrastructure reference.
@@ -819,12 +820,13 @@ type machineCustomCreateOptions struct {
 	infraRefName  string
 	conditions    []simpleCondition
 	addresses     []machineAddress
+	hasStatus     bool // explicit flag to trigger status update even with zero values
 }
 
 // needsStatusUpdate reports whether any status fields are set that require
 // a Status().Update() call after Machine creation.
 func (o *machineCustomCreateOptions) needsStatusUpdate() bool {
-	return o.phase != "" || o.nodeRefName != "" || len(o.conditions) > 0 || len(o.addresses) > 0
+	return o.hasStatus || o.phase != "" || o.nodeRefName != "" || len(o.conditions) > 0 || len(o.addresses) > 0
 }
 
 // createMachineCustom creates a CAPI Machine resource with fine-grained field control.
