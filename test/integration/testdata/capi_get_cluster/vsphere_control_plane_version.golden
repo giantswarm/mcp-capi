@@ -1,0 +1,6 @@
+Cluster: test-clusters/vsphere-kcp-cluster
+Phase: 
+Ready: false
+Provider: vsphere
+Version: v1.30.0
+Machines: 0/0 ready

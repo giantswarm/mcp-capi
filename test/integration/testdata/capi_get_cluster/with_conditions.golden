@@ -1,0 +1,11 @@
+Cluster: test-clusters/healthy-cluster
+Phase: 
+Ready: true
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  ControlPlaneReady: True (ControlPlaneInitialized)
+  InfrastructureReady: True (InfrastructureProvisioned)
