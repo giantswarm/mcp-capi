@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -39,7 +40,7 @@ func compareWithGoldenNormalized(text, goldenPath string, normalizers []Normaliz
 		normalized = n(normalized)
 	}
 
-	if os.Getenv("UPDATE_GOLDEN") == "true" {
+	if update, _ := strconv.ParseBool(os.Getenv("UPDATE_GOLDEN")); update {
 		return updateGoldenFile(normalized, goldenPath)
 	}
 
