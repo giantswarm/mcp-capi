@@ -36,7 +36,10 @@ func (m *mockT) Error(args ...any) { m.errors = append(m.errors, fmt.Sprint(args
 func (m *mockT) Errorf(format string, args ...any) {
 	m.errors = append(m.errors, fmt.Sprintf(format, args...))
 }
-func (m *mockT) TempDir() string { return "" }
+func (m *mockT) TempDir() string {
+	m.Fatal("TempDir is not supported on mockT")
+	return ""
+}
 
 // runCleanups runs all registered cleanups in LIFO order (matching testing.T behavior).
 func (m *mockT) runCleanups() {
