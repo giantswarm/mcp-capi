@@ -200,6 +200,7 @@ type machineDeploymentOp struct {
 	nilReplicas       bool
 	version           string
 	phase             string
+	hasStatus         bool // explicit flag to trigger status update even with zero values
 	statusReplicas    int
 	readyReplicas     int
 	updatedReplicas   int
@@ -217,6 +218,7 @@ func (op *machineDeploymentOp) execute(ctx context.Context, ec *executionContext
 		nilReplicas:       op.nilReplicas,
 		version:           op.version,
 		phase:             op.phase,
+		hasStatus:         op.hasStatus,
 		statusReplicas:    op.statusReplicas,
 		readyReplicas:     op.readyReplicas,
 		updatedReplicas:   op.updatedReplicas,

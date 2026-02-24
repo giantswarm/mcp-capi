@@ -405,9 +405,9 @@ func (te *testEnv) createMachine(ctx context.Context, namespace, clusterName, ma
 	}
 }
 
-// ptr returns a pointer to the given string value.
-func ptr(s string) *string {
-	return &s
+// ptr returns a pointer to the given value.
+func ptr[T any](v T) *T {
+	return &v
 }
 
 // createKubeadmControlPlane creates a KubeadmControlPlane resource.
@@ -535,7 +535,7 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 	}
 
 	// Update status if needed
-	needsStatusUpdate := opts.phase != "" || opts.readyReplicas > 0 || opts.updatedReplicas > 0 || opts.availableReplicas > 0 || opts.statusReplicas > 0
+	needsStatusUpdate := opts.hasStatus || opts.phase != "" || opts.readyReplicas > 0 || opts.updatedReplicas > 0 || opts.availableReplicas > 0 || opts.statusReplicas > 0
 	if needsStatusUpdate {
 		if opts.phase != "" {
 			md.Status.Phase = opts.phase
@@ -559,6 +559,7 @@ type machineDeploymentCreateOptions struct {
 	nilReplicas       bool
 	version           string
 	phase             string
+	hasStatus         bool // explicit flag to trigger status update even with zero values
 	statusReplicas    int
 	readyReplicas     int
 	updatedReplicas   int

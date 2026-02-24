@@ -395,6 +395,7 @@ type MachineDeploymentBuilder struct {
 	nilReplicas       bool // if true, Spec.Replicas is nil (overrides replicas field)
 	version           string
 	phase             string
+	hasStatus         bool // explicit flag to trigger status update even with zero values
 	statusReplicas    int
 	readyReplicas     int
 	updatedReplicas   int
@@ -442,7 +443,9 @@ func (mdb *MachineDeploymentBuilder) WithPhase(phase string) *MachineDeploymentB
 }
 
 // WithStatus sets the status replica counts.
+// Setting status explicitly triggers a status update even when all values are zero.
 func (mdb *MachineDeploymentBuilder) WithStatus(total, ready, updated, available int) *MachineDeploymentBuilder {
+	mdb.hasStatus = true
 	mdb.statusReplicas = total
 	mdb.readyReplicas = ready
 	mdb.updatedReplicas = updated
@@ -461,6 +464,7 @@ func (mdb *MachineDeploymentBuilder) Create() *Harness {
 		nilReplicas:       mdb.nilReplicas,
 		version:           mdb.version,
 		phase:             mdb.phase,
+		hasStatus:         mdb.hasStatus,
 		statusReplicas:    mdb.statusReplicas,
 		readyReplicas:     mdb.readyReplicas,
 		updatedReplicas:   mdb.updatedReplicas,
