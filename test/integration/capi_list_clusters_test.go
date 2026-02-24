@@ -69,6 +69,93 @@ func TestCapiListClusters(t *testing.T) {
 			Execute()
 	})
 
+	t.Run("lists single cluster", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "only-cluster").
+			ToolCall("capi_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("single.golden").
+			Execute()
+	})
+
+	t.Run("lists clusters without namespace argument", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "cluster-1").
+			ToolCall("capi_list_clusters").
+			AssertContent("no_namespace_arg.golden").
+			Execute()
+	})
+
+	t.Run("lists mixed providers in same namespace", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "aws-cluster").WithProvider("aws").WithPhase("Provisioned").Create().
+			Cluster(namespace, "azure-cluster").WithProvider("azure").WithPhase("Provisioned").Create().
+			Cluster(namespace, "gcp-cluster").WithProvider("gcp").WithPhase("Pending").Create().
+			ToolCall("capi_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("mixed_providers_same_namespace.golden").
+			Execute()
+	})
+
+	t.Run("lists cluster with unknown infrastructure provider", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "custom-cluster").
+			WithCustomInfraRef("DOCluster", "custom-cluster").
+			Create().
+			ToolCall("capi_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("unknown_infra_kind.golden").
+			Execute()
+	})
+
+	t.Run("lists cluster with non-kubeadm control plane", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "rosa-cluster").
+			WithProvider("aws").
+			WithControlPlaneRef("ROSAControlPlane", "rosa-cp").
+			Create().
+			ToolCall("capi_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("non_kubeadm_control_plane.golden").
+			Execute()
+	})
+
+	t.Run("lists cluster with missing control plane resource", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "missing-cp-cluster").
+			WithProvider("aws").
+			WithControlPlaneRef("KubeadmControlPlane", "missing-cp-cluster-control-plane").
+			Create().
+			ToolCall("capi_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("missing_control_plane.golden").
+			Execute()
+	})
+
 	t.Run("lists clusters across all namespaces", func(t *testing.T) {
 		t.Parallel()
 		namespace := "test-clusters"

@@ -385,12 +385,13 @@ func (te *testEnv) createGCPCluster(ctx context.Context, namespace, name string)
 // clusterCreateOptions holds all parameters for creating a fully-configured cluster
 // in minimal API calls.
 type clusterCreateOptions struct {
-	namespace  string
-	name       string
-	provider   string
-	version    string
-	phase      string
-	conditions []clusterv1.Condition
+	namespace      string
+	name           string
+	provider       string
+	version        string
+	phase          string
+	conditions     []clusterv1.Condition
+	customInfraRef *customRef // custom InfrastructureRef (overrides provider)
 }
 
 // createClusterFull creates a fully-configured CAPI Cluster in minimal API calls.
@@ -416,42 +417,53 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 		},
 	}
 
-	// Set infrastructure ref before Create based on provider
-	switch opts.provider {
-	case "aws":
-		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
-			Kind:       "AWSCluster",
-			Name:       opts.name,
-			Namespace:  opts.namespace,
-		}
-	case "azure":
+	// Set infrastructure ref before Create
+	if opts.customInfraRef != nil {
+		// Custom InfrastructureRef overrides provider
 		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
 			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-			Kind:       "AzureCluster",
-			Name:       opts.name,
+			Kind:       opts.customInfraRef.kind,
+			Name:       opts.customInfraRef.name,
 			Namespace:  opts.namespace,
 		}
-	case "gcp":
-		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-			Kind:       "GCPCluster",
-			Name:       opts.name,
-			Namespace:  opts.namespace,
-		}
-	case "vsphere":
-		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-			Kind:       "VSphereCluster",
-			Name:       opts.name,
-			Namespace:  opts.namespace,
-		}
-	case "vcd":
-		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-			Kind:       "VCDCluster",
-			Name:       opts.name,
-			Namespace:  opts.namespace,
+	} else {
+		// Set infrastructure ref based on provider
+		switch opts.provider {
+		case "aws":
+			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
+				Kind:       "AWSCluster",
+				Name:       opts.name,
+				Namespace:  opts.namespace,
+			}
+		case "azure":
+			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+				Kind:       "AzureCluster",
+				Name:       opts.name,
+				Namespace:  opts.namespace,
+			}
+		case "gcp":
+			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+				Kind:       "GCPCluster",
+				Name:       opts.name,
+				Namespace:  opts.namespace,
+			}
+		case "vsphere":
+			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+				Kind:       "VSphereCluster",
+				Name:       opts.name,
+				Namespace:  opts.namespace,
+			}
+		case "vcd":
+			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+				Kind:       "VCDCluster",
+				Name:       opts.name,
+				Namespace:  opts.namespace,
+			}
 		}
 	}
 
@@ -608,6 +620,31 @@ func (te *testEnv) setClusterControlPlaneRef(ctx context.Context, namespace, clu
 		APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
 		Kind:       "KubeadmControlPlane",
 		Name:       kcpName,
+		Namespace:  namespace,
+	}
+	// Ensure Topology.Class is set if Topology exists (required by CAPI validation)
+	if cluster.Spec.Topology != nil && cluster.Spec.Topology.Class == "" {
+		cluster.Spec.Topology.Class = "default"
+	}
+	if err := te.ctrlClient.Update(ctx, cluster); err != nil {
+		te.t.Fatalf("failed to set ControlPlaneRef on cluster %s/%s: %v", namespace, clusterName, err)
+	}
+}
+
+// setClusterControlPlaneRefCustom sets the ControlPlaneRef on a cluster to an arbitrary kind and name.
+// Unlike setClusterControlPlaneRef, this does not assume KubeadmControlPlane and allows
+// testing non-KubeadmControlPlane types or references to non-existent resources.
+func (te *testEnv) setClusterControlPlaneRefCustom(ctx context.Context, namespace, clusterName, kind, cpName string) {
+	te.t.Helper()
+	cluster := &clusterv1.Cluster{}
+	key := client.ObjectKey{Namespace: namespace, Name: clusterName}
+	if err := te.ctrlClient.Get(ctx, key, cluster); err != nil {
+		te.t.Fatalf("failed to get cluster %s/%s: %v", namespace, clusterName, err)
+	}
+	cluster.Spec.ControlPlaneRef = &corev1.ObjectReference{
+		APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
+		Kind:       kind,
+		Name:       cpName,
 		Namespace:  namespace,
 	}
 	// Ensure Topology.Class is set if Topology exists (required by CAPI validation)

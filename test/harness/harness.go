@@ -170,6 +170,14 @@ type ClusterBuilder struct {
 	readyMachines int    // number of machines with NodeRef (ready)
 	controlPlane  *controlPlaneConfig
 	conditions    []clusterv1.Condition // conditions to set on the cluster
+	customInfraRef  *customRef // custom InfrastructureRef (overrides provider)
+	customCPRef     *customRef // custom ControlPlaneRef (overrides controlPlane)
+}
+
+// customRef holds a custom object reference for InfrastructureRef or ControlPlaneRef.
+type customRef struct {
+	kind string
+	name string
 }
 
 // Cluster starts a new cluster builder.
@@ -204,6 +212,21 @@ func (cb *ClusterBuilder) WithVersion(version string) *ClusterBuilder {
 func (cb *ClusterBuilder) WithMachines(total, ready int) *ClusterBuilder {
 	cb.totalMachines = total
 	cb.readyMachines = ready
+	return cb
+}
+
+// WithCustomInfraRef sets a custom InfrastructureRef with an arbitrary Kind.
+// This overrides any provider set via WithProvider.
+func (cb *ClusterBuilder) WithCustomInfraRef(kind, name string) *ClusterBuilder {
+	cb.customInfraRef = &customRef{kind: kind, name: name}
+	return cb
+}
+
+// WithControlPlaneRef sets a custom ControlPlaneRef with an arbitrary Kind and name.
+// Use this to test non-KubeadmControlPlane control plane types or references
+// to control plane resources that don't exist.
+func (cb *ClusterBuilder) WithControlPlaneRef(kind, name string) *ClusterBuilder {
+	cb.customCPRef = &customRef{kind: kind, name: name}
 	return cb
 }
 
@@ -309,15 +332,17 @@ func (cpb *ControlPlaneBuilder) Done() *ClusterBuilder {
 func (cb *ClusterBuilder) Create() *Harness {
 	cb.harness.t.Helper()
 	cb.harness.operations = append(cb.harness.operations, &clusterBuilderOp{
-		namespace:     cb.namespace,
-		name:          cb.name,
-		provider:      cb.provider,
-		phase:         cb.phase,
-		version:       cb.version,
-		totalMachines: cb.totalMachines,
-		readyMachines: cb.readyMachines,
-		controlPlane:  cb.controlPlane,
-		conditions:    cb.conditions,
+		namespace:      cb.namespace,
+		name:           cb.name,
+		provider:       cb.provider,
+		phase:          cb.phase,
+		version:        cb.version,
+		totalMachines:  cb.totalMachines,
+		readyMachines:  cb.readyMachines,
+		controlPlane:   cb.controlPlane,
+		conditions:     cb.conditions,
+		customInfraRef: cb.customInfraRef,
+		customCPRef:    cb.customCPRef,
 	})
 	return cb.harness
 }

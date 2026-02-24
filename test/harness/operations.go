@@ -67,15 +67,17 @@ func (op *clusterOp) describe() string {
 
 // clusterBuilderOp creates a cluster with optional provider, phase, version, machine settings, and conditions.
 type clusterBuilderOp struct {
-	namespace     string
-	name          string
-	provider      string
-	phase         string
-	version       string
-	totalMachines int
-	readyMachines int
-	controlPlane  *controlPlaneConfig
-	conditions    []clusterv1.Condition
+	namespace      string
+	name           string
+	provider       string
+	phase          string
+	version        string
+	totalMachines  int
+	readyMachines  int
+	controlPlane   *controlPlaneConfig
+	conditions     []clusterv1.Condition
+	customInfraRef *customRef // custom InfrastructureRef (overrides provider)
+	customCPRef    *customRef // custom ControlPlaneRef (overrides controlPlane)
 }
 
 func (op *clusterBuilderOp) execute(ec *executionContext) {
@@ -84,12 +86,13 @@ func (op *clusterBuilderOp) execute(ec *executionContext) {
 
 	// Create the cluster with all spec fields and status in minimal API calls
 	ec.k8sEnv.createClusterFull(ec.ctx, clusterCreateOptions{
-		namespace:  op.namespace,
-		name:       op.name,
-		provider:   op.provider,
-		phase:      op.phase,
-		version:    op.version,
-		conditions: op.conditions,
+		namespace:      op.namespace,
+		name:           op.name,
+		provider:       op.provider,
+		phase:          op.phase,
+		version:        op.version,
+		conditions:     op.conditions,
+		customInfraRef: op.customInfraRef,
 	})
 
 	// Create machines if specified
@@ -104,6 +107,11 @@ func (op *clusterBuilderOp) execute(ec *executionContext) {
 		kcpName := op.name + "-control-plane"
 		ec.k8sEnv.createKubeadmControlPlane(ec.ctx, op.namespace, kcpName, op.controlPlane.version, op.controlPlane.replicas)
 		ec.k8sEnv.setClusterControlPlaneRef(ec.ctx, op.namespace, op.name, kcpName)
+	}
+
+	// Set custom ControlPlaneRef if specified (overrides controlPlane)
+	if op.customCPRef != nil {
+		ec.k8sEnv.setClusterControlPlaneRefCustom(ec.ctx, op.namespace, op.name, op.customCPRef.kind, op.customCPRef.name)
 	}
 }
 
