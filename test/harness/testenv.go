@@ -644,25 +644,23 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 	}
 
 	if opts.ownerMDName != "" {
-		isController := true
 		ms.OwnerReferences = []metav1.OwnerReference{
 			{
 				APIVersion: "cluster.x-k8s.io/v1beta1",
 				Kind:       "MachineDeployment",
 				Name:       opts.ownerMDName,
 				UID:        deterministicUID(opts.ownerMDName),
-				Controller: &isController,
+				Controller: ptr(true),
 			},
 		}
 	} else if opts.ownerKind != "" {
-		isController := true
 		ms.OwnerReferences = []metav1.OwnerReference{
 			{
 				APIVersion: "cluster.x-k8s.io/v1beta1",
 				Kind:       opts.ownerKind,
 				Name:       opts.ownerName,
 				UID:        deterministicUID(opts.ownerName),
-				Controller: &isController,
+				Controller: ptr(true),
 			},
 		}
 	}
