@@ -27,27 +27,7 @@ const (
 // additional context in failure messages.
 // See package documentation for detailed usage information.
 func compareWithGolden(text, goldenPath string) error {
-	// Check if we should update the golden file
-	if os.Getenv("UPDATE_GOLDEN") == "true" {
-		return updateGoldenFile(text, goldenPath)
-	}
-
-	// Read the golden file
-	expected, err := os.ReadFile(goldenPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("golden file %s does not exist (run tests with UPDATE_GOLDEN=true to create it)", goldenPath)
-		}
-		return fmt.Errorf("failed to read golden file %s: %w", goldenPath, err)
-	}
-
-	// Compare text with golden file content
-	if text != string(expected) {
-		diff := cmp.Diff(string(expected), text)
-		return fmt.Errorf("output does not match golden file %s:\n(-expected +actual)\n%s", goldenPath, diff)
-	}
-
-	return nil
+	return compareWithGoldenNormalized(text, goldenPath, nil)
 }
 
 // compareWithGoldenNormalized compares text with a golden file after applying normalizers.
