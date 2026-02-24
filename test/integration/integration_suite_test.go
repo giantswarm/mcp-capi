@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -8,7 +9,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	harness.InitManager()
+	if err := harness.InitManager(); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize test harness: %v\n", err)
+		os.Exit(1)
+	}
 	code := m.Run()
 	harness.ShutdownManager()
 	os.Exit(code)

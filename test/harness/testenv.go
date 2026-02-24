@@ -49,19 +49,29 @@ var (
 	// mgr is the package-level k8senv manager singleton.
 	mgr     k8senv.Manager
 	mgrOnce sync.Once
+	mgrErr  error
 )
 
 // InitManager initializes the k8senv manager with CAPI CRDs.
 // Must be called once from TestMain before any tests run.
-// It is safe to call from multiple goroutines; only the first call performs initialization.
-func InitManager() {
+// It is safe to call from multiple goroutines; only the first call performs
+// initialization. Subsequent calls return the cached result.
+//
+// On failure, callers should print the error and exit:
+//
+//	if err := harness.InitManager(); err != nil {
+//	    fmt.Fprintf(os.Stderr, "failed to initialize test harness: %v\n", err)
+//	    os.Exit(1)
+//	}
+func InitManager() error {
 	mgrOnce.Do(func() {
 		// Silence k8senv logs during tests
 		k8senv.SetLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 		crdPath, err := getCRDPath()
 		if err != nil {
-			panic(fmt.Sprintf("failed to get CRD path: %v", err))
+			mgrErr = fmt.Errorf("getting CRD path: %w", err)
+			return
 		}
 
 		// Pool size matches GOMAXPROCS, which is also the default for
@@ -81,9 +91,11 @@ func InitManager() {
 		defer cancel()
 
 		if err := mgr.Initialize(ctx); err != nil {
-			panic(fmt.Sprintf("failed to initialize k8senv: %v", err))
+			mgrErr = fmt.Errorf("initializing k8senv: %w", err)
+			return
 		}
 	})
+	return mgrErr
 }
 
 // ShutdownManager stops the k8senv manager and releases all resources.
