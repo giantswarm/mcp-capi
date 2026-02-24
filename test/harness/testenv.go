@@ -3,7 +3,6 @@ package harness
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -65,11 +64,11 @@ func InitManager() {
 			panic(fmt.Sprintf("failed to get CRD path: %v", err))
 		}
 
-		poolSize := runtime.GOMAXPROCS(0) // same default as testing.parallel
-		if f := flag.Lookup("test.parallel"); f != nil {
-			if n, err := strconv.Atoi(f.Value.String()); err == nil && n > 0 {
-				poolSize = n
-			}
+		// Pool size matches GOMAXPROCS, which is also the default for
+		// go test -parallel. Override via HARNESS_POOL_SIZE env var.
+		poolSize := runtime.GOMAXPROCS(0)
+		if v, err := strconv.Atoi(os.Getenv("HARNESS_POOL_SIZE")); err == nil && v > 0 {
+			poolSize = v
 		}
 
 		mgr = k8senv.NewManager(
