@@ -3,7 +3,13 @@ package harness
 import (
 	"context"
 	"io"
+	"time"
 )
+
+// defaultExecuteTimeout is the maximum duration for all operations in a single
+// Execute() call. It is generous enough for slow CI environments but catches
+// genuine hangs that would otherwise block until the global test timeout.
+const defaultExecuteTimeout = 2 * time.Minute
 
 // Harness holds all resources for an isolated test environment.
 // Operations are queued when methods are called and executed when Execute() is invoked.
@@ -51,7 +57,7 @@ func (h *Harness) Execute() *Harness {
 	}
 
 	// Create test context
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), defaultExecuteTimeout)
 	h.t.Cleanup(func() { cancel() })
 
 	// Initialize test environment
