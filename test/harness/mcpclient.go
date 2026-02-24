@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"path/filepath"
+	"sync"
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/client/transport"
@@ -23,11 +24,36 @@ const (
 	testdataDir = "testdata"
 )
 
+// syncBuffer is a thread-safe bytes.Buffer for capturing stderr output.
+// The stdio transport writes to it from a goroutine while the test cleanup reads it.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (n int, err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) Read(p []byte) (n int, err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Read(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
 // mcpClient wraps an MCP client for testing purposes
 type mcpClient struct {
 	t         TestingT
 	client    *client.Client
-	stderrBuf *bytes.Buffer
+	stderrBuf *syncBuffer
 }
 
 // callToolResult wraps an MCP CallToolResult for testing purposes.
@@ -61,7 +87,7 @@ func newMCPClient(ctx context.Context, t TestingT, input io.Reader, output io.Wr
 	t.Helper()
 
 	// Create buffer to capture stderr for debugging
-	stderrBuf := &bytes.Buffer{}
+	stderrBuf := &syncBuffer{}
 
 	// Create stdio transport using NewIO for in-process communication
 	// Note: NewIO takes (input, output, stderr) where:
