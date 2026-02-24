@@ -1,0 +1,11 @@
+Machine: test-clusters/sparse-machine
+
+Basic Information:
+  Cluster: sparse-cluster
+  Phase: Running
+
+Conditions:
+  - Type: Ready
+    Status: True
+  - Type: InfrastructureReady
+    Status: False

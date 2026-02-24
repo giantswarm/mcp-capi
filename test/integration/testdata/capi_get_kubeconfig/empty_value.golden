@@ -1,0 +1,9 @@
+Kubeconfig for cluster test-clusters/empty-cluster:
+
+```yaml
+
+```
+
+To use this kubeconfig:
+1. Save the content between the ``` markers to a file (e.g., cluster-kubeconfig.yaml)
+2. Use it with kubectl: kubectl --kubeconfig=cluster-kubeconfig.yaml get nodes

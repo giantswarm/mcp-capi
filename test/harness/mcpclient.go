@@ -186,6 +186,26 @@ func (res *callToolResult) assertContent(goldenPath string) {
 	}
 }
 
+// assertContentNormalized compares the extracted text content with the specified golden file
+// after applying normalizers to both the actual output and golden file content.
+func (res *callToolResult) assertContentNormalized(goldenPath string, normalizers []Normalizer) {
+	res.t.Helper()
+
+	if res.Err != nil {
+		res.t.Fatal("assertContentNormalized called on a protocol error result (use AssertError)")
+	}
+	if res.Result != nil && res.Result.IsError {
+		res.t.Fatal("assertContentNormalized called on a tool error result (use AssertError)")
+	}
+
+	text := res.extractText()
+	fullPath := filepath.Join(testdataDir, goldenPath)
+	err := compareWithGoldenNormalized(text, fullPath, normalizers)
+	if err != nil {
+		res.t.Fatalf("golden file comparison failed: %v", err)
+	}
+}
+
 // extractError extracts the error text from a failed tool call.
 // For protocol errors (Err != nil), returns Err.Error().
 // For tool errors (Result.IsError), extracts the text content (which holds the error message).

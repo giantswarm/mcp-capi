@@ -1,0 +1,14 @@
+Machine: test-clusters/nocond-machine
+
+Basic Information:
+  Cluster: nocond-cluster
+  Phase: Running
+  Kubernetes Version: v1.29.0
+
+Bootstrap:
+  Kind: KubeadmConfig
+  Name: nocond-bootstrap
+
+Infrastructure:
+  Kind: AWSMachine
+  Name: nocond-infra

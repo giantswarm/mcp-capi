@@ -10,6 +10,26 @@ import (
 func TestCapiGetCluster(t *testing.T) {
 	t.Parallel()
 
+	t.Run("returns error when namespace argument is missing", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_get_cluster").
+			WithArg("name", "some-cluster").
+			AssertError("missing_namespace.golden").
+			Execute()
+	})
+
+	t.Run("returns error when name argument is missing", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", "some-ns").
+			AssertError("missing_name.golden").
+			Execute()
+	})
+
 	t.Run("returns error for non-existent cluster", func(t *testing.T) {
 		t.Parallel()
 		namespace := "test-clusters"
@@ -282,4 +302,53 @@ func TestCapiGetCluster(t *testing.T) {
 				Execute()
 		})
 	}
+
+	t.Run("gets cluster with mixed conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "mixed-cluster").WithProvider("aws").WithPhase("Provisioned").
+			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is ready").Done().
+			WithCondition("ControlPlaneReady").False().Reason("CPNotReady").Message("Control plane not ready").Done().
+			WithCondition("InfrastructureReady").True().Reason("InfraReady").Message("Infrastructure is ready").Done().
+			Create().
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "mixed-cluster").
+			AssertContent("mixed_conditions.golden").
+			Execute()
+	})
+
+	t.Run("gets cluster with no conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "nocond-cluster").WithProvider("azure").WithPhase("Provisioning").
+			Create().
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "nocond-cluster").
+			AssertContent("no_conditions.golden").
+			Execute()
+	})
+
+	t.Run("gets cluster with nil control plane ref", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "nocp-cluster").WithProvider("aws").WithPhase("Provisioned").WithVersion("v1.29.0").
+			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is ready").Done().
+			Create().
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "nocp-cluster").
+			AssertContent("nil_control_plane_ref.golden").
+			Execute()
+	})
 }

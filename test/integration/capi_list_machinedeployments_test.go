@@ -130,4 +130,49 @@ func TestCapiListMachineDeployments(t *testing.T) {
 			AssertContent("across_clusters.golden").
 			Execute()
 	})
+
+	t.Run("lists machine deployment with zero status replicas", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineDeployment(namespace, "md-new").ForCluster("test-cluster").WithReplicas(3).WithVersion("v1.29.0").
+			Create().
+			ToolCall("capi_list_machinedeployments").
+			WithArg("namespace", namespace).
+			AssertContent("zero_status_replicas.golden").
+			Execute()
+	})
+
+	t.Run("lists machine deployment without version", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineDeployment(namespace, "md-noversion").ForCluster("test-cluster").WithReplicas(2).
+			WithStatus(2, 2, 2, 2).Create().
+			ToolCall("capi_list_machinedeployments").
+			WithArg("namespace", namespace).
+			AssertContent("no_version.golden").
+			Execute()
+	})
+
+	t.Run("lists machine deployment with mismatched replica counts", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineDeployment(namespace, "md-rolling").ForCluster("test-cluster").WithReplicas(5).WithVersion("v1.29.0").
+			WithStatus(5, 2, 3, 2).Create().
+			ToolCall("capi_list_machinedeployments").
+			WithArg("namespace", namespace).
+			AssertContent("mismatched_replicas.golden").
+			Execute()
+	})
 }

@@ -4,9 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+// Normalizer is a function that normalizes text before golden file comparison.
+// It is applied to both the actual output and the golden file content (or the
+// output before writing when updating golden files).
+type Normalizer func(string) string
 
 const (
 	// dirPermissions is the permission mode for directories (rwxr-xr-x).
@@ -44,6 +50,40 @@ func compareWithGolden(text, goldenPath string) error {
 	return nil
 }
 
+// compareWithGoldenNormalized compares text with a golden file after applying normalizers.
+// Normalizers are applied to both the actual text and the golden file content.
+// When UPDATE_GOLDEN is set, normalizers are applied to the text before writing.
+func compareWithGoldenNormalized(text, goldenPath string, normalizers []Normalizer) error {
+	normalized := text
+	for _, n := range normalizers {
+		normalized = n(normalized)
+	}
+
+	if os.Getenv("UPDATE_GOLDEN") == "true" {
+		return updateGoldenFile(normalized, goldenPath)
+	}
+
+	expected, err := os.ReadFile(goldenPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("golden file %s does not exist (run tests with UPDATE_GOLDEN=true to create it)", goldenPath)
+		}
+		return fmt.Errorf("failed to read golden file %s: %w", goldenPath, err)
+	}
+
+	expectedNormalized := string(expected)
+	for _, n := range normalizers {
+		expectedNormalized = n(expectedNormalized)
+	}
+
+	if normalized != expectedNormalized {
+		diff := cmp.Diff(expectedNormalized, normalized)
+		return fmt.Errorf("output does not match golden file %s:\n(-expected +actual)\n%s", goldenPath, diff)
+	}
+
+	return nil
+}
+
 // updateGoldenFile writes the given text to a golden file.
 // It creates the directory if it doesn't exist.
 func updateGoldenFile(text, goldenPath string) error {
@@ -59,4 +99,19 @@ func updateGoldenFile(text, goldenPath string) error {
 	}
 
 	return nil
+}
+
+var (
+	uuidPattern      = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \+\d{4} [A-Z]+`)
+)
+
+// NormalizeUID replaces all UUID strings with a deterministic placeholder.
+func NormalizeUID(text string) string {
+	return uuidPattern.ReplaceAllString(text, "<UID>")
+}
+
+// NormalizeTimestamp replaces all Go-formatted timestamps with a deterministic placeholder.
+func NormalizeTimestamp(text string) string {
+	return timestampPattern.ReplaceAllString(text, "<TIMESTAMP>")
 }

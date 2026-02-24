@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -402,13 +403,15 @@ func (te *testEnv) createGCPCluster(ctx context.Context, namespace, name string)
 // clusterCreateOptions holds all parameters for creating a fully-configured cluster
 // in minimal API calls.
 type clusterCreateOptions struct {
-	namespace      string
-	name           string
-	provider       string
-	version        string
-	phase          string
-	conditions     []clusterv1.Condition
-	customInfraRef *customRef // custom InfrastructureRef (overrides provider)
+	namespace         string
+	name              string
+	provider          string
+	version           string
+	phase             string
+	conditions        []clusterv1.Condition
+	customInfraRef    *customRef // custom InfrastructureRef (overrides provider)
+	controlPlaneReady *bool      // explicit ControlPlaneReady status
+	infraReady        *bool      // explicit InfrastructureReady status
 }
 
 // createClusterFull creates a fully-configured CAPI Cluster in minimal API calls.
@@ -496,14 +499,20 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 		te.t.Fatalf("failed to create cluster %s/%s: %v", opts.namespace, opts.name, err)
 	}
 
-	// Combine phase + conditions into a single Status().Update() when possible
-	needsStatusUpdate := opts.phase != "" || len(opts.conditions) > 0
+	// Combine phase + conditions + status booleans into a single Status().Update() when possible
+	needsStatusUpdate := opts.phase != "" || len(opts.conditions) > 0 || opts.controlPlaneReady != nil || opts.infraReady != nil
 	if needsStatusUpdate {
 		if opts.phase != "" {
 			cluster.Status.Phase = opts.phase
 		}
 		if len(opts.conditions) > 0 {
 			cluster.Status.Conditions = opts.conditions
+		}
+		if opts.controlPlaneReady != nil {
+			cluster.Status.ControlPlaneReady = *opts.controlPlaneReady
+		}
+		if opts.infraReady != nil {
+			cluster.Status.InfrastructureReady = *opts.infraReady
 		}
 		if err := te.ctrlClient.Status().Update(ctx, cluster); err != nil {
 			te.t.Fatalf("failed to update status on cluster %s/%s: %v", opts.namespace, opts.name, err)
@@ -754,7 +763,6 @@ type machineDeploymentCreateOptions struct {
 func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOptions) {
 	te.t.Helper()
 
-	replicas := int32(opts.replicas)
 	ms := &clusterv1.MachineSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.name,
@@ -765,7 +773,6 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 		},
 		Spec: clusterv1.MachineSetSpec{
 			ClusterName: opts.clusterName,
-			Replicas:    &replicas,
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"machineset": opts.name,
@@ -786,6 +793,11 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 				},
 			},
 		},
+	}
+
+	if !opts.nilReplicas {
+		replicas := int32(opts.replicas)
+		ms.Spec.Replicas = &replicas
 	}
 
 	if opts.version != "" {
@@ -819,6 +831,17 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 				Controller: &isController,
 			},
 		}
+	} else if opts.ownerKind != "" {
+		isController := true
+		ms.OwnerReferences = []metav1.OwnerReference{
+			{
+				APIVersion: "cluster.x-k8s.io/v1beta1",
+				Kind:       opts.ownerKind,
+				Name:       opts.ownerName,
+				UID:        "test-uid",
+				Controller: &isController,
+			},
+		}
 	}
 
 	if err := te.ctrlClient.Create(ctx, ms); err != nil {
@@ -826,11 +849,18 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 	}
 
 	// Update status if needed
-	needsStatusUpdate := opts.statusReplicas > 0 || opts.readyReplicas > 0 || opts.availableReplicas > 0
+	needsStatusUpdate := opts.statusReplicas > 0 || opts.readyReplicas > 0 || opts.availableReplicas > 0 || opts.failureReason != "" || opts.failureMessage != ""
 	if needsStatusUpdate {
 		ms.Status.Replicas = int32(opts.statusReplicas)
 		ms.Status.ReadyReplicas = int32(opts.readyReplicas)
 		ms.Status.AvailableReplicas = int32(opts.availableReplicas)
+		if opts.failureReason != "" {
+			reason := capierrors.MachineSetStatusError(opts.failureReason)
+			ms.Status.FailureReason = &reason
+		}
+		if opts.failureMessage != "" {
+			ms.Status.FailureMessage = &opts.failureMessage
+		}
 		if err := te.ctrlClient.Status().Update(ctx, ms); err != nil {
 			te.t.Fatalf("failed to update status on MachineSet %s/%s: %v", opts.namespace, opts.name, err)
 		}
@@ -843,6 +873,7 @@ type machineSetCreateOptions struct {
 	name              string
 	clusterName       string
 	replicas          int
+	nilReplicas       bool
 	version           string
 	statusReplicas    int
 	readyReplicas     int
@@ -852,6 +883,10 @@ type machineSetCreateOptions struct {
 	bootstrapKind     string
 	bootstrapName     string
 	ownerMDName       string
+	ownerKind         string
+	ownerName         string
+	failureReason     string
+	failureMessage    string
 }
 
 // nodeCreateOptions holds all parameters for creating a fully-configured Kubernetes Node.
@@ -954,6 +989,102 @@ func (te *testEnv) createNode(ctx context.Context, opts nodeCreateOptions) {
 	}
 }
 
+// machineCustomCreateOptions holds all parameters for creating a fully-configured CAPI Machine.
+type machineCustomCreateOptions struct {
+	namespace     string
+	name          string
+	clusterName   string
+	phase         string
+	version       string
+	providerID    string
+	nodeRefName   string
+	configRefKind string
+	configRefName string
+	infraRefKind  string
+	infraRefName  string
+	conditions    []machineCondition
+	addresses     []machineAddress
+}
+
+// createMachineCustom creates a CAPI Machine resource with fine-grained field control.
+func (te *testEnv) createMachineCustom(ctx context.Context, opts machineCustomCreateOptions) {
+	te.t.Helper()
+	machine := &clusterv1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.name,
+			Namespace: opts.namespace,
+			Labels: map[string]string{
+				clusterv1.ClusterNameLabel: opts.clusterName,
+			},
+		},
+		Spec: clusterv1.MachineSpec{
+			ClusterName: opts.clusterName,
+			Bootstrap: clusterv1.Bootstrap{
+				DataSecretName: ptr("bootstrap-secret"),
+			},
+		},
+	}
+
+	if opts.version != "" {
+		machine.Spec.Version = &opts.version
+	}
+
+	if opts.providerID != "" {
+		machine.Spec.ProviderID = &opts.providerID
+	}
+
+	if opts.configRefKind != "" {
+		machine.Spec.Bootstrap.ConfigRef = &corev1.ObjectReference{
+			APIVersion: "bootstrap.cluster.x-k8s.io/v1beta1",
+			Kind:       opts.configRefKind,
+			Name:       opts.configRefName,
+		}
+	}
+
+	if opts.infraRefKind != "" {
+		machine.Spec.InfrastructureRef = corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			Kind:       opts.infraRefKind,
+			Name:       opts.infraRefName,
+		}
+	}
+
+	if err := te.ctrlClient.Create(ctx, machine); err != nil {
+		te.t.Fatalf("failed to create Machine %s/%s: %v", opts.namespace, opts.name, err)
+	}
+
+	needsStatusUpdate := opts.phase != "" || opts.nodeRefName != "" || len(opts.conditions) > 0 || len(opts.addresses) > 0
+	if needsStatusUpdate {
+		if opts.phase != "" {
+			machine.Status.Phase = opts.phase
+		}
+		if opts.nodeRefName != "" {
+			machine.Status.NodeRef = &corev1.ObjectReference{
+				Kind: "Node",
+				Name: opts.nodeRefName,
+			}
+		}
+		for _, cond := range opts.conditions {
+			machine.Status.Conditions = append(machine.Status.Conditions, clusterv1.Condition{
+				Type:               clusterv1.ConditionType(cond.condType),
+				Status:             corev1.ConditionStatus(cond.status),
+				Reason:             cond.reason,
+				Message:            cond.message,
+				LastTransitionTime: metav1.Now(),
+			})
+		}
+		for _, addr := range opts.addresses {
+			machine.Status.Addresses = append(machine.Status.Addresses, clusterv1.MachineAddress{
+				Type:    clusterv1.MachineAddressType(addr.addrType),
+				Address: addr.address,
+			})
+		}
+		if err := te.ctrlClient.Status().Update(ctx, machine); err != nil {
+			te.t.Fatalf("failed to update status on Machine %s/%s: %v", opts.namespace, opts.name, err)
+		}
+	}
+}
+
 // writeKubeconfig converts a rest.Config to a kubeconfig file
 // and writes it to the specified path.
 func writeKubeconfig(config *rest.Config, outputPath string) error {
@@ -992,3 +1123,4 @@ func writeKubeconfig(config *rest.Config, outputPath string) error {
 	// Write to file
 	return clientcmd.WriteToFile(kubeconfig, outputPath)
 }
+

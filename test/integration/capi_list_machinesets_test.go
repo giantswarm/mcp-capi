@@ -130,4 +130,50 @@ func TestCapiListMachineSets(t *testing.T) {
 			AssertContent("across_clusters.golden").
 			Execute()
 	})
+
+	t.Run("lists machine set with nil replicas", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "ms-nil-replicas").ForCluster("test-cluster").WithNilReplicas().
+			WithStatus(2, 1, 1).Create().
+			ToolCall("capi_list_machinesets").
+			WithArg("namespace", namespace).
+			AssertContent("nil_replicas.golden").
+			Execute()
+	})
+
+	t.Run("lists machine set with non-machinedeployment owner", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "ms-custom-owner").ForCluster("test-cluster").WithReplicas(3).
+			WithStatus(3, 3, 3).
+			OwnedByKind("MachinePool", "my-machinepool").Create().
+			ToolCall("capi_list_machinesets").
+			WithArg("namespace", namespace).
+			AssertContent("non_md_owner.golden").
+			Execute()
+	})
+
+	t.Run("lists orphaned machine set without owner references", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "ms-orphan").ForCluster("test-cluster").WithReplicas(2).
+			WithStatus(2, 2, 2).Create().
+			ToolCall("capi_list_machinesets").
+			WithArg("namespace", namespace).
+			AssertContent("orphaned.golden").
+			Execute()
+	})
 }

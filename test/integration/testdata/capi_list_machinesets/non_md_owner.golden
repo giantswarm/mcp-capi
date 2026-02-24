@@ -1,0 +1,8 @@
+Found 1 machine sets:
+
+MachineSet: test-clusters/ms-custom-owner
+  Cluster: test-cluster
+  Replicas: 3
+  Ready: 3/3
+  Available: 3
+

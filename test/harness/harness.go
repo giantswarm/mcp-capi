@@ -182,8 +182,10 @@ type ClusterBuilder struct {
 	readyMachines int    // number of machines with NodeRef (ready)
 	controlPlane  *controlPlaneConfig
 	conditions    []clusterv1.Condition // conditions to set on the cluster
-	customInfraRef  *customRef // custom InfrastructureRef (overrides provider)
-	customCPRef     *customRef // custom ControlPlaneRef (overrides controlPlane)
+	customInfraRef       *customRef // custom InfrastructureRef (overrides provider)
+	customCPRef          *customRef // custom ControlPlaneRef (overrides controlPlane)
+	controlPlaneReady    *bool // explicit control plane ready status
+	infraReady           *bool // explicit infrastructure ready status
 }
 
 // customRef holds a custom object reference for InfrastructureRef or ControlPlaneRef.
@@ -242,11 +244,24 @@ func (cb *ClusterBuilder) WithControlPlaneRef(kind, name string) *ClusterBuilder
 	return cb
 }
 
+// WithControlPlaneReady explicitly sets the ControlPlaneReady status field on the cluster.
+func (cb *ClusterBuilder) WithControlPlaneReady(ready bool) *ClusterBuilder {
+	cb.controlPlaneReady = &ready
+	return cb
+}
+
+// WithInfraReady explicitly sets the InfrastructureReady status field on the cluster.
+func (cb *ClusterBuilder) WithInfraReady(ready bool) *ClusterBuilder {
+	cb.infraReady = &ready
+	return cb
+}
+
 // ConditionBuilder provides a fluent API for configuring a cluster condition.
 type ConditionBuilder struct {
 	clusterBuilder *ClusterBuilder
 	condType       string
 	status         corev1.ConditionStatus
+	severity       clusterv1.ConditionSeverity
 	reason         string
 	message        string
 }
@@ -277,6 +292,12 @@ func (cob *ConditionBuilder) Unknown() *ConditionBuilder {
 	return cob
 }
 
+// Severity sets the severity for this condition (Error, Warning, Info).
+func (cob *ConditionBuilder) Severity(severity clusterv1.ConditionSeverity) *ConditionBuilder {
+	cob.severity = severity
+	return cob
+}
+
 // Reason sets the reason for this condition.
 func (cob *ConditionBuilder) Reason(reason string) *ConditionBuilder {
 	cob.reason = reason
@@ -294,6 +315,7 @@ func (cob *ConditionBuilder) Done() *ClusterBuilder {
 	cob.clusterBuilder.conditions = append(cob.clusterBuilder.conditions, clusterv1.Condition{
 		Type:               clusterv1.ConditionType(cob.condType),
 		Status:             cob.status,
+		Severity:           cob.severity,
 		Reason:             cob.reason,
 		Message:            cob.message,
 		LastTransitionTime: metav1.Now(),
@@ -353,8 +375,10 @@ func (cb *ClusterBuilder) Create() *Harness {
 		readyMachines:  cb.readyMachines,
 		controlPlane:   cb.controlPlane,
 		conditions:     cb.conditions,
-		customInfraRef: cb.customInfraRef,
-		customCPRef:    cb.customCPRef,
+		customInfraRef:    cb.customInfraRef,
+		customCPRef:       cb.customCPRef,
+		controlPlaneReady: cb.controlPlaneReady,
+		infraReady:        cb.infraReady,
 	})
 	return cb.harness
 }
@@ -442,6 +466,7 @@ type MachineSetBuilder struct {
 	name              string
 	clusterName       string
 	replicas          int
+	nilReplicas       bool // if true, Spec.Replicas is nil (overrides replicas field)
 	version           string
 	statusReplicas    int
 	readyReplicas     int
@@ -451,6 +476,10 @@ type MachineSetBuilder struct {
 	bootstrapKind     string
 	bootstrapName     string
 	ownerMDName       string
+	ownerKind         string // custom owner kind (defaults to "MachineDeployment" if ownerMDName is set)
+	ownerName         string // custom owner name (used with ownerKind)
+	failureReason     string
+	failureMessage    string
 }
 
 // MachineSet starts a new MachineSet builder.
@@ -509,6 +538,32 @@ func (msb *MachineSetBuilder) OwnedBy(mdName string) *MachineSetBuilder {
 	return msb
 }
 
+// OwnedByKind sets a custom owner reference with an arbitrary kind and name.
+// Use this to test non-MachineDeployment owners.
+func (msb *MachineSetBuilder) OwnedByKind(kind, name string) *MachineSetBuilder {
+	msb.ownerKind = kind
+	msb.ownerName = name
+	return msb
+}
+
+// WithNilReplicas sets Spec.Replicas to nil (no desired replica count).
+func (msb *MachineSetBuilder) WithNilReplicas() *MachineSetBuilder {
+	msb.nilReplicas = true
+	return msb
+}
+
+// WithFailureReason sets the failure reason on the MachineSet status.
+func (msb *MachineSetBuilder) WithFailureReason(reason string) *MachineSetBuilder {
+	msb.failureReason = reason
+	return msb
+}
+
+// WithFailureMessage sets the failure message on the MachineSet status.
+func (msb *MachineSetBuilder) WithFailureMessage(message string) *MachineSetBuilder {
+	msb.failureMessage = message
+	return msb
+}
+
 // Create queues the MachineSet creation and returns to the harness.
 func (msb *MachineSetBuilder) Create() *Harness {
 	msb.harness.t.Helper()
@@ -517,6 +572,7 @@ func (msb *MachineSetBuilder) Create() *Harness {
 		name:              msb.name,
 		clusterName:       msb.clusterName,
 		replicas:          msb.replicas,
+		nilReplicas:       msb.nilReplicas,
 		version:           msb.version,
 		statusReplicas:    msb.statusReplicas,
 		readyReplicas:     msb.readyReplicas,
@@ -526,6 +582,10 @@ func (msb *MachineSetBuilder) Create() *Harness {
 		bootstrapKind:     msb.bootstrapKind,
 		bootstrapName:     msb.bootstrapName,
 		ownerMDName:       msb.ownerMDName,
+		ownerKind:         msb.ownerKind,
+		ownerName:         msb.ownerName,
+		failureReason:     msb.failureReason,
+		failureMessage:    msb.failureMessage,
 	})
 	return msb.harness
 }
@@ -701,6 +761,166 @@ func (nb *NodeBuilder) Create() *Harness {
 	return nb.harness
 }
 
+// machineCondition holds a machine condition configuration.
+type machineCondition struct {
+	condType string
+	status   string
+	reason   string
+	message  string
+}
+
+// machineAddress holds a machine address configuration.
+type machineAddress struct {
+	addrType string
+	address  string
+}
+
+// MachineBuilder provides a fluent API for building individual CAPI Machine resources.
+// Use this for fine-grained control over machine fields like Bootstrap.ConfigRef,
+// InfrastructureRef, Version, and Conditions.
+type MachineBuilder struct {
+	harness       *Harness
+	namespace     string
+	name          string
+	clusterName   string
+	phase         string
+	version       string
+	providerID    string
+	nodeRefName   string
+	configRefKind string
+	configRefName string
+	infraRefKind  string
+	infraRefName  string
+	conditions    []machineCondition
+	addresses     []machineAddress
+}
+
+// Machine starts a new machine builder.
+func (h *Harness) Machine(namespace, name string) *MachineBuilder {
+	return &MachineBuilder{
+		harness:   h,
+		namespace: namespace,
+		name:      name,
+	}
+}
+
+// ForCluster sets the cluster name for this machine.
+func (mb *MachineBuilder) ForCluster(clusterName string) *MachineBuilder {
+	mb.clusterName = clusterName
+	return mb
+}
+
+// WithPhase sets the machine phase.
+func (mb *MachineBuilder) WithPhase(phase string) *MachineBuilder {
+	mb.phase = phase
+	return mb
+}
+
+// WithVersion sets the Kubernetes version.
+func (mb *MachineBuilder) WithVersion(version string) *MachineBuilder {
+	mb.version = version
+	return mb
+}
+
+// WithProviderID sets the provider ID.
+func (mb *MachineBuilder) WithProviderID(providerID string) *MachineBuilder {
+	mb.providerID = providerID
+	return mb
+}
+
+// WithNodeRef sets the NodeRef (makes the machine "ready").
+func (mb *MachineBuilder) WithNodeRef(nodeName string) *MachineBuilder {
+	mb.nodeRefName = nodeName
+	return mb
+}
+
+// WithConfigRef sets the Bootstrap.ConfigRef.
+func (mb *MachineBuilder) WithConfigRef(kind, name string) *MachineBuilder {
+	mb.configRefKind = kind
+	mb.configRefName = name
+	return mb
+}
+
+// WithInfraRef sets the InfrastructureRef.
+func (mb *MachineBuilder) WithInfraRef(kind, name string) *MachineBuilder {
+	mb.infraRefKind = kind
+	mb.infraRefName = name
+	return mb
+}
+
+// MachineConditionBuilder provides a fluent API for configuring a machine condition.
+type MachineConditionBuilder struct {
+	machineBuilder *MachineBuilder
+	condType       string
+	status         string
+	reason         string
+	message        string
+}
+
+// WithCondition starts configuring a condition for this machine.
+func (mb *MachineBuilder) WithCondition(condType string) *MachineConditionBuilder {
+	return &MachineConditionBuilder{
+		machineBuilder: mb,
+		condType:       condType,
+	}
+}
+
+// Status sets the condition status ("True", "False", "Unknown").
+func (mcb *MachineConditionBuilder) Status(status string) *MachineConditionBuilder {
+	mcb.status = status
+	return mcb
+}
+
+// Reason sets the reason for this condition.
+func (mcb *MachineConditionBuilder) Reason(reason string) *MachineConditionBuilder {
+	mcb.reason = reason
+	return mcb
+}
+
+// Message sets the message for this condition.
+func (mcb *MachineConditionBuilder) Message(message string) *MachineConditionBuilder {
+	mcb.message = message
+	return mcb
+}
+
+// Done returns to the MachineBuilder to continue configuration.
+func (mcb *MachineConditionBuilder) Done() *MachineBuilder {
+	mcb.machineBuilder.conditions = append(mcb.machineBuilder.conditions, machineCondition{
+		condType: mcb.condType,
+		status:   mcb.status,
+		reason:   mcb.reason,
+		message:  mcb.message,
+	})
+	return mcb.machineBuilder
+}
+
+// WithAddress adds an address to the machine status.
+func (mb *MachineBuilder) WithAddress(addrType, address string) *MachineBuilder {
+	mb.addresses = append(mb.addresses, machineAddress{addrType: addrType, address: address})
+	return mb
+}
+
+// Create queues the machine creation operation and returns to the harness.
+func (mb *MachineBuilder) Create() *Harness {
+	mb.harness.t.Helper()
+	mb.harness.operations = append(mb.harness.operations, &machineBuilderOp{
+		namespace:     mb.namespace,
+		name:          mb.name,
+		clusterName:   mb.clusterName,
+		phase:         mb.phase,
+		version:       mb.version,
+		providerID:    mb.providerID,
+		nodeRefName:   mb.nodeRefName,
+		configRefKind: mb.configRefKind,
+		configRefName: mb.configRefName,
+		infraRefKind:  mb.infraRefKind,
+		infraRefName:  mb.infraRefName,
+		conditions:    mb.conditions,
+		addresses:     mb.addresses,
+	})
+	return mb.harness
+}
+
 // ToolCall provides a fluent API for MCP tool call testing.
 // It accumulates tool name and arguments, then queues operations
 // when finalized via AssertContent or bridge methods.
@@ -748,6 +968,24 @@ func (tc *ToolCall) AssertContent(goldenPath string) *Harness {
 	tc.harness.operations = append(tc.harness.operations, &assertContentOp{
 		toolName:   tc.toolName,
 		goldenPath: goldenPath,
+	})
+	return tc.harness
+}
+
+// AssertContentNormalized queues the tool call and normalized assertion, then returns to the harness.
+// Normalizers are applied to both the actual output and golden file content before comparison,
+// allowing non-deterministic fields (e.g. UID, timestamps) to be replaced with placeholders.
+// The goldenPath is relative to testdata/<toolName>/.
+func (tc *ToolCall) AssertContentNormalized(goldenPath string, normalizers ...Normalizer) *Harness {
+	tc.harness.t.Helper()
+	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
+		toolName: tc.toolName,
+		args:     tc.args,
+	})
+	tc.harness.operations = append(tc.harness.operations, &assertContentNormalizedOp{
+		toolName:    tc.toolName,
+		goldenPath:  goldenPath,
+		normalizers: normalizers,
 	})
 	return tc.harness
 }

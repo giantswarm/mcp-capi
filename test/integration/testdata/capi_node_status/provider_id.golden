@@ -1,8 +1,8 @@
 Node: provider-node
 
 Basic Information:
-  UID: 7c5001db-217a-4d1c-ab94-aa996da403dd
-  Created: 2026-02-24 10:28:14 +0000 UTC
+  UID: <UID>
+  Created: <TIMESTAMP>
   Schedulable: true
   Provider ID: aws:///us-east-1a/i-1234567890abcdef0
 

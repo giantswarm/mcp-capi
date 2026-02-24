@@ -87,4 +87,123 @@ func TestCapiGetMachine(t *testing.T) {
 			AssertContent("machine_from_multi.golden").
 			Execute()
 	})
+
+	t.Run("gets machine with all optional fields", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "full-cluster").
+			Machine(namespace, "full-machine").ForCluster("full-cluster").
+			WithPhase("Running").
+			WithVersion("v1.29.0").
+			WithProviderID("aws:///us-east-1/i-1234567890").
+			WithNodeRef("full-machine-node").
+			WithConfigRef("KubeadmConfig", "full-machine-bootstrap").
+			WithInfraRef("AWSMachine", "full-machine-infra").
+			WithCondition("Ready").Status("True").Reason("MachineReady").Message("Machine is ready").Done().
+			WithCondition("InfrastructureReady").Status("True").Reason("InfraReady").Message("Infra provisioned").Done().
+			WithAddress("InternalIP", "10.0.1.5").
+			WithAddress("ExternalIP", "54.123.45.67").
+			Create().
+			ToolCall("capi_get_machine").
+			WithArg("namespace", namespace).
+			WithArg("name", "full-machine").
+			AssertContent("all_fields.golden").
+			Execute()
+	})
+
+	t.Run("gets machine with nil bootstrap config ref", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "nobootstrap-cluster").
+			Machine(namespace, "nobootstrap-machine").ForCluster("nobootstrap-cluster").
+			WithPhase("Running").
+			WithInfraRef("AWSMachine", "nobootstrap-infra").
+			Create().
+			ToolCall("capi_get_machine").
+			WithArg("namespace", namespace).
+			WithArg("name", "nobootstrap-machine").
+			AssertContent("nil_config_ref.golden").
+			Execute()
+	})
+
+	t.Run("gets machine with empty infrastructure ref kind", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "noinfra-cluster").
+			Machine(namespace, "noinfra-machine").ForCluster("noinfra-cluster").
+			WithPhase("Provisioning").
+			WithConfigRef("KubeadmConfig", "noinfra-bootstrap").
+			Create().
+			ToolCall("capi_get_machine").
+			WithArg("namespace", namespace).
+			WithArg("name", "noinfra-machine").
+			AssertContent("empty_infra_ref.golden").
+			Execute()
+	})
+
+	t.Run("gets machine with nil version", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "nover-cluster").
+			Machine(namespace, "nover-machine").ForCluster("nover-cluster").
+			WithPhase("Running").
+			WithNodeRef("nover-node").
+			Create().
+			ToolCall("capi_get_machine").
+			WithArg("namespace", namespace).
+			WithArg("name", "nover-machine").
+			AssertContent("nil_version.golden").
+			Execute()
+	})
+
+	t.Run("gets machine with no conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "nocond-cluster").
+			Machine(namespace, "nocond-machine").ForCluster("nocond-cluster").
+			WithPhase("Running").
+			WithVersion("v1.29.0").
+			WithInfraRef("AWSMachine", "nocond-infra").
+			WithConfigRef("KubeadmConfig", "nocond-bootstrap").
+			Create().
+			ToolCall("capi_get_machine").
+			WithArg("namespace", namespace).
+			WithArg("name", "nocond-machine").
+			AssertContent("no_conditions.golden").
+			Execute()
+	})
+
+	t.Run("gets machine with condition without reason and message", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "sparse-cluster").
+			Machine(namespace, "sparse-machine").ForCluster("sparse-cluster").
+			WithPhase("Running").
+			WithCondition("Ready").Status("True").Done().
+			WithCondition("InfrastructureReady").Status("False").Done().
+			Create().
+			ToolCall("capi_get_machine").
+			WithArg("namespace", namespace).
+			WithArg("name", "sparse-machine").
+			AssertContent("condition_no_reason_message.golden").
+			Execute()
+	})
 }

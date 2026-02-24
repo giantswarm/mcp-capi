@@ -164,4 +164,56 @@ func TestCapiGetMachineSet(t *testing.T) {
 			AssertContent("no_ready_replicas.golden").
 			Execute()
 	})
+
+	t.Run("gets machine set with failure reason", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "failure-reason-ms").ForCluster("test-cluster").WithReplicas(3).
+			WithStatus(3, 1, 1).
+			WithFailureReason("InvalidConfiguration").Create().
+			ToolCall("capi_get_machineset").
+			WithArg("namespace", namespace).
+			WithArg("name", "failure-reason-ms").
+			AssertContent("with_failure_reason.golden").
+			Execute()
+	})
+
+	t.Run("gets machine set with failure message", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "failure-message-ms").ForCluster("test-cluster").WithReplicas(3).
+			WithStatus(3, 0, 0).
+			WithFailureMessage("unable to create machines: quota exceeded").Create().
+			ToolCall("capi_get_machineset").
+			WithArg("namespace", namespace).
+			WithArg("name", "failure-message-ms").
+			AssertContent("with_failure_message.golden").
+			Execute()
+	})
+
+	t.Run("gets machine set with both failure reason and message", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "failure-both-ms").ForCluster("test-cluster").WithReplicas(3).
+			WithStatus(3, 0, 0).
+			WithFailureReason("InvalidConfiguration").
+			WithFailureMessage("spec.template.spec.infrastructureRef is required").Create().
+			ToolCall("capi_get_machineset").
+			WithArg("namespace", namespace).
+			WithArg("name", "failure-both-ms").
+			AssertContent("with_failure_reason_and_message.golden").
+			Execute()
+	})
 }

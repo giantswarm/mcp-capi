@@ -1,0 +1,10 @@
+Cluster: test-clusters/mixed-2
+Phase: Provisioning
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (ClusterNotReady)
+  InfrastructureReady: True (InfraReady)

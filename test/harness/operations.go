@@ -84,17 +84,19 @@ func (op *clusterOp) describe() string {
 
 // clusterBuilderOp creates a cluster with optional provider, phase, version, machine settings, and conditions.
 type clusterBuilderOp struct {
-	namespace      string
-	name           string
-	provider       string
-	phase          string
-	version        string
-	totalMachines  int
-	readyMachines  int
-	controlPlane   *controlPlaneConfig
-	conditions     []clusterv1.Condition
-	customInfraRef *customRef // custom InfrastructureRef (overrides provider)
-	customCPRef    *customRef // custom ControlPlaneRef (overrides controlPlane)
+	namespace         string
+	name              string
+	provider          string
+	phase             string
+	version           string
+	totalMachines     int
+	readyMachines     int
+	controlPlane      *controlPlaneConfig
+	conditions        []clusterv1.Condition
+	customInfraRef    *customRef // custom InfrastructureRef (overrides provider)
+	customCPRef       *customRef // custom ControlPlaneRef (overrides controlPlane)
+	controlPlaneReady *bool      // explicit ControlPlaneReady status
+	infraReady        *bool      // explicit InfrastructureReady status
 }
 
 func (op *clusterBuilderOp) execute(ec *executionContext) {
@@ -103,13 +105,15 @@ func (op *clusterBuilderOp) execute(ec *executionContext) {
 
 	// Create the cluster with all spec fields and status in minimal API calls
 	ec.k8sEnv.createClusterFull(ec.ctx, clusterCreateOptions{
-		namespace:      op.namespace,
-		name:           op.name,
-		provider:       op.provider,
-		phase:          op.phase,
-		version:        op.version,
-		conditions:     op.conditions,
-		customInfraRef: op.customInfraRef,
+		namespace:         op.namespace,
+		name:              op.name,
+		provider:          op.provider,
+		phase:             op.phase,
+		version:           op.version,
+		conditions:        op.conditions,
+		customInfraRef:    op.customInfraRef,
+		controlPlaneReady: op.controlPlaneReady,
+		infraReady:        op.infraReady,
 	})
 
 	// Create machines if specified
@@ -227,6 +231,7 @@ type machineSetOp struct {
 	name              string
 	clusterName       string
 	replicas          int
+	nilReplicas       bool
 	version           string
 	statusReplicas    int
 	readyReplicas     int
@@ -236,6 +241,10 @@ type machineSetOp struct {
 	bootstrapKind     string
 	bootstrapName     string
 	ownerMDName       string
+	ownerKind         string
+	ownerName         string
+	failureReason     string
+	failureMessage    string
 }
 
 func (op *machineSetOp) execute(ec *executionContext) {
@@ -246,6 +255,7 @@ func (op *machineSetOp) execute(ec *executionContext) {
 		name:              op.name,
 		clusterName:       op.clusterName,
 		replicas:          op.replicas,
+		nilReplicas:       op.nilReplicas,
 		version:           op.version,
 		statusReplicas:    op.statusReplicas,
 		readyReplicas:     op.readyReplicas,
@@ -255,11 +265,56 @@ func (op *machineSetOp) execute(ec *executionContext) {
 		bootstrapKind:     op.bootstrapKind,
 		bootstrapName:     op.bootstrapName,
 		ownerMDName:       op.ownerMDName,
+		ownerKind:         op.ownerKind,
+		ownerName:         op.ownerName,
+		failureReason:     op.failureReason,
+		failureMessage:    op.failureMessage,
 	})
 }
 
 func (op *machineSetOp) describe() string {
 	return fmt.Sprintf("create MachineSet %q in namespace %q for cluster %q", op.name, op.namespace, op.clusterName)
+}
+
+// machineBuilderOp creates a CAPI Machine resource with fine-grained field control.
+type machineBuilderOp struct {
+	namespace     string
+	name          string
+	clusterName   string
+	phase         string
+	version       string
+	providerID    string
+	nodeRefName   string
+	configRefKind string
+	configRefName string
+	infraRefKind  string
+	infraRefName  string
+	conditions    []machineCondition
+	addresses     []machineAddress
+}
+
+func (op *machineBuilderOp) execute(ec *executionContext) {
+	ec.t.Helper()
+	ec.t.Logf("creating Machine '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
+	ec.k8sEnv.createMachineCustom(ec.ctx, machineCustomCreateOptions{
+		namespace:     op.namespace,
+		name:          op.name,
+		clusterName:   op.clusterName,
+		phase:         op.phase,
+		version:       op.version,
+		providerID:    op.providerID,
+		nodeRefName:   op.nodeRefName,
+		configRefKind: op.configRefKind,
+		configRefName: op.configRefName,
+		infraRefKind:  op.infraRefKind,
+		infraRefName:  op.infraRefName,
+		conditions:    op.conditions,
+		addresses:     op.addresses,
+	})
+}
+
+func (op *machineBuilderOp) describe() string {
+	return fmt.Sprintf("create Machine %q in namespace %q for cluster %q", op.name, op.namespace, op.clusterName)
 }
 
 // toolCallOp executes an MCP tool call.
@@ -297,6 +352,27 @@ func (op *assertContentOp) execute(ec *executionContext) {
 
 func (op *assertContentOp) describe() string {
 	return fmt.Sprintf("assert content matches %q", filepath.Join(op.toolName, op.goldenPath))
+}
+
+// assertContentNormalizedOp compares the last tool call result with a golden file
+// after applying normalizers to both the actual output and golden file content.
+type assertContentNormalizedOp struct {
+	toolName    string
+	goldenPath  string
+	normalizers []Normalizer
+}
+
+func (op *assertContentNormalizedOp) execute(ec *executionContext) {
+	ec.t.Helper()
+	if ec.lastToolResult == nil {
+		ec.t.Fatal("assertContentNormalized called without a preceding tool call")
+	}
+	fullGoldenPath := filepath.Join(op.toolName, op.goldenPath)
+	ec.lastToolResult.assertContentNormalized(fullGoldenPath, op.normalizers)
+}
+
+func (op *assertContentNormalizedOp) describe() string {
+	return fmt.Sprintf("assert normalized content matches %q", filepath.Join(op.toolName, op.goldenPath))
 }
 
 // assertErrorOp compares the last tool call error with a golden file.

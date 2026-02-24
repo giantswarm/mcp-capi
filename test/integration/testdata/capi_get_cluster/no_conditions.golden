@@ -1,0 +1,6 @@
+Cluster: test-clusters/nocond-cluster
+Phase: Provisioning
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready

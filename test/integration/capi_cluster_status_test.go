@@ -10,6 +10,26 @@ import (
 func TestCapiClusterStatus(t *testing.T) {
 	t.Parallel()
 
+	t.Run("returns error when namespace argument is missing", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_cluster_status").
+			WithArg("name", "some-cluster").
+			AssertError("missing_namespace.golden").
+			Execute()
+	})
+
+	t.Run("returns error when name argument is missing", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_cluster_status").
+			WithArg("namespace", "some-ns").
+			AssertError("missing_name.golden").
+			Execute()
+	})
+
 	t.Run("returns error for non-existent cluster", func(t *testing.T) {
 		t.Parallel()
 		namespace := "test-clusters"
@@ -282,4 +302,70 @@ func TestCapiClusterStatus(t *testing.T) {
 				Execute()
 		})
 	}
+
+	t.Run("gets status with mixed conditions ready true cp false", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "mixed-1").WithProvider("aws").WithPhase("Provisioned").
+			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is ready").Done().
+			WithCondition("ControlPlaneReady").False().Reason("CPNotReady").Message("Control plane not ready").Done().
+			Create().
+			ToolCall("capi_cluster_status").
+			WithArg("namespace", namespace).
+			WithArg("name", "mixed-1").
+			AssertContent("mixed_ready_true_cp_false.golden").
+			Execute()
+	})
+
+	t.Run("gets status with mixed conditions ready false infra true", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "mixed-2").WithProvider("azure").WithPhase("Provisioning").
+			WithCondition("Ready").False().Reason("ClusterNotReady").Message("Cluster not ready").Done().
+			WithCondition("InfrastructureReady").True().Reason("InfraReady").Message("Infrastructure is ready").Done().
+			Create().
+			ToolCall("capi_cluster_status").
+			WithArg("namespace", namespace).
+			WithArg("name", "mixed-2").
+			AssertContent("mixed_ready_false_infra_true.golden").
+			Execute()
+	})
+
+	t.Run("gets status with no conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "nocond-cluster").WithProvider("gcp").WithPhase("Pending").
+			Create().
+			ToolCall("capi_cluster_status").
+			WithArg("namespace", namespace).
+			WithArg("name", "nocond-cluster").
+			AssertContent("no_conditions.golden").
+			Execute()
+	})
+
+	t.Run("gets status with nil control plane ref", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "nocp-cluster").WithProvider("aws").WithPhase("Provisioned").WithVersion("v1.29.0").
+			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is ready").Done().
+			WithCondition("InfrastructureReady").True().Reason("InfraReady").Message("Infrastructure is ready").Done().
+			Create().
+			ToolCall("capi_cluster_status").
+			WithArg("namespace", namespace).
+			WithArg("name", "nocp-cluster").
+			AssertContent("nil_control_plane_ref.golden").
+			Execute()
+	})
 }

@@ -1,0 +1,10 @@
+Cluster: test-clusters/nocp-cluster
+Phase: Provisioned
+Ready: true
+Provider: aws
+Version: v1.29.0
+Machines: 0/0 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  InfrastructureReady: True (InfraReady)
