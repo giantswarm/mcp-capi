@@ -94,6 +94,10 @@ type testEnv struct {
 func newTestEnv(t TestingT) *testEnv {
 	t.Helper()
 
+	if mgr == nil {
+		t.Fatal("harness.InitManager() must be called from TestMain before running tests")
+	}
+
 	// Acquire an instance from the pool
 	ctx, cancel := context.WithTimeout(context.Background(), acquireTimeout)
 	defer cancel()
