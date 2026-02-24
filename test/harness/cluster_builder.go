@@ -119,52 +119,52 @@ func (cb *ClusterBuilder) WithCondition(condType string) *ConditionBuilder {
 }
 
 // True sets the condition status to True.
-func (cob *ConditionBuilder) True() *ConditionBuilder {
-	cob.status = corev1.ConditionTrue
-	return cob
+func (cb *ConditionBuilder) True() *ConditionBuilder {
+	cb.status = corev1.ConditionTrue
+	return cb
 }
 
 // False sets the condition status to False.
-func (cob *ConditionBuilder) False() *ConditionBuilder {
-	cob.status = corev1.ConditionFalse
-	return cob
+func (cb *ConditionBuilder) False() *ConditionBuilder {
+	cb.status = corev1.ConditionFalse
+	return cb
 }
 
 // Unknown sets the condition status to Unknown.
-func (cob *ConditionBuilder) Unknown() *ConditionBuilder {
-	cob.status = corev1.ConditionUnknown
-	return cob
+func (cb *ConditionBuilder) Unknown() *ConditionBuilder {
+	cb.status = corev1.ConditionUnknown
+	return cb
 }
 
 // Severity sets the severity for this condition (Error, Warning, Info).
-func (cob *ConditionBuilder) Severity(severity clusterv1.ConditionSeverity) *ConditionBuilder {
-	cob.severity = severity
-	return cob
+func (cb *ConditionBuilder) Severity(severity clusterv1.ConditionSeverity) *ConditionBuilder {
+	cb.severity = severity
+	return cb
 }
 
 // Reason sets the reason for this condition.
-func (cob *ConditionBuilder) Reason(reason string) *ConditionBuilder {
-	cob.reason = reason
-	return cob
+func (cb *ConditionBuilder) Reason(reason string) *ConditionBuilder {
+	cb.reason = reason
+	return cb
 }
 
 // Message sets the message for this condition.
-func (cob *ConditionBuilder) Message(message string) *ConditionBuilder {
-	cob.message = message
-	return cob
+func (cb *ConditionBuilder) Message(message string) *ConditionBuilder {
+	cb.message = message
+	return cb
 }
 
 // Done returns to the ClusterBuilder to continue configuration.
-func (cob *ConditionBuilder) Done() *ClusterBuilder {
-	cob.clusterBuilder.conditions = append(cob.clusterBuilder.conditions, clusterv1.Condition{
-		Type:               clusterv1.ConditionType(cob.condType),
-		Status:             cob.status,
-		Severity:           cob.severity,
-		Reason:             cob.reason,
-		Message:            cob.message,
+func (cb *ConditionBuilder) Done() *ClusterBuilder {
+	cb.clusterBuilder.conditions = append(cb.clusterBuilder.conditions, clusterv1.Condition{
+		Type:               clusterv1.ConditionType(cb.condType),
+		Status:             cb.status,
+		Severity:           cb.severity,
+		Reason:             cb.reason,
+		Message:            cb.message,
 		LastTransitionTime: metav1.Now(),
 	})
-	return cob.clusterBuilder
+	return cb.clusterBuilder
 }
 
 // ControlPlaneBuilder provides a fluent API for configuring the control plane.

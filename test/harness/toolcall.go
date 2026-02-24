@@ -37,7 +37,6 @@ func (tc *ToolCall) WithArgs(args map[string]any) *ToolCall {
 // This enables continued chaining after the assertion.
 // The goldenPath is relative to testdata/<toolName>/.
 func (tc *ToolCall) AssertContent(goldenPath string) *Harness {
-	tc.harness.t.Helper()
 	// Queue the tool call operation
 	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
 		toolName: tc.toolName,
@@ -56,7 +55,6 @@ func (tc *ToolCall) AssertContent(goldenPath string) *Harness {
 // allowing non-deterministic fields (e.g. UID, timestamps) to be replaced with placeholders.
 // The goldenPath is relative to testdata/<toolName>/.
 func (tc *ToolCall) AssertContentNormalized(goldenPath string, normalizers ...Normalizer) *Harness {
-	tc.harness.t.Helper()
 	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
 		toolName: tc.toolName,
 		args:     tc.args,
@@ -73,7 +71,6 @@ func (tc *ToolCall) AssertContentNormalized(goldenPath string, normalizers ...No
 // Use this for tool calls that are expected to fail (protocol errors or tool errors).
 // The goldenPath is relative to testdata/<toolName>/.
 func (tc *ToolCall) AssertError(goldenPath string) *Harness {
-	tc.harness.t.Helper()
 	// Queue the tool call operation
 	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
 		toolName: tc.toolName,
