@@ -16,6 +16,25 @@
 //   - Fast test setup if tests are skipped (environment only created on Execute)
 //   - Single point of execution for easier debugging
 //
+// # TestMain Setup
+//
+// Before any tests run, the k8senv manager must be initialized by calling
+// [InitManager] from TestMain. After all tests complete, [ShutdownManager]
+// must be called to release resources. This is required because the manager
+// maintains a pool of local Kubernetes API server instances that are shared
+// across tests.
+//
+//	func TestMain(m *testing.M) {
+//		harness.InitManager()
+//		code := m.Run()
+//		harness.ShutdownManager()
+//		os.Exit(code)
+//	}
+//
+// [InitManager] is safe to call from multiple goroutines; only the first
+// call performs initialization. The pool size defaults to GOMAXPROCS and
+// can be overridden with the HARNESS_POOL_SIZE environment variable.
+//
 // # Usage
 //
 // Use [New] to create a new test harness, chain operations using the fluent
