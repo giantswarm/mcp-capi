@@ -579,7 +579,7 @@ type machineDeploymentCreateOptions struct {
 // needsStatusUpdate reports whether any status fields are set that require
 // a Status().Update() call after MachineDeployment creation.
 func (o *machineDeploymentCreateOptions) needsStatusUpdate() bool {
-	return o.hasStatus || o.phase != "" || o.readyReplicas > 0 || o.updatedReplicas > 0 || o.availableReplicas > 0 || o.statusReplicas > 0
+	return o.hasStatus || o.phase != ""
 }
 
 // createMachineSet creates a CAPI MachineSet resource for the given cluster.
@@ -722,7 +722,7 @@ type machineSetCreateOptions struct {
 // needsStatusUpdate reports whether any status fields are set that require
 // a Status().Update() call after MachineSet creation.
 func (o *machineSetCreateOptions) needsStatusUpdate() bool {
-	return o.hasStatus || o.statusReplicas > 0 || o.readyReplicas > 0 || o.availableReplicas > 0 || o.failureReason != "" || o.failureMessage != "" || len(o.conditions) > 0
+	return o.hasStatus || o.failureReason != "" || o.failureMessage != "" || len(o.conditions) > 0
 }
 
 // nodeCreateOptions holds all parameters for creating a fully-configured Kubernetes Node.
