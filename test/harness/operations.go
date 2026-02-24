@@ -168,3 +168,24 @@ func (op *assertContentOp) execute(ec *executionContext) {
 func (op *assertContentOp) describe() string {
 	return fmt.Sprintf("assert content matches %q", filepath.Join(op.toolName, op.goldenPath))
 }
+
+// assertErrorOp compares the last tool call error with a golden file.
+// IMPORTANT: This operation must be preceded by a toolCallOp that sets lastToolResult.
+// The AssertError() method on ToolCall enforces this by queuing both operations together.
+type assertErrorOp struct {
+	toolName   string
+	goldenPath string
+}
+
+func (op *assertErrorOp) execute(ec *executionContext) {
+	ec.t.Helper()
+	if ec.lastToolResult == nil {
+		ec.t.Fatal("assertError called without a preceding tool call")
+	}
+	fullGoldenPath := filepath.Join(op.toolName, op.goldenPath)
+	ec.lastToolResult.assertError(fullGoldenPath)
+}
+
+func (op *assertErrorOp) describe() string {
+	return fmt.Sprintf("assert error matches %q", filepath.Join(op.toolName, op.goldenPath))
+}

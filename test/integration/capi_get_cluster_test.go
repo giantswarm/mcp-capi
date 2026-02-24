@@ -10,6 +10,19 @@ import (
 func TestCapiGetCluster(t *testing.T) {
 	t.Parallel()
 
+	t.Run("returns error for non-existent cluster", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "does-not-exist").
+			AssertError("not_found.golden").
+			Execute()
+	})
+
 	t.Run("gets a basic cluster", func(t *testing.T) {
 		t.Parallel()
 		namespace := "test-clusters"

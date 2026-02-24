@@ -397,3 +397,21 @@ func (tc *ToolCall) AssertContent(goldenPath string) *Harness {
 	})
 	return tc.harness
 }
+
+// AssertError queues the tool call and error assertion, then returns to the harness.
+// Use this for tool calls that are expected to fail (protocol errors or tool errors).
+// The goldenPath is relative to testdata/<toolName>/.
+func (tc *ToolCall) AssertError(goldenPath string) *Harness {
+	tc.harness.t.Helper()
+	// Queue the tool call operation
+	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
+		toolName: tc.toolName,
+		args:     tc.args,
+	})
+	// Queue the error assertion operation
+	tc.harness.operations = append(tc.harness.operations, &assertErrorOp{
+		toolName:   tc.toolName,
+		goldenPath: goldenPath,
+	})
+	return tc.harness
+}

@@ -116,6 +116,21 @@
 //		Create().
 //		Execute()
 //
+// # Error Testing
+//
+// The package supports testing tool calls that return errors via [ToolCall.AssertError].
+// This works with both protocol errors (handler returns an error) and tool errors
+// (handler returns mcp.NewToolResultError). The error text is compared against a
+// golden file, just like [ToolCall.AssertContent] does for successful responses.
+//
+//	harness.New(t).
+//		CreateNamespace("test").
+//		ToolCall("capi_get_cluster").
+//		WithArg("namespace", "test").
+//		WithArg("name", "does-not-exist").
+//		AssertError("not_found.golden").
+//		Execute()
+//
 // # Public API
 //
 // The package exports the following types for writing tests:
@@ -134,7 +149,8 @@
 //   - [Harness.ToolCall]: Start a tool call builder
 //   - [Harness.Execute]: Execute all queued operations
 //   - [ToolCall.WithArg], [ToolCall.WithArgs]: Add arguments to tool call
-//   - [ToolCall.AssertContent]: Queue tool call and assertion, return to harness
+//   - [ToolCall.AssertContent]: Queue tool call and content assertion, return to harness
+//   - [ToolCall.AssertError]: Queue tool call and error assertion, return to harness
 //
 // Internal implementation details (testEnv, mcpClient, callToolResult, operation types)
 // remain unexported to keep the API surface minimal and allow implementation changes

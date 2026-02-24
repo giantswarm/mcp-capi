@@ -30,10 +30,14 @@ type mcpClient struct {
 	stderrBuf *bytes.Buffer
 }
 
-// callToolResult wraps an MCP CallToolResult for testing purposes
+// callToolResult wraps an MCP CallToolResult for testing purposes.
+// For protocol errors (handler returns error), Err is set and Result is nil.
+// For tool errors (handler returns mcp.NewToolResultError), Result.IsError is true.
+// For successful calls, Result is set with IsError false.
 type callToolResult struct {
 	t      TestingT
 	Result *mcp.CallToolResult
+	Err    error // non-nil for protocol errors
 }
 
 // initializeMCPClient creates and initializes the MCP client with cleanup registration.
@@ -113,7 +117,7 @@ func (c *mcpClient) CallTool(ctx context.Context, toolName string, args map[stri
 
 	result, err := c.client.CallTool(ctx, request)
 	if err != nil {
-		c.t.Fatalf("failed to call tool %s: %v", toolName, err)
+		return &callToolResult{t: c.t, Err: err}
 	}
 
 	return &callToolResult{
@@ -137,9 +141,13 @@ func (c *mcpClient) stderr() string {
 // extractText extracts the first text content from the MCP response.
 // If multiple text contents exist, only the first one is returned.
 // Use Result.Content directly to access all content items.
+// Fatals if the tool call returned a protocol error (use extractError instead).
 func (res *callToolResult) extractText() string {
 	res.t.Helper()
 
+	if res.Err != nil {
+		res.t.Fatal("cannot extract text: tool call returned a protocol error (use AssertError)")
+	}
 	if res.Result == nil {
 		res.t.Fatal("result is nil")
 	}
@@ -159,9 +167,49 @@ func (res *callToolResult) extractText() string {
 
 // assertContent compares the extracted text content with the specified golden file.
 // The goldenPath is relative to the testdata directory.
+// Fatals if the tool call returned an error (use assertError instead).
 func (res *callToolResult) assertContent(goldenPath string) {
 	res.t.Helper()
+
+	if res.Err != nil {
+		res.t.Fatal("assertContent called on a protocol error result (use AssertError)")
+	}
+	if res.Result != nil && res.Result.IsError {
+		res.t.Fatal("assertContent called on a tool error result (use AssertError)")
+	}
+
 	text := res.extractText()
+	fullPath := filepath.Join(testdataDir, goldenPath)
+	err := compareWithGolden(text, fullPath)
+	if err != nil {
+		res.t.Fatalf("golden file comparison failed: %v", err)
+	}
+}
+
+// extractError extracts the error text from a failed tool call.
+// For protocol errors (Err != nil), returns Err.Error().
+// For tool errors (Result.IsError), extracts the text content (which holds the error message).
+// Fatals if the tool call succeeded (use extractText/assertContent instead).
+func (res *callToolResult) extractError() string {
+	res.t.Helper()
+
+	if res.Err != nil {
+		return res.Err.Error()
+	}
+	if res.Result != nil && res.Result.IsError {
+		return res.extractText()
+	}
+
+	res.t.Fatal("cannot extract error: tool call succeeded (use AssertContent)")
+	panic("unreachable") // Fatal calls runtime.Goexit but compiler needs a return
+}
+
+// assertError compares the error text with the specified golden file.
+// The goldenPath is relative to the testdata directory.
+// Works with both protocol errors and tool errors.
+func (res *callToolResult) assertError(goldenPath string) {
+	res.t.Helper()
+	text := res.extractError()
 	fullPath := filepath.Join(testdataDir, goldenPath)
 	err := compareWithGolden(text, fullPath)
 	if err != nil {
