@@ -736,11 +736,11 @@ func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		content.WriteString(fmt.Sprintf("  Total Replicas: %d\n", ms.Status.Replicas))
 		content.WriteString(fmt.Sprintf("  Ready Replicas: %d\n", ms.Status.ReadyReplicas))
 		content.WriteString(fmt.Sprintf("  Available Replicas: %d\n", ms.Status.AvailableReplicas))
-		if ms.Status.FailureReason != nil {
-			content.WriteString(fmt.Sprintf("  Failure Reason: %s\n", *ms.Status.FailureReason))
+		if ms.Status.FailureReason != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+			content.WriteString(fmt.Sprintf("  Failure Reason: %s\n", *ms.Status.FailureReason)) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 		}
-		if ms.Status.FailureMessage != nil {
-			content.WriteString(fmt.Sprintf("  Failure Message: %s\n", *ms.Status.FailureMessage))
+		if ms.Status.FailureMessage != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+			content.WriteString(fmt.Sprintf("  Failure Message: %s\n", *ms.Status.FailureMessage)) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 		}
 
 		// Machine template

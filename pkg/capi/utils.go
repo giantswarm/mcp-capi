@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"             //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
 // ClusterStatus represents the status of a CAPI cluster
@@ -163,8 +163,8 @@ func GetControlPlaneStatus(kcp *controlplanev1.KubeadmControlPlane) string {
 		return "Ready"
 	}
 
-	if kcp.Status.UnavailableReplicas > 0 {
-		return fmt.Sprintf("Degraded (%d unavailable)", kcp.Status.UnavailableReplicas)
+	if kcp.Status.UnavailableReplicas > 0 { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+		return fmt.Sprintf("Degraded (%d unavailable)", kcp.Status.UnavailableReplicas) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	}
 
 	if kcp.Status.Replicas == 0 {

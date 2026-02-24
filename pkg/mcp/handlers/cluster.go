@@ -8,7 +8,7 @@ import (
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
 // createCreateClusterHandler creates a handler for creating new CAPI clusters

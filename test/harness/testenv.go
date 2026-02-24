@@ -25,8 +25,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"                    //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	capierrors "sigs.k8s.io/cluster-api/errors" //nolint:staticcheck // TODO: migrate when CAPI v1beta2 provides a replacement type
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
