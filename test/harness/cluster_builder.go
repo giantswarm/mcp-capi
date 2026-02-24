@@ -1,0 +1,231 @@
+package harness
+
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+)
+
+// controlPlaneConfig holds the configuration for a control plane resource.
+type controlPlaneConfig struct {
+	kind     string // e.g., "KubeadmControlPlane"
+	version  string
+	replicas int32
+}
+
+// ClusterBuilder provides a fluent API for building cluster resources with custom properties.
+// Similar to ToolCall, it accumulates configuration and queues the operation when finalized.
+type ClusterBuilder struct {
+	harness           *Harness
+	namespace         string
+	name              string
+	provider          string // "", "aws", "azure", "gcp", "vsphere", "vcd"
+	phase             string // cluster phase to set after creation
+	version           string // kubernetes version to set after creation
+	totalMachines     int    // number of machines to create
+	readyMachines     int    // number of machines with NodeRef (ready)
+	controlPlane      *controlPlaneConfig
+	conditions        []clusterv1.Condition // conditions to set on the cluster
+	customInfraRef    *customRef            // custom InfrastructureRef (overrides provider)
+	customCPRef       *customRef            // custom ControlPlaneRef (overrides controlPlane)
+	controlPlaneReady *bool                 // explicit control plane ready status
+	infraReady        *bool                 // explicit infrastructure ready status
+}
+
+// customRef holds a custom object reference for InfrastructureRef or ControlPlaneRef.
+type customRef struct {
+	kind string
+	name string
+}
+
+// Cluster starts a new cluster builder.
+func (h *Harness) Cluster(namespace, name string) *ClusterBuilder {
+	return &ClusterBuilder{
+		harness:   h,
+		namespace: namespace,
+		name:      name,
+	}
+}
+
+// WithProvider sets the infrastructure provider (aws, azure, gcp, vsphere, vcd).
+func (cb *ClusterBuilder) WithProvider(provider string) *ClusterBuilder {
+	cb.provider = provider
+	return cb
+}
+
+// WithPhase sets the cluster phase to apply after creation.
+func (cb *ClusterBuilder) WithPhase(phase string) *ClusterBuilder {
+	cb.phase = phase
+	return cb
+}
+
+// WithVersion sets the kubernetes version to apply after creation.
+func (cb *ClusterBuilder) WithVersion(version string) *ClusterBuilder {
+	cb.version = version
+	return cb
+}
+
+// WithMachines sets the number of machines to create and how many should be ready.
+// Ready machines will have a NodeRef set in their status.
+func (cb *ClusterBuilder) WithMachines(total, ready int) *ClusterBuilder {
+	if ready > total {
+		cb.harness.t.Fatalf("WithMachines: ready (%d) cannot exceed total (%d)", ready, total)
+	}
+	cb.totalMachines = total
+	cb.readyMachines = ready
+	return cb
+}
+
+// WithCustomInfraRef sets a custom InfrastructureRef with an arbitrary Kind.
+// This overrides any provider set via WithProvider.
+func (cb *ClusterBuilder) WithCustomInfraRef(kind, name string) *ClusterBuilder {
+	cb.customInfraRef = &customRef{kind: kind, name: name}
+	return cb
+}
+
+// WithControlPlaneRef sets a custom ControlPlaneRef with an arbitrary Kind and name.
+// Use this to test non-KubeadmControlPlane control plane types or references
+// to control plane resources that don't exist.
+func (cb *ClusterBuilder) WithControlPlaneRef(kind, name string) *ClusterBuilder {
+	cb.customCPRef = &customRef{kind: kind, name: name}
+	return cb
+}
+
+// WithControlPlaneReady explicitly sets the ControlPlaneReady status field on the cluster.
+func (cb *ClusterBuilder) WithControlPlaneReady(ready bool) *ClusterBuilder {
+	cb.controlPlaneReady = &ready
+	return cb
+}
+
+// WithInfraReady explicitly sets the InfrastructureReady status field on the cluster.
+func (cb *ClusterBuilder) WithInfraReady(ready bool) *ClusterBuilder {
+	cb.infraReady = &ready
+	return cb
+}
+
+// ConditionBuilder provides a fluent API for configuring a cluster condition.
+type ConditionBuilder struct {
+	clusterBuilder *ClusterBuilder
+	condType       string
+	status         corev1.ConditionStatus
+	severity       clusterv1.ConditionSeverity
+	reason         string
+	message        string
+}
+
+// WithCondition starts configuring a condition for this cluster.
+func (cb *ClusterBuilder) WithCondition(condType string) *ConditionBuilder {
+	return &ConditionBuilder{
+		clusterBuilder: cb,
+		condType:       condType,
+	}
+}
+
+// True sets the condition status to True.
+func (cob *ConditionBuilder) True() *ConditionBuilder {
+	cob.status = corev1.ConditionTrue
+	return cob
+}
+
+// False sets the condition status to False.
+func (cob *ConditionBuilder) False() *ConditionBuilder {
+	cob.status = corev1.ConditionFalse
+	return cob
+}
+
+// Unknown sets the condition status to Unknown.
+func (cob *ConditionBuilder) Unknown() *ConditionBuilder {
+	cob.status = corev1.ConditionUnknown
+	return cob
+}
+
+// Severity sets the severity for this condition (Error, Warning, Info).
+func (cob *ConditionBuilder) Severity(severity clusterv1.ConditionSeverity) *ConditionBuilder {
+	cob.severity = severity
+	return cob
+}
+
+// Reason sets the reason for this condition.
+func (cob *ConditionBuilder) Reason(reason string) *ConditionBuilder {
+	cob.reason = reason
+	return cob
+}
+
+// Message sets the message for this condition.
+func (cob *ConditionBuilder) Message(message string) *ConditionBuilder {
+	cob.message = message
+	return cob
+}
+
+// Done returns to the ClusterBuilder to continue configuration.
+func (cob *ConditionBuilder) Done() *ClusterBuilder {
+	cob.clusterBuilder.conditions = append(cob.clusterBuilder.conditions, clusterv1.Condition{
+		Type:               clusterv1.ConditionType(cob.condType),
+		Status:             cob.status,
+		Severity:           cob.severity,
+		Reason:             cob.reason,
+		Message:            cob.message,
+		LastTransitionTime: metav1.Now(),
+	})
+	return cob.clusterBuilder
+}
+
+// ControlPlaneBuilder provides a fluent API for configuring the control plane.
+type ControlPlaneBuilder struct {
+	clusterBuilder *ClusterBuilder
+	kind           string // e.g., "KubeadmControlPlane"
+	version        string
+	replicas       int32
+}
+
+// WithKubeadmControlPlane starts configuring a KubeadmControlPlane for this cluster.
+func (cb *ClusterBuilder) WithKubeadmControlPlane() *ControlPlaneBuilder {
+	return &ControlPlaneBuilder{
+		clusterBuilder: cb,
+		kind:           "KubeadmControlPlane",
+		replicas:       1, // sensible default
+	}
+}
+
+// Version sets the Kubernetes version on the control plane.
+func (cpb *ControlPlaneBuilder) Version(version string) *ControlPlaneBuilder {
+	cpb.version = version
+	return cpb
+}
+
+// Replicas sets the number of control plane replicas.
+func (cpb *ControlPlaneBuilder) Replicas(replicas int32) *ControlPlaneBuilder {
+	cpb.replicas = replicas
+	return cpb
+}
+
+// Done returns to the ClusterBuilder to continue configuration.
+func (cpb *ControlPlaneBuilder) Done() *ClusterBuilder {
+	cpb.clusterBuilder.controlPlane = &controlPlaneConfig{
+		kind:     cpb.kind,
+		version:  cpb.version,
+		replicas: cpb.replicas,
+	}
+	return cpb.clusterBuilder
+}
+
+// Create queues the cluster creation operation and returns to the harness.
+func (cb *ClusterBuilder) Create() *Harness {
+	cb.harness.t.Helper()
+	cb.harness.operations = append(cb.harness.operations, &clusterBuilderOp{
+		namespace:         cb.namespace,
+		name:              cb.name,
+		provider:          cb.provider,
+		phase:             cb.phase,
+		version:           cb.version,
+		totalMachines:     cb.totalMachines,
+		readyMachines:     cb.readyMachines,
+		controlPlane:      cb.controlPlane,
+		conditions:        cb.conditions,
+		customInfraRef:    cb.customInfraRef,
+		customCPRef:       cb.customCPRef,
+		controlPlaneReady: cb.controlPlaneReady,
+		infraReady:        cb.infraReady,
+	})
+	return cb.harness
+}
