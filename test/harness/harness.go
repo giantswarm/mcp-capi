@@ -390,6 +390,7 @@ type MachineDeploymentBuilder struct {
 	name              string
 	clusterName       string
 	replicas          int
+	nilReplicas       bool // if true, Spec.Replicas is nil (overrides replicas field)
 	version           string
 	phase             string
 	statusReplicas    int
@@ -417,6 +418,12 @@ func (mdb *MachineDeploymentBuilder) ForCluster(clusterName string) *MachineDepl
 // WithReplicas sets the desired replica count.
 func (mdb *MachineDeploymentBuilder) WithReplicas(replicas int) *MachineDeploymentBuilder {
 	mdb.replicas = replicas
+	return mdb
+}
+
+// WithNilReplicas sets Spec.Replicas to nil (no desired replica count).
+func (mdb *MachineDeploymentBuilder) WithNilReplicas() *MachineDeploymentBuilder {
+	mdb.nilReplicas = true
 	return mdb
 }
 
@@ -449,6 +456,7 @@ func (mdb *MachineDeploymentBuilder) Create() *Harness {
 		name:              mdb.name,
 		clusterName:       mdb.clusterName,
 		replicas:          mdb.replicas,
+		nilReplicas:       mdb.nilReplicas,
 		version:           mdb.version,
 		phase:             mdb.phase,
 		statusReplicas:    mdb.statusReplicas,
@@ -480,6 +488,15 @@ type MachineSetBuilder struct {
 	ownerName         string // custom owner name (used with ownerKind)
 	failureReason     string
 	failureMessage    string
+	conditions        []machineSetCondition
+}
+
+// machineSetCondition holds a MachineSet condition configuration.
+type machineSetCondition struct {
+	condType string
+	status   string
+	reason   string
+	message  string
 }
 
 // MachineSet starts a new MachineSet builder.
@@ -564,6 +581,52 @@ func (msb *MachineSetBuilder) WithFailureMessage(message string) *MachineSetBuil
 	return msb
 }
 
+// MachineSetConditionBuilder provides a fluent API for configuring a MachineSet condition.
+type MachineSetConditionBuilder struct {
+	machineSetBuilder *MachineSetBuilder
+	condType          string
+	status            string
+	reason            string
+	message           string
+}
+
+// WithCondition starts configuring a condition for this MachineSet.
+func (msb *MachineSetBuilder) WithCondition(condType string) *MachineSetConditionBuilder {
+	return &MachineSetConditionBuilder{
+		machineSetBuilder: msb,
+		condType:          condType,
+	}
+}
+
+// Status sets the condition status ("True", "False", "Unknown").
+func (mscb *MachineSetConditionBuilder) Status(status string) *MachineSetConditionBuilder {
+	mscb.status = status
+	return mscb
+}
+
+// Reason sets the reason for this condition.
+func (mscb *MachineSetConditionBuilder) Reason(reason string) *MachineSetConditionBuilder {
+	mscb.reason = reason
+	return mscb
+}
+
+// Message sets the message for this condition.
+func (mscb *MachineSetConditionBuilder) Message(message string) *MachineSetConditionBuilder {
+	mscb.message = message
+	return mscb
+}
+
+// Done returns to the MachineSetBuilder to continue configuration.
+func (mscb *MachineSetConditionBuilder) Done() *MachineSetBuilder {
+	mscb.machineSetBuilder.conditions = append(mscb.machineSetBuilder.conditions, machineSetCondition{
+		condType: mscb.condType,
+		status:   mscb.status,
+		reason:   mscb.reason,
+		message:  mscb.message,
+	})
+	return mscb.machineSetBuilder
+}
+
 // Create queues the MachineSet creation and returns to the harness.
 func (msb *MachineSetBuilder) Create() *Harness {
 	msb.harness.t.Helper()
@@ -584,6 +647,7 @@ func (msb *MachineSetBuilder) Create() *Harness {
 		ownerMDName:       msb.ownerMDName,
 		ownerKind:         msb.ownerKind,
 		ownerName:         msb.ownerName,
+		conditions:        msb.conditions,
 		failureReason:     msb.failureReason,
 		failureMessage:    msb.failureMessage,
 	})

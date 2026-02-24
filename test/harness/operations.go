@@ -196,6 +196,7 @@ type machineDeploymentOp struct {
 	name              string
 	clusterName       string
 	replicas          int
+	nilReplicas       bool
 	version           string
 	phase             string
 	statusReplicas    int
@@ -212,6 +213,7 @@ func (op *machineDeploymentOp) execute(ec *executionContext) {
 		name:              op.name,
 		clusterName:       op.clusterName,
 		replicas:          op.replicas,
+		nilReplicas:       op.nilReplicas,
 		version:           op.version,
 		phase:             op.phase,
 		statusReplicas:    op.statusReplicas,
@@ -243,6 +245,7 @@ type machineSetOp struct {
 	ownerMDName       string
 	ownerKind         string
 	ownerName         string
+	conditions        []machineSetCondition
 	failureReason     string
 	failureMessage    string
 }
@@ -267,6 +270,7 @@ func (op *machineSetOp) execute(ec *executionContext) {
 		ownerMDName:       op.ownerMDName,
 		ownerKind:         op.ownerKind,
 		ownerName:         op.ownerName,
+		conditions:        op.conditions,
 		failureReason:     op.failureReason,
 		failureMessage:    op.failureMessage,
 	})

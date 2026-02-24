@@ -175,4 +175,19 @@ func TestCapiListMachineDeployments(t *testing.T) {
 			AssertContent("mismatched_replicas.golden").
 			Execute()
 	})
+
+	t.Run("lists machine deployment with nil replicas", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineDeployment(namespace, "md-nil-replicas").ForCluster("test-cluster").WithNilReplicas().
+			WithPhase("Running").Create().
+			ToolCall("capi_list_machinedeployments").
+			WithArg("namespace", namespace).
+			AssertContent("nil_replicas.golden").
+			Execute()
+	})
 }

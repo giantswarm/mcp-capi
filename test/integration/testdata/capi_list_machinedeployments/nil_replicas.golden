@@ -1,0 +1,6 @@
+Found 1 machine deployments:
+
+MachineDeployment: test-clusters/md-nil-replicas
+  Cluster: test-cluster
+  Phase: Running
+

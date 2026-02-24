@@ -1,0 +1,1 @@
+Failed to get node status: failed to get machine: failed to get machine test-clusters/nonexistent-machine: machines.cluster.x-k8s.io "nonexistent-machine" not found

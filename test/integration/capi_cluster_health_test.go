@@ -265,4 +265,39 @@ func TestCapiClusterHealth(t *testing.T) {
 			AssertContent("empty_phase.golden").
 			Execute()
 	})
+
+	t.Run("shows both issues and warnings for combined error and warning conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "combined-conditions").WithProvider("aws").
+			WithCondition("NetworkReady").False().Severity(clusterv1.ConditionSeverityError).Reason("NetworkFailed").Message("Network configuration failed").Done().
+			WithCondition("CertificatesExpiring").False().Severity(clusterv1.ConditionSeverityWarning).Reason("CertsExpiringSoon").Message("Certificates will expire in 30 days").Done().
+			Create().
+			ToolCall("capi_cluster_health").
+			WithArg("namespace", namespace).
+			WithArg("name", "combined-conditions").
+			AssertContent("combined_issues_and_warnings.golden").
+			Execute()
+	})
+
+	t.Run("shows all recommendation sections when CP infra and workers are all not ready", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "all-unhealthy").WithProvider("aws").WithPhase("Provisioning").
+			WithControlPlaneReady(false).
+			WithInfraReady(false).
+			WithMachines(3, 0).
+			Create().
+			ToolCall("capi_cluster_health").
+			WithArg("namespace", namespace).
+			WithArg("name", "all-unhealthy").
+			AssertContent("all_recommendations.golden").
+			Execute()
+	})
 }

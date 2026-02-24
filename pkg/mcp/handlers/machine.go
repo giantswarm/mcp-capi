@@ -93,7 +93,9 @@ func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 		for _, md := range mds.Items {
 			content.WriteString(fmt.Sprintf("MachineDeployment: %s/%s\n", md.Namespace, md.Name))
 			content.WriteString(fmt.Sprintf("  Cluster: %s\n", md.Spec.ClusterName))
+			if md.Spec.Replicas != nil {
 			content.WriteString(fmt.Sprintf("  Replicas: %d\n", *md.Spec.Replicas))
+		}
 			if md.Status.Replicas > 0 {
 				content.WriteString(fmt.Sprintf("  Status: %d ready / %d updated / %d available\n",
 					md.Status.ReadyReplicas,

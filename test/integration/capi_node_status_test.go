@@ -194,4 +194,17 @@ func TestCapiNodeStatus(t *testing.T) {
 			AssertError("machine_no_noderef.golden").
 			Execute()
 	})
+
+	t.Run("returns error when machine_name not found", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			ToolCall("capi_node_status").
+			WithArg("namespace", namespace).
+			WithArg("machine_name", "nonexistent-machine").
+			AssertError("machine_not_found.golden").
+			Execute()
+	})
 }

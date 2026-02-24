@@ -216,4 +216,59 @@ func TestCapiGetMachineSet(t *testing.T) {
 			AssertContent("with_failure_reason_and_message.golden").
 			Execute()
 	})
+
+	t.Run("gets machine set with condition", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "cond-ms").ForCluster("test-cluster").WithReplicas(3).
+			WithStatus(3, 3, 3).
+			WithCondition("Ready").Status("True").Reason("MachinesReady").Message("All machines are ready").Done().
+			Create().
+			ToolCall("capi_get_machineset").
+			WithArg("namespace", namespace).
+			WithArg("name", "cond-ms").
+			AssertContent("with_condition.golden").
+			Execute()
+	})
+
+	t.Run("gets machine set with condition without reason and message", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "cond-minimal-ms").ForCluster("test-cluster").WithReplicas(2).
+			WithStatus(2, 2, 2).
+			WithCondition("Ready").Status("True").Done().
+			Create().
+			ToolCall("capi_get_machineset").
+			WithArg("namespace", namespace).
+			WithArg("name", "cond-minimal-ms").
+			AssertContent("with_condition_minimal.golden").
+			Execute()
+	})
+
+	t.Run("gets machine set with multiple conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "multi-cond-ms").ForCluster("test-cluster").WithReplicas(3).
+			WithStatus(3, 1, 1).
+			WithCondition("Ready").Status("False").Reason("MachinesNotReady").Message("2 of 3 machines are not ready").Done().
+			WithCondition("MachinesCreated").Status("True").Reason("MachinesCreated").Done().
+			Create().
+			ToolCall("capi_get_machineset").
+			WithArg("namespace", namespace).
+			WithArg("name", "multi-cond-ms").
+			AssertContent("with_multiple_conditions.golden").
+			Execute()
+	})
 }

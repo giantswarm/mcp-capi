@@ -686,7 +686,6 @@ func (te *testEnv) setClusterControlPlaneRefCustom(ctx context.Context, namespac
 func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDeploymentCreateOptions) {
 	te.t.Helper()
 
-	replicas := int32(opts.replicas)
 	md := &clusterv1.MachineDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.name,
@@ -697,7 +696,6 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 		},
 		Spec: clusterv1.MachineDeploymentSpec{
 			ClusterName: opts.clusterName,
-			Replicas:    &replicas,
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"machinedeployment": opts.name,
@@ -719,6 +717,11 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 				},
 			},
 		},
+	}
+
+	if !opts.nilReplicas {
+		replicas := int32(opts.replicas)
+		md.Spec.Replicas = &replicas
 	}
 
 	if opts.version != "" {
@@ -751,6 +754,7 @@ type machineDeploymentCreateOptions struct {
 	name              string
 	clusterName       string
 	replicas          int
+	nilReplicas       bool
 	version           string
 	phase             string
 	statusReplicas    int
@@ -849,7 +853,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 	}
 
 	// Update status if needed
-	needsStatusUpdate := opts.statusReplicas > 0 || opts.readyReplicas > 0 || opts.availableReplicas > 0 || opts.failureReason != "" || opts.failureMessage != ""
+	needsStatusUpdate := opts.statusReplicas > 0 || opts.readyReplicas > 0 || opts.availableReplicas > 0 || opts.failureReason != "" || opts.failureMessage != "" || len(opts.conditions) > 0
 	if needsStatusUpdate {
 		ms.Status.Replicas = int32(opts.statusReplicas)
 		ms.Status.ReadyReplicas = int32(opts.readyReplicas)
@@ -860,6 +864,15 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 		}
 		if opts.failureMessage != "" {
 			ms.Status.FailureMessage = &opts.failureMessage
+		}
+		for _, cond := range opts.conditions {
+			ms.Status.Conditions = append(ms.Status.Conditions, clusterv1.Condition{
+				Type:               clusterv1.ConditionType(cond.condType),
+				Status:             corev1.ConditionStatus(cond.status),
+				Reason:             cond.reason,
+				Message:            cond.message,
+				LastTransitionTime: metav1.Now(),
+			})
 		}
 		if err := te.ctrlClient.Status().Update(ctx, ms); err != nil {
 			te.t.Fatalf("failed to update status on MachineSet %s/%s: %v", opts.namespace, opts.name, err)
@@ -885,6 +898,7 @@ type machineSetCreateOptions struct {
 	ownerMDName       string
 	ownerKind         string
 	ownerName         string
+	conditions        []machineSetCondition
 	failureReason     string
 	failureMessage    string
 }

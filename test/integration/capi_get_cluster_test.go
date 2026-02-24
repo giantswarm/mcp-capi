@@ -351,4 +351,18 @@ func TestCapiGetCluster(t *testing.T) {
 			AssertContent("nil_control_plane_ref.golden").
 			Execute()
 	})
+
+	t.Run("gets cluster with nil infrastructure ref", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "no-infra-cluster").WithPhase("Pending").Create().
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "no-infra-cluster").
+			AssertContent("nil_infra_ref.golden").
+			Execute()
+	})
 }
