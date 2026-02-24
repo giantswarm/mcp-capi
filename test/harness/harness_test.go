@@ -2,6 +2,7 @@ package harness
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -23,9 +24,13 @@ func (m *mockT) Log(args ...any)  { m.logs = append(m.logs, fmt.Sprint(args...))
 func (m *mockT) Logf(format string, args ...any) {
 	m.logs = append(m.logs, fmt.Sprintf(format, args...))
 }
-func (m *mockT) Fatal(args ...any) { m.fatals = append(m.fatals, fmt.Sprint(args...)) }
+func (m *mockT) Fatal(args ...any) {
+	m.fatals = append(m.fatals, fmt.Sprint(args...))
+	runtime.Goexit()
+}
 func (m *mockT) Fatalf(format string, args ...any) {
 	m.fatals = append(m.fatals, fmt.Sprintf(format, args...))
+	runtime.Goexit()
 }
 func (m *mockT) Error(args ...any) { m.errors = append(m.errors, fmt.Sprint(args...)) }
 func (m *mockT) Errorf(format string, args ...any) {
@@ -72,8 +77,14 @@ func TestHarness_DoubleExecute(t *testing.T) {
 	// the test environment manager.
 	h.executed = true
 
-	// Second Execute should trigger a fatal.
-	h.Execute()
+	// Run in a goroutine because mockT.Fatal calls runtime.Goexit(),
+	// which terminates the goroutine. We need to survive to inspect fatals.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		h.Execute()
+	}()
+	<-done
 
 	if len(mt.fatals) != 1 {
 		t.Fatalf("expected exactly 1 fatal, got %d: %v", len(mt.fatals), mt.fatals)
