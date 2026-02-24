@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/giantswarm/k8senv"
@@ -34,39 +35,45 @@ const (
 	acquireTimeout        = 5 * time.Minute
 )
 
-// mgr is the package-level k8senv manager singleton.
-var mgr k8senv.Manager
+var (
+	// mgr is the package-level k8senv manager singleton.
+	mgr     k8senv.Manager
+	mgrOnce sync.Once
+)
 
 // InitManager initializes the k8senv manager with CAPI CRDs.
 // Must be called once from TestMain before any tests run.
+// It is safe to call from multiple goroutines; only the first call performs initialization.
 func InitManager() {
-	// Silence k8senv logs during tests
-	k8senv.SetLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	mgrOnce.Do(func() {
+		// Silence k8senv logs during tests
+		k8senv.SetLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
-	crdPath, err := getCRDPath()
-	if err != nil {
-		panic(fmt.Sprintf("failed to get CRD path: %v", err))
-	}
-
-	poolSize := runtime.GOMAXPROCS(0) // same default as testing.parallel
-	if f := flag.Lookup("test.parallel"); f != nil {
-		if n, err := strconv.Atoi(f.Value.String()); err == nil && n > 0 {
-			poolSize = n
+		crdPath, err := getCRDPath()
+		if err != nil {
+			panic(fmt.Sprintf("failed to get CRD path: %v", err))
 		}
-	}
 
-	mgr = k8senv.NewManager(
-		k8senv.WithCRDDir(crdPath),
-		k8senv.WithPoolSize(poolSize),
-		k8senv.WithReleaseStrategy(k8senv.ReleasePurge),
-	)
+		poolSize := runtime.GOMAXPROCS(0) // same default as testing.parallel
+		if f := flag.Lookup("test.parallel"); f != nil {
+			if n, err := strconv.Atoi(f.Value.String()); err == nil && n > 0 {
+				poolSize = n
+			}
+		}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+		mgr = k8senv.NewManager(
+			k8senv.WithCRDDir(crdPath),
+			k8senv.WithPoolSize(poolSize),
+			k8senv.WithReleaseStrategy(k8senv.ReleasePurge),
+		)
 
-	if err := mgr.Initialize(ctx); err != nil {
-		panic(fmt.Sprintf("failed to initialize k8senv: %v", err))
-	}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		if err := mgr.Initialize(ctx); err != nil {
+			panic(fmt.Sprintf("failed to initialize k8senv: %v", err))
+		}
+	})
 }
 
 // ShutdownManager stops the k8senv manager and releases all resources.
