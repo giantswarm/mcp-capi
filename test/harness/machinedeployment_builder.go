@@ -50,7 +50,7 @@ func (mdb *MachineDeploymentBuilder) WithPhase(phase string) *MachineDeploymentB
 
 // WithStatus sets the status replica counts.
 // Setting status explicitly triggers a status update even when all values are zero.
-func (mdb *MachineDeploymentBuilder) WithStatus(total, ready, updated, available int) *MachineDeploymentBuilder {
+func (mdb *MachineDeploymentBuilder) WithStatus(total, ready, updated, available int32) *MachineDeploymentBuilder {
 	mdb.hasStatus = true
 	mdb.statusReplicas = total
 	mdb.readyReplicas = ready

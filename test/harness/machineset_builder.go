@@ -38,7 +38,7 @@ func (msb *MachineSetBuilder) WithVersion(version string) *MachineSetBuilder {
 
 // WithStatus sets the status replica counts.
 // Setting status explicitly triggers a status update even when all values are zero.
-func (msb *MachineSetBuilder) WithStatus(total, ready, available int) *MachineSetBuilder {
+func (msb *MachineSetBuilder) WithStatus(total, ready, available int32) *MachineSetBuilder {
 	msb.hasStatus = true
 	msb.statusReplicas = total
 	msb.readyReplicas = ready

@@ -319,16 +319,20 @@ func (o *clusterCreateOptions) needsStatusUpdate() bool {
 // providerInfraRef returns the APIVersion and Kind for a provider's infrastructure reference.
 // Returns empty strings for unknown providers (no InfrastructureRef is set).
 func providerInfraRef(provider string) (apiVersion, kind string) {
-	type infraRef struct{ apiVersion, kind string }
-	providers := map[string]infraRef{
-		"aws":     {"infrastructure.cluster.x-k8s.io/v1beta2", "AWSCluster"},
-		"azure":   {"infrastructure.cluster.x-k8s.io/v1beta1", "AzureCluster"},
-		"gcp":     {"infrastructure.cluster.x-k8s.io/v1beta1", "GCPCluster"},
-		"vsphere": {"infrastructure.cluster.x-k8s.io/v1beta1", "VSphereCluster"},
-		"vcd":     {"infrastructure.cluster.x-k8s.io/v1beta1", "VCDCluster"},
+	switch provider {
+	case "aws":
+		return "infrastructure.cluster.x-k8s.io/v1beta2", "AWSCluster"
+	case "azure":
+		return "infrastructure.cluster.x-k8s.io/v1beta1", "AzureCluster"
+	case "gcp":
+		return "infrastructure.cluster.x-k8s.io/v1beta1", "GCPCluster"
+	case "vsphere":
+		return "infrastructure.cluster.x-k8s.io/v1beta1", "VSphereCluster"
+	case "vcd":
+		return "infrastructure.cluster.x-k8s.io/v1beta1", "VCDCluster"
+	default:
+		return "", ""
 	}
-	ref := providers[provider]
-	return ref.apiVersion, ref.kind
 }
 
 // createClusterFull creates a fully-configured CAPI Cluster in minimal API calls.
@@ -558,10 +562,10 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 		if opts.phase != "" {
 			md.Status.Phase = opts.phase
 		}
-		md.Status.Replicas = int32(opts.statusReplicas)
-		md.Status.ReadyReplicas = int32(opts.readyReplicas)
-		md.Status.UpdatedReplicas = int32(opts.updatedReplicas)
-		md.Status.AvailableReplicas = int32(opts.availableReplicas)
+		md.Status.Replicas = opts.statusReplicas
+		md.Status.ReadyReplicas = opts.readyReplicas
+		md.Status.UpdatedReplicas = opts.updatedReplicas
+		md.Status.AvailableReplicas = opts.availableReplicas
 		if err := te.ctrlClient.Status().Update(ctx, md); err != nil {
 			te.t.Fatalf("failed to update status on MachineDeployment %s/%s: %v", opts.namespace, opts.name, err)
 		}
@@ -578,10 +582,10 @@ type machineDeploymentCreateOptions struct {
 	version           string
 	phase             string
 	hasStatus         bool // explicit flag to trigger status update even with zero values
-	statusReplicas    int
-	readyReplicas     int
-	updatedReplicas   int
-	availableReplicas int
+	statusReplicas    int32
+	readyReplicas     int32
+	updatedReplicas   int32
+	availableReplicas int32
 }
 
 // needsStatusUpdate reports whether any status fields are set that require
@@ -678,9 +682,9 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 
 	// Update status if needed
 	if opts.needsStatusUpdate() {
-		ms.Status.Replicas = int32(opts.statusReplicas)
-		ms.Status.ReadyReplicas = int32(opts.readyReplicas)
-		ms.Status.AvailableReplicas = int32(opts.availableReplicas)
+		ms.Status.Replicas = opts.statusReplicas
+		ms.Status.ReadyReplicas = opts.readyReplicas
+		ms.Status.AvailableReplicas = opts.availableReplicas
 		if opts.failureReason != "" {
 			reason := capierrors.MachineSetStatusError(opts.failureReason)
 			ms.Status.FailureReason = &reason //nolint:staticcheck // deprecated but needed for v1beta1 test coverage
@@ -712,9 +716,9 @@ type machineSetCreateOptions struct {
 	nilReplicas       bool
 	version           string
 	hasStatus         bool // explicit flag to trigger status update even with zero values
-	statusReplicas    int
-	readyReplicas     int
-	availableReplicas int
+	statusReplicas    int32
+	readyReplicas     int32
+	availableReplicas int32
 	infraRefKind      string
 	infraRefName      string
 	bootstrapKind     string
