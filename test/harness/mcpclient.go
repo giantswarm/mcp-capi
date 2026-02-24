@@ -190,7 +190,7 @@ func (res *callToolResult) extractText() string {
 	}
 
 	res.t.Fatal("no text content found in result")
-	panic("unreachable") // Fatal calls runtime.Goexit but compiler needs a return
+	return "" // unreachable: Fatal calls runtime.Goexit but compiler needs a return
 }
 
 // assertContent compares the extracted text content with the specified golden file.
@@ -249,7 +249,7 @@ func (res *callToolResult) extractError() string {
 	}
 
 	res.t.Fatal("cannot extract error: tool call succeeded (use AssertContent)")
-	panic("unreachable") // Fatal calls runtime.Goexit but compiler needs a return
+	return "" // unreachable: Fatal calls runtime.Goexit but compiler needs a return
 }
 
 // assertError compares the error text with the specified golden file.
