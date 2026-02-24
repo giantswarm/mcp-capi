@@ -37,6 +37,8 @@ func (b *syncBuffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
+// Read satisfies io.Reader, required by io.NopCloser to wrap syncBuffer as an
+// io.ReadCloser for the transport.NewIO logging parameter.
 func (b *syncBuffer) Read(p []byte) (n int, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
