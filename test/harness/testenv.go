@@ -789,29 +789,9 @@ func (te *testEnv) createNode(ctx context.Context, opts nodeCreateOptions) {
 		})
 	}
 
-	// Set capacity
-	node.Status.Capacity = corev1.ResourceList{}
-	if opts.capacity.cpu != "" {
-		node.Status.Capacity[corev1.ResourceCPU] = resource.MustParse(opts.capacity.cpu)
-	}
-	if opts.capacity.memory != "" {
-		node.Status.Capacity[corev1.ResourceMemory] = resource.MustParse(opts.capacity.memory)
-	}
-	if opts.capacity.pods != "" {
-		node.Status.Capacity[corev1.ResourcePods] = resource.MustParse(opts.capacity.pods)
-	}
-
-	// Set allocatable
-	node.Status.Allocatable = corev1.ResourceList{}
-	if opts.allocatable.cpu != "" {
-		node.Status.Allocatable[corev1.ResourceCPU] = resource.MustParse(opts.allocatable.cpu)
-	}
-	if opts.allocatable.memory != "" {
-		node.Status.Allocatable[corev1.ResourceMemory] = resource.MustParse(opts.allocatable.memory)
-	}
-	if opts.allocatable.pods != "" {
-		node.Status.Allocatable[corev1.ResourcePods] = resource.MustParse(opts.allocatable.pods)
-	}
+	// Set capacity and allocatable
+	node.Status.Capacity = buildResourceList(opts.capacity)
+	node.Status.Allocatable = buildResourceList(opts.allocatable)
 
 	if err := te.ctrlClient.Status().Update(ctx, node); err != nil {
 		te.t.Fatalf("failed to update status on node %s: %v", opts.name, err)
@@ -917,6 +897,22 @@ func (te *testEnv) createMachineCustom(ctx context.Context, opts machineCustomCr
 			te.t.Fatalf("failed to update status on Machine %s/%s: %v", opts.namespace, opts.name, err)
 		}
 	}
+}
+
+// buildResourceList converts a nodeResources struct into a corev1.ResourceList,
+// skipping any fields that are empty strings.
+func buildResourceList(res nodeResources) corev1.ResourceList {
+	rl := corev1.ResourceList{}
+	if res.cpu != "" {
+		rl[corev1.ResourceCPU] = resource.MustParse(res.cpu)
+	}
+	if res.memory != "" {
+		rl[corev1.ResourceMemory] = resource.MustParse(res.memory)
+	}
+	if res.pods != "" {
+		rl[corev1.ResourcePods] = resource.MustParse(res.pods)
+	}
+	return rl
 }
 
 // writeKubeconfig converts a rest.Config to a kubeconfig file
