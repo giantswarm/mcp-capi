@@ -43,7 +43,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			Node("ready-node").
-			WithCondition("Ready").Status("True").Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
 			WithAddress("InternalIP", "10.0.0.1").
 			WithAddress("Hostname", "ready-node").
 			WithTaint("node.kubernetes.io/not-ready", "", "NoSchedule").
@@ -59,8 +59,8 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			Node("not-ready-node").
-			WithCondition("Ready").Status("False").Reason("KubeletNotReady").Message("container runtime network not ready").Done().
-			WithCondition("MemoryPressure").Status("False").Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
+			WithCondition("Ready").False().Reason("KubeletNotReady").Message("container runtime network not ready").Done().
+			WithCondition("MemoryPressure").False().Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
 			WithAddress("InternalIP", "10.0.0.5").
 			WithAddress("Hostname", "not-ready-node").
 			WithTaint("node.kubernetes.io/not-ready", "", "NoSchedule").
@@ -76,10 +76,10 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			Node("multi-cond-node").
-			WithCondition("Ready").Status("True").Reason("KubeletReady").Message("kubelet is posting ready status").Done().
-			WithCondition("MemoryPressure").Status("False").Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
-			WithCondition("DiskPressure").Status("False").Reason("KubeletHasNoDiskPressure").Message("kubelet has no disk pressure").Done().
-			WithCondition("PIDPressure").Status("False").Reason("KubeletHasSufficientPID").Message("kubelet has sufficient PID available").Done().
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithCondition("MemoryPressure").False().Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
+			WithCondition("DiskPressure").False().Reason("KubeletHasNoDiskPressure").Message("kubelet has no disk pressure").Done().
+			WithCondition("PIDPressure").False().Reason("KubeletHasSufficientPID").Message("kubelet has sufficient PID available").Done().
 			WithAddress("InternalIP", "10.0.0.2").
 			WithAddress("Hostname", "multi-cond-node").
 			WithTaint("node.kubernetes.io/not-ready", "", "NoSchedule").
@@ -96,7 +96,7 @@ func TestCapiNodeStatus(t *testing.T) {
 		harness.New(t).
 			Node("cordoned-node").
 			WithUnschedulable(true).
-			WithCondition("Ready").Status("True").Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
 			WithAddress("InternalIP", "10.0.0.3").
 			WithAddress("Hostname", "cordoned-node").
 			WithTaint("node.kubernetes.io/unschedulable", "", "NoSchedule").
@@ -114,7 +114,7 @@ func TestCapiNodeStatus(t *testing.T) {
 		harness.New(t).
 			Node("provider-node").
 			WithProviderID("aws:///us-east-1a/i-1234567890abcdef0").
-			WithCondition("Ready").Status("True").Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
 			WithAddress("InternalIP", "10.0.0.4").
 			WithAddress("ExternalIP", "54.123.45.67").
 			WithAddress("Hostname", "provider-node").
@@ -133,7 +133,7 @@ func TestCapiNodeStatus(t *testing.T) {
 		harness.New(t).
 			CreateNamespace(namespace).
 			Node("lookup-cluster-machine-0-node").
-			WithCondition("Ready").Status("True").Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
 			WithAddress("InternalIP", "10.0.1.1").
 			WithAddress("Hostname", "lookup-cluster-machine-0-node").
 			WithTaint("node.kubernetes.io/not-ready", "", "NoSchedule").
@@ -151,7 +151,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			Node("multi-addr-node").
-			WithCondition("Ready").Status("True").Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
 			WithAddress("InternalIP", "10.0.0.10").
 			WithAddress("ExternalIP", "203.0.113.50").
 			WithAddress("Hostname", "multi-addr-node").
@@ -168,7 +168,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			Node("tainted-node").
-			WithCondition("Ready").Status("True").Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
 			WithAddress("InternalIP", "10.0.0.11").
 			WithAddress("Hostname", "tainted-node").
 			WithTaint("dedicated", "gpu", "NoSchedule").

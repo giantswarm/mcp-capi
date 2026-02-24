@@ -226,7 +226,7 @@ func TestCapiGetMachineSet(t *testing.T) {
 			CreateClusters(namespace, "test-cluster").
 			MachineSet(namespace, "cond-ms").ForCluster("test-cluster").WithReplicas(3).
 			WithStatus(3, 3, 3).
-			WithCondition("Ready").Status("True").Reason("MachinesReady").Message("All machines are ready").Done().
+			WithCondition("Ready").True().Reason("MachinesReady").Message("All machines are ready").Done().
 			Create().
 			ToolCall("capi_get_machineset").
 			WithArg("namespace", namespace).
@@ -244,7 +244,7 @@ func TestCapiGetMachineSet(t *testing.T) {
 			CreateClusters(namespace, "test-cluster").
 			MachineSet(namespace, "cond-minimal-ms").ForCluster("test-cluster").WithReplicas(2).
 			WithStatus(2, 2, 2).
-			WithCondition("Ready").Status("True").Done().
+			WithCondition("Ready").True().Done().
 			Create().
 			ToolCall("capi_get_machineset").
 			WithArg("namespace", namespace).
@@ -262,8 +262,8 @@ func TestCapiGetMachineSet(t *testing.T) {
 			CreateClusters(namespace, "test-cluster").
 			MachineSet(namespace, "multi-cond-ms").ForCluster("test-cluster").WithReplicas(3).
 			WithStatus(3, 1, 1).
-			WithCondition("Ready").Status("False").Reason("MachinesNotReady").Message("2 of 3 machines are not ready").Done().
-			WithCondition("MachinesCreated").Status("True").Reason("MachinesCreated").Done().
+			WithCondition("Ready").False().Reason("MachinesNotReady").Message("2 of 3 machines are not ready").Done().
+			WithCondition("MachinesCreated").True().Reason("MachinesCreated").Done().
 			Create().
 			ToolCall("capi_get_machineset").
 			WithArg("namespace", namespace).

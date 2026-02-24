@@ -102,8 +102,8 @@ func TestCapiGetMachine(t *testing.T) {
 			WithNodeRef("full-machine-node").
 			WithConfigRef("KubeadmConfig", "full-machine-bootstrap").
 			WithInfraRef("AWSMachine", "full-machine-infra").
-			WithCondition("Ready").Status("True").Reason("MachineReady").Message("Machine is ready").Done().
-			WithCondition("InfrastructureReady").Status("True").Reason("InfraReady").Message("Infra provisioned").Done().
+			WithCondition("Ready").True().Reason("MachineReady").Message("Machine is ready").Done().
+			WithCondition("InfrastructureReady").True().Reason("InfraReady").Message("Infra provisioned").Done().
 			WithAddress("InternalIP", "10.0.1.5").
 			WithAddress("ExternalIP", "54.123.45.67").
 			Create().
@@ -197,8 +197,8 @@ func TestCapiGetMachine(t *testing.T) {
 			CreateClusters(namespace, "sparse-cluster").
 			Machine(namespace, "sparse-machine").ForCluster("sparse-cluster").
 			WithPhase("Running").
-			WithCondition("Ready").Status("True").Done().
-			WithCondition("InfrastructureReady").Status("False").Done().
+			WithCondition("Ready").True().Done().
+			WithCondition("InfrastructureReady").False().Done().
 			Create().
 			ToolCall("capi_get_machine").
 			WithArg("namespace", namespace).

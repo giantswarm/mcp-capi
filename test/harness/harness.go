@@ -500,7 +500,7 @@ type MachineSetBuilder struct {
 // machineSetCondition holds a MachineSet condition configuration.
 type machineSetCondition struct {
 	condType string
-	status   string
+	status   corev1.ConditionStatus
 	reason   string
 	message  string
 }
@@ -591,7 +591,7 @@ func (msb *MachineSetBuilder) WithFailureMessage(message string) *MachineSetBuil
 type MachineSetConditionBuilder struct {
 	machineSetBuilder *MachineSetBuilder
 	condType          string
-	status            string
+	status            corev1.ConditionStatus
 	reason            string
 	message           string
 }
@@ -604,9 +604,21 @@ func (msb *MachineSetBuilder) WithCondition(condType string) *MachineSetConditio
 	}
 }
 
-// Status sets the condition status ("True", "False", "Unknown").
-func (mscb *MachineSetConditionBuilder) Status(status string) *MachineSetConditionBuilder {
-	mscb.status = status
+// True sets the condition status to True.
+func (mscb *MachineSetConditionBuilder) True() *MachineSetConditionBuilder {
+	mscb.status = corev1.ConditionTrue
+	return mscb
+}
+
+// False sets the condition status to False.
+func (mscb *MachineSetConditionBuilder) False() *MachineSetConditionBuilder {
+	mscb.status = corev1.ConditionFalse
+	return mscb
+}
+
+// Unknown sets the condition status to Unknown.
+func (mscb *MachineSetConditionBuilder) Unknown() *MachineSetConditionBuilder {
+	mscb.status = corev1.ConditionUnknown
 	return mscb
 }
 
@@ -677,7 +689,7 @@ type NodeBuilder struct {
 // nodeCondition holds a node condition configuration.
 type nodeCondition struct {
 	condType string
-	status   string
+	status   corev1.ConditionStatus
 	reason   string
 	message  string
 }
@@ -754,7 +766,7 @@ func (nb *NodeBuilder) WithUnschedulable(unschedulable bool) *NodeBuilder {
 type NodeConditionBuilder struct {
 	nodeBuilder *NodeBuilder
 	condType    string
-	status      string
+	status      corev1.ConditionStatus
 	reason      string
 	message     string
 }
@@ -767,9 +779,21 @@ func (nb *NodeBuilder) WithCondition(condType string) *NodeConditionBuilder {
 	}
 }
 
-// Status sets the condition status ("True", "False", "Unknown").
-func (ncb *NodeConditionBuilder) Status(status string) *NodeConditionBuilder {
-	ncb.status = status
+// True sets the condition status to True.
+func (ncb *NodeConditionBuilder) True() *NodeConditionBuilder {
+	ncb.status = corev1.ConditionTrue
+	return ncb
+}
+
+// False sets the condition status to False.
+func (ncb *NodeConditionBuilder) False() *NodeConditionBuilder {
+	ncb.status = corev1.ConditionFalse
+	return ncb
+}
+
+// Unknown sets the condition status to Unknown.
+func (ncb *NodeConditionBuilder) Unknown() *NodeConditionBuilder {
+	ncb.status = corev1.ConditionUnknown
 	return ncb
 }
 
@@ -834,7 +858,7 @@ func (nb *NodeBuilder) Create() *Harness {
 // machineCondition holds a machine condition configuration.
 type machineCondition struct {
 	condType string
-	status   string
+	status   corev1.ConditionStatus
 	reason   string
 	message  string
 }
@@ -922,7 +946,7 @@ func (mb *MachineBuilder) WithInfraRef(kind, name string) *MachineBuilder {
 type MachineConditionBuilder struct {
 	machineBuilder *MachineBuilder
 	condType       string
-	status         string
+	status         corev1.ConditionStatus
 	reason         string
 	message        string
 }
@@ -935,9 +959,21 @@ func (mb *MachineBuilder) WithCondition(condType string) *MachineConditionBuilde
 	}
 }
 
-// Status sets the condition status ("True", "False", "Unknown").
-func (mcb *MachineConditionBuilder) Status(status string) *MachineConditionBuilder {
-	mcb.status = status
+// True sets the condition status to True.
+func (mcb *MachineConditionBuilder) True() *MachineConditionBuilder {
+	mcb.status = corev1.ConditionTrue
+	return mcb
+}
+
+// False sets the condition status to False.
+func (mcb *MachineConditionBuilder) False() *MachineConditionBuilder {
+	mcb.status = corev1.ConditionFalse
+	return mcb
+}
+
+// Unknown sets the condition status to Unknown.
+func (mcb *MachineConditionBuilder) Unknown() *MachineConditionBuilder {
+	mcb.status = corev1.ConditionUnknown
 	return mcb
 }
 

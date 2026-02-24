@@ -671,7 +671,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 		for _, cond := range opts.conditions {
 			ms.Status.Conditions = append(ms.Status.Conditions, clusterv1.Condition{
 				Type:               clusterv1.ConditionType(cond.condType),
-				Status:             corev1.ConditionStatus(cond.status),
+				Status:             cond.status,
 				Reason:             cond.reason,
 				Message:            cond.message,
 				LastTransitionTime: metav1.Now(),
@@ -763,7 +763,7 @@ func (te *testEnv) createNode(ctx context.Context, opts nodeCreateOptions) {
 	for _, cond := range opts.conditions {
 		node.Status.Conditions = append(node.Status.Conditions, corev1.NodeCondition{
 			Type:    corev1.NodeConditionType(cond.condType),
-			Status:  corev1.ConditionStatus(cond.status),
+			Status:  cond.status,
 			Reason:  cond.reason,
 			Message: cond.message,
 		})
@@ -884,7 +884,7 @@ func (te *testEnv) createMachineCustom(ctx context.Context, opts machineCustomCr
 		for _, cond := range opts.conditions {
 			machine.Status.Conditions = append(machine.Status.Conditions, clusterv1.Condition{
 				Type:               clusterv1.ConditionType(cond.condType),
-				Status:             corev1.ConditionStatus(cond.status),
+				Status:             cond.status,
 				Reason:             cond.reason,
 				Message:            cond.message,
 				LastTransitionTime: metav1.Now(),
