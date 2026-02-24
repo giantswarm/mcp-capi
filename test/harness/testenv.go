@@ -697,6 +697,7 @@ type machineSetCreateOptions struct {
 	replicas          int
 	nilReplicas       bool
 	version           string
+	hasStatus         bool // explicit flag to trigger status update even with zero values
 	statusReplicas    int
 	readyReplicas     int
 	availableReplicas int
@@ -715,7 +716,7 @@ type machineSetCreateOptions struct {
 // needsStatusUpdate reports whether any status fields are set that require
 // a Status().Update() call after MachineSet creation.
 func (o *machineSetCreateOptions) needsStatusUpdate() bool {
-	return o.statusReplicas > 0 || o.readyReplicas > 0 || o.availableReplicas > 0 || o.failureReason != "" || o.failureMessage != "" || len(o.conditions) > 0
+	return o.hasStatus || o.statusReplicas > 0 || o.readyReplicas > 0 || o.availableReplicas > 0 || o.failureReason != "" || o.failureMessage != "" || len(o.conditions) > 0
 }
 
 // nodeCreateOptions holds all parameters for creating a fully-configured Kubernetes Node.
