@@ -292,6 +292,12 @@ type clusterCreateOptions struct {
 	infraReady        *bool      // explicit InfrastructureReady status
 }
 
+// needsStatusUpdate reports whether any status fields are set that require
+// a Status().Update() call after cluster creation.
+func (o *clusterCreateOptions) needsStatusUpdate() bool {
+	return o.phase != "" || len(o.conditions) > 0 || o.controlPlaneReady != nil || o.infraReady != nil
+}
+
 // providerInfraRef returns the APIVersion and Kind for a provider's infrastructure reference.
 // Returns empty strings for unknown providers (no InfrastructureRef is set).
 func providerInfraRef(provider string) (apiVersion, kind string) {
@@ -363,8 +369,7 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 	}
 
 	// Combine phase + conditions + status booleans into a single Status().Update() when possible
-	needsStatusUpdate := opts.phase != "" || len(opts.conditions) > 0 || opts.controlPlaneReady != nil || opts.infraReady != nil
-	if needsStatusUpdate {
+	if opts.needsStatusUpdate() {
 		if opts.phase != "" {
 			cluster.Status.Phase = opts.phase
 		}
@@ -453,24 +458,7 @@ func (te *testEnv) createKubeadmControlPlane(ctx context.Context, namespace, nam
 // setClusterControlPlaneRef sets the ControlPlaneRef on a cluster to point to a KubeadmControlPlane.
 func (te *testEnv) setClusterControlPlaneRef(ctx context.Context, namespace, clusterName, kcpName string) {
 	te.t.Helper()
-	cluster := &clusterv1.Cluster{}
-	key := client.ObjectKey{Namespace: namespace, Name: clusterName}
-	if err := te.ctrlClient.Get(ctx, key, cluster); err != nil {
-		te.t.Fatalf("failed to get cluster %s/%s: %v", namespace, clusterName, err)
-	}
-	cluster.Spec.ControlPlaneRef = &corev1.ObjectReference{
-		APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
-		Kind:       "KubeadmControlPlane",
-		Name:       kcpName,
-		Namespace:  namespace,
-	}
-	// Ensure Topology.Class is set if Topology exists (required by CAPI validation)
-	if cluster.Spec.Topology != nil && cluster.Spec.Topology.Class == "" {
-		cluster.Spec.Topology.Class = "default"
-	}
-	if err := te.ctrlClient.Update(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to set ControlPlaneRef on cluster %s/%s: %v", namespace, clusterName, err)
-	}
+	te.setClusterControlPlaneRefCustom(ctx, namespace, clusterName, "KubeadmControlPlane", kcpName)
 }
 
 // setClusterControlPlaneRefCustom sets the ControlPlaneRef on a cluster to an arbitrary kind and name.
