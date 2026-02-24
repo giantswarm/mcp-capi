@@ -270,6 +270,21 @@ type clusterCreateOptions struct {
 	infraReady        *bool      // explicit InfrastructureReady status
 }
 
+// providerInfraRef returns the APIVersion and Kind for a provider's infrastructure reference.
+// Returns empty strings for unknown providers (no InfrastructureRef is set).
+func providerInfraRef(provider string) (apiVersion, kind string) {
+	type infraRef struct{ apiVersion, kind string }
+	providers := map[string]infraRef{
+		"aws":     {"infrastructure.cluster.x-k8s.io/v1beta2", "AWSCluster"},
+		"azure":   {"infrastructure.cluster.x-k8s.io/v1beta1", "AzureCluster"},
+		"gcp":     {"infrastructure.cluster.x-k8s.io/v1beta1", "GCPCluster"},
+		"vsphere": {"infrastructure.cluster.x-k8s.io/v1beta1", "VSphereCluster"},
+		"vcd":     {"infrastructure.cluster.x-k8s.io/v1beta1", "VCDCluster"},
+	}
+	ref := providers[provider]
+	return ref.apiVersion, ref.kind
+}
+
 // createClusterFull creates a fully-configured CAPI Cluster in minimal API calls.
 // It sets InfrastructureRef and Topology on the initial Create (avoiding Get+Update),
 // and combines phase + conditions into a single Status().Update() when both are present.
@@ -302,41 +317,11 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 			Name:       opts.customInfraRef.name,
 			Namespace:  opts.namespace,
 		}
-	} else {
-		// Set infrastructure ref based on provider
-		switch opts.provider {
-		case "aws":
+	} else if opts.provider != "" {
+		if apiVersion, kind := providerInfraRef(opts.provider); kind != "" {
 			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
-				Kind:       "AWSCluster",
-				Name:       opts.name,
-				Namespace:  opts.namespace,
-			}
-		case "azure":
-			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "AzureCluster",
-				Name:       opts.name,
-				Namespace:  opts.namespace,
-			}
-		case "gcp":
-			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "GCPCluster",
-				Name:       opts.name,
-				Namespace:  opts.namespace,
-			}
-		case "vsphere":
-			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "VSphereCluster",
-				Name:       opts.name,
-				Namespace:  opts.namespace,
-			}
-		case "vcd":
-			cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "VCDCluster",
+				APIVersion: apiVersion,
+				Kind:       kind,
 				Name:       opts.name,
 				Namespace:  opts.namespace,
 			}
