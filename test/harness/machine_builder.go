@@ -1,17 +1,5 @@
 package harness
 
-import (
-	corev1 "k8s.io/api/core/v1"
-)
-
-// machineCondition holds a machine condition configuration.
-type machineCondition struct {
-	condType string
-	status   corev1.ConditionStatus
-	reason   string
-	message  string
-}
-
 // machineAddress holds a machine address configuration.
 type machineAddress struct {
 	addrType string
@@ -81,62 +69,15 @@ func (mb *MachineBuilder) WithInfraRef(kind, name string) *MachineBuilder {
 	return mb
 }
 
-// MachineConditionBuilder provides a fluent API for configuring a machine condition.
-type MachineConditionBuilder struct {
-	machineBuilder *MachineBuilder
-	condType       string
-	status         corev1.ConditionStatus
-	reason         string
-	message        string
-}
-
 // WithCondition starts configuring a condition for this machine.
-func (mb *MachineBuilder) WithCondition(condType string) *MachineConditionBuilder {
-	return &MachineConditionBuilder{
-		machineBuilder: mb,
-		condType:       condType,
+func (mb *MachineBuilder) WithCondition(condType string) *simpleConditionBuilder[*MachineBuilder] {
+	return &simpleConditionBuilder[*MachineBuilder]{
+		condType: condType,
+		done: func(c simpleCondition) *MachineBuilder {
+			mb.conditions = append(mb.conditions, c)
+			return mb
+		},
 	}
-}
-
-// True sets the condition status to True.
-func (mcb *MachineConditionBuilder) True() *MachineConditionBuilder {
-	mcb.status = corev1.ConditionTrue
-	return mcb
-}
-
-// False sets the condition status to False.
-func (mcb *MachineConditionBuilder) False() *MachineConditionBuilder {
-	mcb.status = corev1.ConditionFalse
-	return mcb
-}
-
-// Unknown sets the condition status to Unknown.
-func (mcb *MachineConditionBuilder) Unknown() *MachineConditionBuilder {
-	mcb.status = corev1.ConditionUnknown
-	return mcb
-}
-
-// Reason sets the reason for this condition.
-func (mcb *MachineConditionBuilder) Reason(reason string) *MachineConditionBuilder {
-	mcb.reason = reason
-	return mcb
-}
-
-// Message sets the message for this condition.
-func (mcb *MachineConditionBuilder) Message(message string) *MachineConditionBuilder {
-	mcb.message = message
-	return mcb
-}
-
-// Done returns to the MachineBuilder to continue configuration.
-func (mcb *MachineConditionBuilder) Done() *MachineBuilder {
-	mcb.machineBuilder.conditions = append(mcb.machineBuilder.conditions, machineCondition{
-		condType: mcb.condType,
-		status:   mcb.status,
-		reason:   mcb.reason,
-		message:  mcb.message,
-	})
-	return mcb.machineBuilder
 }
 
 // WithAddress adds an address to the machine status.

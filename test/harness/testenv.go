@@ -713,7 +713,7 @@ type machineSetCreateOptions struct {
 	ownerMDName       string
 	ownerKind         string
 	ownerName         string
-	conditions        []machineSetCondition
+	conditions        []simpleCondition
 	failureReason     string
 	failureMessage    string
 }
@@ -729,7 +729,7 @@ type nodeCreateOptions struct {
 	name          string
 	providerID    string
 	unschedulable bool
-	conditions    []nodeCondition
+	conditions    []simpleCondition
 	addresses     []nodeAddress
 	taints        []nodeTaint
 	capacity      nodeResources
@@ -817,7 +817,7 @@ type machineCustomCreateOptions struct {
 	configRefName string
 	infraRefKind  string
 	infraRefName  string
-	conditions    []machineCondition
+	conditions    []simpleCondition
 	addresses     []machineAddress
 }
 

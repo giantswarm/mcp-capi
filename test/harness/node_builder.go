@@ -1,17 +1,5 @@
 package harness
 
-import (
-	corev1 "k8s.io/api/core/v1"
-)
-
-// nodeCondition holds a node condition configuration.
-type nodeCondition struct {
-	condType string
-	status   corev1.ConditionStatus
-	reason   string
-	message  string
-}
-
 // nodeAddress holds a node address configuration.
 type nodeAddress struct {
 	addrType string
@@ -88,62 +76,15 @@ func (nb *NodeBuilder) WithUnschedulable(unschedulable bool) *NodeBuilder {
 	return nb
 }
 
-// NodeConditionBuilder provides a fluent API for configuring a node condition.
-type NodeConditionBuilder struct {
-	nodeBuilder *NodeBuilder
-	condType    string
-	status      corev1.ConditionStatus
-	reason      string
-	message     string
-}
-
 // WithCondition starts configuring a condition for this node.
-func (nb *NodeBuilder) WithCondition(condType string) *NodeConditionBuilder {
-	return &NodeConditionBuilder{
-		nodeBuilder: nb,
-		condType:    condType,
+func (nb *NodeBuilder) WithCondition(condType string) *simpleConditionBuilder[*NodeBuilder] {
+	return &simpleConditionBuilder[*NodeBuilder]{
+		condType: condType,
+		done: func(c simpleCondition) *NodeBuilder {
+			nb.conditions = append(nb.conditions, c)
+			return nb
+		},
 	}
-}
-
-// True sets the condition status to True.
-func (ncb *NodeConditionBuilder) True() *NodeConditionBuilder {
-	ncb.status = corev1.ConditionTrue
-	return ncb
-}
-
-// False sets the condition status to False.
-func (ncb *NodeConditionBuilder) False() *NodeConditionBuilder {
-	ncb.status = corev1.ConditionFalse
-	return ncb
-}
-
-// Unknown sets the condition status to Unknown.
-func (ncb *NodeConditionBuilder) Unknown() *NodeConditionBuilder {
-	ncb.status = corev1.ConditionUnknown
-	return ncb
-}
-
-// Reason sets the reason for this condition.
-func (ncb *NodeConditionBuilder) Reason(reason string) *NodeConditionBuilder {
-	ncb.reason = reason
-	return ncb
-}
-
-// Message sets the message for this condition.
-func (ncb *NodeConditionBuilder) Message(message string) *NodeConditionBuilder {
-	ncb.message = message
-	return ncb
-}
-
-// Done returns to the NodeBuilder to continue configuration.
-func (ncb *NodeConditionBuilder) Done() *NodeBuilder {
-	ncb.nodeBuilder.conditions = append(ncb.nodeBuilder.conditions, nodeCondition{
-		condType: ncb.condType,
-		status:   ncb.status,
-		reason:   ncb.reason,
-		message:  ncb.message,
-	})
-	return ncb.nodeBuilder
 }
 
 // WithAddress adds an address to the node.

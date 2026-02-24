@@ -1,17 +1,5 @@
 package harness
 
-import (
-	corev1 "k8s.io/api/core/v1"
-)
-
-// machineSetCondition holds a MachineSet condition configuration.
-type machineSetCondition struct {
-	condType string
-	status   corev1.ConditionStatus
-	reason   string
-	message  string
-}
-
 // MachineSetBuilder provides a fluent API for building MachineSet resources.
 type MachineSetBuilder struct {
 	harness *Harness
@@ -104,62 +92,15 @@ func (msb *MachineSetBuilder) WithFailureMessage(message string) *MachineSetBuil
 	return msb
 }
 
-// MachineSetConditionBuilder provides a fluent API for configuring a MachineSet condition.
-type MachineSetConditionBuilder struct {
-	machineSetBuilder *MachineSetBuilder
-	condType          string
-	status            corev1.ConditionStatus
-	reason            string
-	message           string
-}
-
 // WithCondition starts configuring a condition for this MachineSet.
-func (msb *MachineSetBuilder) WithCondition(condType string) *MachineSetConditionBuilder {
-	return &MachineSetConditionBuilder{
-		machineSetBuilder: msb,
-		condType:          condType,
+func (msb *MachineSetBuilder) WithCondition(condType string) *simpleConditionBuilder[*MachineSetBuilder] {
+	return &simpleConditionBuilder[*MachineSetBuilder]{
+		condType: condType,
+		done: func(c simpleCondition) *MachineSetBuilder {
+			msb.conditions = append(msb.conditions, c)
+			return msb
+		},
 	}
-}
-
-// True sets the condition status to True.
-func (mscb *MachineSetConditionBuilder) True() *MachineSetConditionBuilder {
-	mscb.status = corev1.ConditionTrue
-	return mscb
-}
-
-// False sets the condition status to False.
-func (mscb *MachineSetConditionBuilder) False() *MachineSetConditionBuilder {
-	mscb.status = corev1.ConditionFalse
-	return mscb
-}
-
-// Unknown sets the condition status to Unknown.
-func (mscb *MachineSetConditionBuilder) Unknown() *MachineSetConditionBuilder {
-	mscb.status = corev1.ConditionUnknown
-	return mscb
-}
-
-// Reason sets the reason for this condition.
-func (mscb *MachineSetConditionBuilder) Reason(reason string) *MachineSetConditionBuilder {
-	mscb.reason = reason
-	return mscb
-}
-
-// Message sets the message for this condition.
-func (mscb *MachineSetConditionBuilder) Message(message string) *MachineSetConditionBuilder {
-	mscb.message = message
-	return mscb
-}
-
-// Done returns to the MachineSetBuilder to continue configuration.
-func (mscb *MachineSetConditionBuilder) Done() *MachineSetBuilder {
-	mscb.machineSetBuilder.conditions = append(mscb.machineSetBuilder.conditions, machineSetCondition{
-		condType: mscb.condType,
-		status:   mscb.status,
-		reason:   mscb.reason,
-		message:  mscb.message,
-	})
-	return mscb.machineSetBuilder
 }
 
 // Create queues the MachineSet creation and returns to the harness.
