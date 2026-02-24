@@ -670,10 +670,10 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 		ms.Status.AvailableReplicas = int32(opts.availableReplicas)
 		if opts.failureReason != "" {
 			reason := capierrors.MachineSetStatusError(opts.failureReason)
-			ms.Status.FailureReason = &reason
+			ms.Status.FailureReason = &reason //nolint:staticcheck // deprecated but needed for v1beta1 test coverage
 		}
 		if opts.failureMessage != "" {
-			ms.Status.FailureMessage = &opts.failureMessage
+			ms.Status.FailureMessage = &opts.failureMessage //nolint:staticcheck // deprecated but needed for v1beta1 test coverage
 		}
 		for _, cond := range opts.conditions {
 			ms.Status.Conditions = append(ms.Status.Conditions, clusterv1.Condition{
