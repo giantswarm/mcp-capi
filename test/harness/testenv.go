@@ -245,161 +245,6 @@ func (te *testEnv) createCluster(ctx context.Context, namespace, name string) {
 	}
 }
 
-// createAWSCluster creates a CAPI Cluster resource with AWS infrastructure reference
-func (te *testEnv) createAWSCluster(ctx context.Context, namespace, name string) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: name,
-			},
-		},
-		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
-				Kind:       "AWSCluster",
-				Name:       name,
-				Namespace:  namespace,
-			},
-			ClusterNetwork: &clusterv1.ClusterNetwork{
-				Pods: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
-				},
-			},
-		},
-	}
-
-	if err := te.ctrlClient.Create(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to create AWS cluster %s/%s: %v", namespace, name, err)
-	}
-}
-
-// createAzureCluster creates a CAPI Cluster resource with Azure infrastructure reference
-func (te *testEnv) createAzureCluster(ctx context.Context, namespace, name string) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: name,
-			},
-		},
-		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "AzureCluster",
-				Name:       name,
-				Namespace:  namespace,
-			},
-			ClusterNetwork: &clusterv1.ClusterNetwork{
-				Pods: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
-				},
-			},
-		},
-	}
-
-	if err := te.ctrlClient.Create(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to create Azure cluster %s/%s: %v", namespace, name, err)
-	}
-}
-
-// createVSphereCluster creates a CAPI Cluster resource with vSphere infrastructure reference
-func (te *testEnv) createVSphereCluster(ctx context.Context, namespace, name string) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: name,
-			},
-		},
-		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "VSphereCluster",
-				Name:       name,
-				Namespace:  namespace,
-			},
-			ClusterNetwork: &clusterv1.ClusterNetwork{
-				Pods: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
-				},
-			},
-		},
-	}
-
-	if err := te.ctrlClient.Create(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to create vSphere cluster %s/%s: %v", namespace, name, err)
-	}
-}
-
-// createVCDCluster creates a CAPI Cluster resource with VCD infrastructure reference
-func (te *testEnv) createVCDCluster(ctx context.Context, namespace, name string) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: name,
-			},
-		},
-		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "VCDCluster",
-				Name:       name,
-				Namespace:  namespace,
-			},
-			ClusterNetwork: &clusterv1.ClusterNetwork{
-				Pods: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
-				},
-			},
-		},
-	}
-
-	if err := te.ctrlClient.Create(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to create VCD cluster %s/%s: %v", namespace, name, err)
-	}
-}
-
-// createGCPCluster creates a CAPI Cluster resource with GCP infrastructure reference
-func (te *testEnv) createGCPCluster(ctx context.Context, namespace, name string) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: name,
-			},
-		},
-		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &corev1.ObjectReference{
-				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-				Kind:       "GCPCluster",
-				Name:       name,
-				Namespace:  namespace,
-			},
-			ClusterNetwork: &clusterv1.ClusterNetwork{
-				Pods: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
-				},
-			},
-		},
-	}
-
-	if err := te.ctrlClient.Create(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to create GCP cluster %s/%s: %v", namespace, name, err)
-	}
-}
-
 // clusterCreateOptions holds all parameters for creating a fully-configured cluster
 // in minimal API calls.
 type clusterCreateOptions struct {
@@ -520,20 +365,6 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 	}
 }
 
-// setClusterPhase updates the phase of an existing cluster.
-func (te *testEnv) setClusterPhase(ctx context.Context, namespace, name, phase string) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{}
-	key := client.ObjectKey{Namespace: namespace, Name: name}
-	if err := te.ctrlClient.Get(ctx, key, cluster); err != nil {
-		te.t.Fatalf("failed to get cluster %s/%s: %v", namespace, name, err)
-	}
-	cluster.Status.Phase = phase
-	if err := te.ctrlClient.Status().Update(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to set phase on cluster %s/%s: %v", namespace, name, err)
-	}
-}
-
 // createMachine creates a CAPI Machine resource for the given cluster.
 // If ready is true, the machine's Status.NodeRef will be set to simulate a ready machine.
 func (te *testEnv) createMachine(ctx context.Context, namespace, clusterName, machineName string, ready bool) {
@@ -573,39 +404,6 @@ func (te *testEnv) createMachine(ctx context.Context, namespace, clusterName, ma
 // ptr returns a pointer to the given string value.
 func ptr(s string) *string {
 	return &s
-}
-
-// setClusterVersion updates the kubernetes version of an existing cluster.
-// Version is stored in Spec.Topology.Version. Since Topology requires a Class field,
-// we set a placeholder class value.
-func (te *testEnv) setClusterVersion(ctx context.Context, namespace, name, version string) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{}
-	key := client.ObjectKey{Namespace: namespace, Name: name}
-	if err := te.ctrlClient.Get(ctx, key, cluster); err != nil {
-		te.t.Fatalf("failed to get cluster %s/%s: %v", namespace, name, err)
-	}
-	cluster.Spec.Topology = &clusterv1.Topology{
-		Class:   "default",
-		Version: version,
-	}
-	if err := te.ctrlClient.Update(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to set version on cluster %s/%s: %v", namespace, name, err)
-	}
-}
-
-// setClusterConditions updates the conditions on an existing cluster.
-func (te *testEnv) setClusterConditions(ctx context.Context, namespace, name string, conditions []clusterv1.Condition) {
-	te.t.Helper()
-	cluster := &clusterv1.Cluster{}
-	key := client.ObjectKey{Namespace: namespace, Name: name}
-	if err := te.ctrlClient.Get(ctx, key, cluster); err != nil {
-		te.t.Fatalf("failed to get cluster %s/%s: %v", namespace, name, err)
-	}
-	cluster.Status.Conditions = conditions
-	if err := te.ctrlClient.Status().Update(ctx, cluster); err != nil {
-		te.t.Fatalf("failed to set conditions on cluster %s/%s: %v", namespace, name, err)
-	}
 }
 
 // createKubeadmControlPlane creates a KubeadmControlPlane resource.
@@ -1137,4 +935,3 @@ func writeKubeconfig(config *rest.Config, outputPath string) error {
 	// Write to file
 	return clientcmd.WriteToFile(kubeconfig, outputPath)
 }
-
