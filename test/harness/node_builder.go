@@ -34,7 +34,7 @@ type nodeResources struct {
 
 // nodeInfoConfig holds node system information.
 type nodeInfoConfig struct {
-	os                      string
+	osName                  string
 	osImage                 string
 	kernelVersion           string
 	containerRuntimeVersion string
@@ -55,7 +55,7 @@ func (h *Harness) Node(name string) *NodeBuilder {
 		nodeCreateOptions: nodeCreateOptions{
 			name: name,
 			nodeInfo: nodeInfoConfig{
-				os:                      "linux",
+				osName:                  "linux",
 				osImage:                 "Ubuntu 22.04.3 LTS",
 				kernelVersion:           "5.15.0-91-generic",
 				containerRuntimeVersion: "containerd://1.7.2",

@@ -232,7 +232,7 @@ func (te *testEnv) teardown() {
 	}
 }
 
-// createNamespace creates a namespace
+// createNamespace creates a namespace.
 func (te *testEnv) createNamespace(ctx context.Context, name string) {
 	te.t.Helper()
 	ns := &corev1.Namespace{
@@ -262,7 +262,7 @@ func (te *testEnv) createSecret(ctx context.Context, namespace, name string, dat
 	}
 }
 
-// createCluster creates a basic CAPI Cluster resource
+// createCluster creates a basic CAPI Cluster resource.
 func (te *testEnv) createCluster(ctx context.Context, namespace, name string) {
 	te.t.Helper()
 	cluster := &clusterv1.Cluster{
@@ -533,8 +533,7 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 	}
 
 	if !opts.nilReplicas {
-		replicas := int32(opts.replicas)
-		md.Spec.Replicas = &replicas
+		md.Spec.Replicas = &opts.replicas
 	}
 
 	if opts.version != "" {
@@ -565,7 +564,7 @@ type machineDeploymentCreateOptions struct {
 	namespace         string
 	name              string
 	clusterName       string
-	replicas          int
+	replicas          int32
 	nilReplicas       bool
 	version           string
 	phase             string
@@ -619,8 +618,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 	}
 
 	if !opts.nilReplicas {
-		replicas := int32(opts.replicas)
-		ms.Spec.Replicas = &replicas
+		ms.Spec.Replicas = &opts.replicas
 	}
 
 	if opts.version != "" {
@@ -701,7 +699,7 @@ type machineSetCreateOptions struct {
 	namespace         string
 	name              string
 	clusterName       string
-	replicas          int
+	replicas          int32
 	nilReplicas       bool
 	version           string
 	hasStatus         bool // explicit flag to trigger status update even with zero values
@@ -771,7 +769,7 @@ func (te *testEnv) createNode(ctx context.Context, opts nodeCreateOptions) {
 
 	// Update status (conditions, addresses, capacity, allocatable, nodeInfo)
 	node.Status.NodeInfo = corev1.NodeSystemInfo{
-		OperatingSystem:         opts.nodeInfo.os,
+		OperatingSystem:         opts.nodeInfo.osName,
 		OSImage:                 opts.nodeInfo.osImage,
 		KernelVersion:           opts.nodeInfo.kernelVersion,
 		ContainerRuntimeVersion: opts.nodeInfo.containerRuntimeVersion,

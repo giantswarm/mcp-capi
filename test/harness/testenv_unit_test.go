@@ -66,7 +66,7 @@ func TestProviderInfraRef(t *testing.T) {
 }
 
 // uuidRegex matches a standard UUID v4/v5 format (8-4-4-4-12 hex characters).
-var uuidRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+var uuidRegex = regexp.MustCompile(`^` + uuidPattern.String() + `$`)
 
 func TestDeterministicUID(t *testing.T) {
 	t.Parallel()

@@ -37,7 +37,7 @@ func (msb *MachineSetBuilder) ForCluster(clusterName string) *MachineSetBuilder 
 }
 
 // WithReplicas sets the desired replica count.
-func (msb *MachineSetBuilder) WithReplicas(replicas int) *MachineSetBuilder {
+func (msb *MachineSetBuilder) WithReplicas(replicas int32) *MachineSetBuilder {
 	msb.replicas = replicas
 	return msb
 }

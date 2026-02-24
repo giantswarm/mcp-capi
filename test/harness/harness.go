@@ -25,8 +25,7 @@ func New(t TestingT) *Harness {
 	t.Helper()
 
 	h := &Harness{
-		t:          t,
-		operations: nil,
+		t: t,
 	}
 
 	// Register cleanup to check for forgotten Execute()
@@ -134,16 +133,6 @@ func (h *Harness) CreateClusters(namespace string, names ...string) *Harness {
 			name:      name,
 		})
 	}
-	return h
-}
-
-// CreateCluster queues creation of a cluster in the given namespace.
-func (h *Harness) CreateCluster(namespace, name string) *Harness {
-	h.t.Helper()
-	h.operations = append(h.operations, &clusterOp{
-		namespace: namespace,
-		name:      name,
-	})
 	return h
 }
 

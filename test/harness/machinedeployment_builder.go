@@ -25,7 +25,7 @@ func (mdb *MachineDeploymentBuilder) ForCluster(clusterName string) *MachineDepl
 }
 
 // WithReplicas sets the desired replica count.
-func (mdb *MachineDeploymentBuilder) WithReplicas(replicas int) *MachineDeploymentBuilder {
+func (mdb *MachineDeploymentBuilder) WithReplicas(replicas int32) *MachineDeploymentBuilder {
 	mdb.replicas = replicas
 	return mdb
 }
