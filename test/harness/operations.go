@@ -13,8 +13,10 @@ import (
 // Execute() is invoked.
 type operation interface {
 	// execute performs the operation within the given execution context.
+	// The context.Context is passed as a separate parameter following Go conventions
+	// (contexts should not be stored in structs).
 	// Errors are reported via the test interface (t.Fatal/t.Fatalf).
-	execute(ctx *executionContext)
+	execute(ctx context.Context, ec *executionContext)
 
 	// describe returns a human-readable description of the operation for logging.
 	describe() string
@@ -30,7 +32,6 @@ type executionContext struct {
 	t              TestingT
 	k8sEnv         *testEnv
 	mcpClient      *mcpClient
-	ctx            context.Context
 	lastToolResult *callToolResult // stores the result of the last tool call for assertions
 }
 
@@ -39,10 +40,10 @@ type namespaceOp struct {
 	name string
 }
 
-func (op *namespaceOp) execute(ec *executionContext) {
+func (op *namespaceOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating namespace: %s", op.name)
-	ec.k8sEnv.createNamespace(ec.ctx, op.name)
+	ec.k8sEnv.createNamespace(ctx, op.name)
 }
 
 func (op *namespaceOp) describe() string {
@@ -56,10 +57,10 @@ type secretOp struct {
 	data      map[string][]byte
 }
 
-func (op *secretOp) execute(ec *executionContext) {
+func (op *secretOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating secret '%s' in namespace '%s'", op.name, op.namespace)
-	ec.k8sEnv.createSecret(ec.ctx, op.namespace, op.name, op.data)
+	ec.k8sEnv.createSecret(ctx, op.namespace, op.name, op.data)
 }
 
 func (op *secretOp) describe() string {
@@ -72,10 +73,10 @@ type clusterOp struct {
 	name      string
 }
 
-func (op *clusterOp) execute(ec *executionContext) {
+func (op *clusterOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating cluster '%s' in namespace '%s'", op.name, op.namespace)
-	ec.k8sEnv.createCluster(ec.ctx, op.namespace, op.name)
+	ec.k8sEnv.createCluster(ctx, op.namespace, op.name)
 }
 
 func (op *clusterOp) describe() string {
@@ -99,12 +100,12 @@ type clusterBuilderOp struct {
 	infraReady        *bool      // explicit InfrastructureReady status
 }
 
-func (op *clusterBuilderOp) execute(ec *executionContext) {
+func (op *clusterBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating cluster '%s/%s' (provider=%s, phase=%s, version=%s)", op.namespace, op.name, op.provider, op.phase, op.version)
 
 	// Create the cluster with all spec fields and status in minimal API calls
-	ec.k8sEnv.createClusterFull(ec.ctx, clusterCreateOptions{
+	ec.k8sEnv.createClusterFull(ctx, clusterCreateOptions{
 		namespace:         op.namespace,
 		name:              op.name,
 		provider:          op.provider,
@@ -120,19 +121,19 @@ func (op *clusterBuilderOp) execute(ec *executionContext) {
 	for i := 0; i < op.totalMachines; i++ {
 		machineName := fmt.Sprintf("%s-machine-%d", op.name, i)
 		ready := i < op.readyMachines // First N machines are ready
-		ec.k8sEnv.createMachine(ec.ctx, op.namespace, op.name, machineName, ready)
+		ec.k8sEnv.createMachine(ctx, op.namespace, op.name, machineName, ready)
 	}
 
 	// Create control plane if specified
 	if op.controlPlane != nil && op.controlPlane.kind == "KubeadmControlPlane" {
 		kcpName := op.name + "-control-plane"
-		ec.k8sEnv.createKubeadmControlPlane(ec.ctx, op.namespace, kcpName, op.controlPlane.version, op.controlPlane.replicas)
-		ec.k8sEnv.setClusterControlPlaneRef(ec.ctx, op.namespace, op.name, kcpName)
+		ec.k8sEnv.createKubeadmControlPlane(ctx, op.namespace, kcpName, op.controlPlane.version, op.controlPlane.replicas)
+		ec.k8sEnv.setClusterControlPlaneRef(ctx, op.namespace, op.name, kcpName)
 	}
 
 	// Set custom ControlPlaneRef if specified (overrides controlPlane)
 	if op.customCPRef != nil {
-		ec.k8sEnv.setClusterControlPlaneRefCustom(ec.ctx, op.namespace, op.name, op.customCPRef.kind, op.customCPRef.name)
+		ec.k8sEnv.setClusterControlPlaneRefCustom(ctx, op.namespace, op.name, op.customCPRef.kind, op.customCPRef.name)
 	}
 }
 
@@ -166,10 +167,10 @@ type nodeBuilderOp struct {
 	nodeInfo      nodeInfoConfig
 }
 
-func (op *nodeBuilderOp) execute(ec *executionContext) {
+func (op *nodeBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating node '%s'", op.name)
-	ec.k8sEnv.createNode(ec.ctx, nodeCreateOptions{
+	ec.k8sEnv.createNode(ctx, nodeCreateOptions{
 		name:          op.name,
 		providerID:    op.providerID,
 		unschedulable: op.unschedulable,
@@ -205,10 +206,10 @@ type machineDeploymentOp struct {
 	availableReplicas int
 }
 
-func (op *machineDeploymentOp) execute(ec *executionContext) {
+func (op *machineDeploymentOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating MachineDeployment '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
-	ec.k8sEnv.createMachineDeployment(ec.ctx, machineDeploymentCreateOptions{
+	ec.k8sEnv.createMachineDeployment(ctx, machineDeploymentCreateOptions{
 		namespace:         op.namespace,
 		name:              op.name,
 		clusterName:       op.clusterName,
@@ -250,10 +251,10 @@ type machineSetOp struct {
 	failureMessage    string
 }
 
-func (op *machineSetOp) execute(ec *executionContext) {
+func (op *machineSetOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating MachineSet '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
-	ec.k8sEnv.createMachineSet(ec.ctx, machineSetCreateOptions{
+	ec.k8sEnv.createMachineSet(ctx, machineSetCreateOptions{
 		namespace:         op.namespace,
 		name:              op.name,
 		clusterName:       op.clusterName,
@@ -297,10 +298,10 @@ type machineBuilderOp struct {
 	addresses     []machineAddress
 }
 
-func (op *machineBuilderOp) execute(ec *executionContext) {
+func (op *machineBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating Machine '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
-	ec.k8sEnv.createMachineCustom(ec.ctx, machineCustomCreateOptions{
+	ec.k8sEnv.createMachineCustom(ctx, machineCustomCreateOptions{
 		namespace:     op.namespace,
 		name:          op.name,
 		clusterName:   op.clusterName,
@@ -327,10 +328,10 @@ type toolCallOp struct {
 	args     map[string]any
 }
 
-func (op *toolCallOp) execute(ec *executionContext) {
+func (op *toolCallOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("calling %s MCP tool", op.toolName)
-	ec.lastToolResult = ec.mcpClient.CallTool(ec.ctx, op.toolName, op.args)
+	ec.lastToolResult = ec.mcpClient.CallTool(ctx, op.toolName, op.args)
 }
 
 func (op *toolCallOp) describe() string {
@@ -345,7 +346,7 @@ type assertContentOp struct {
 	goldenPath string
 }
 
-func (op *assertContentOp) execute(ec *executionContext) {
+func (op *assertContentOp) execute(_ context.Context, ec *executionContext) {
 	ec.t.Helper()
 	if ec.lastToolResult == nil {
 		ec.t.Fatal("assertContent called without a preceding tool call")
@@ -366,7 +367,7 @@ type assertContentNormalizedOp struct {
 	normalizers []Normalizer
 }
 
-func (op *assertContentNormalizedOp) execute(ec *executionContext) {
+func (op *assertContentNormalizedOp) execute(_ context.Context, ec *executionContext) {
 	ec.t.Helper()
 	if ec.lastToolResult == nil {
 		ec.t.Fatal("assertContentNormalized called without a preceding tool call")
@@ -387,7 +388,7 @@ type assertErrorOp struct {
 	goldenPath string
 }
 
-func (op *assertErrorOp) execute(ec *executionContext) {
+func (op *assertErrorOp) execute(_ context.Context, ec *executionContext) {
 	ec.t.Helper()
 	if ec.lastToolResult == nil {
 		ec.t.Fatal("assertError called without a preceding tool call")
