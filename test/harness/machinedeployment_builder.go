@@ -2,28 +2,19 @@ package harness
 
 // MachineDeploymentBuilder provides a fluent API for building MachineDeployment resources.
 type MachineDeploymentBuilder struct {
-	harness           *Harness
-	namespace         string
-	name              string
-	clusterName       string
-	replicas          int
-	nilReplicas       bool // if true, Spec.Replicas is nil (overrides replicas field)
-	version           string
-	phase             string
-	hasStatus         bool // explicit flag to trigger status update even with zero values
-	statusReplicas    int
-	readyReplicas     int
-	updatedReplicas   int
-	availableReplicas int
+	harness *Harness
+	machineDeploymentCreateOptions
 }
 
 // MachineDeployment starts a new MachineDeployment builder.
 func (h *Harness) MachineDeployment(namespace, name string) *MachineDeploymentBuilder {
 	return &MachineDeploymentBuilder{
-		harness:   h,
-		namespace: namespace,
-		name:      name,
-		replicas:  1,
+		harness: h,
+		machineDeploymentCreateOptions: machineDeploymentCreateOptions{
+			namespace: namespace,
+			name:      name,
+			replicas:  1,
+		},
 	}
 }
 
@@ -72,18 +63,7 @@ func (mdb *MachineDeploymentBuilder) WithStatus(total, ready, updated, available
 func (mdb *MachineDeploymentBuilder) Create() *Harness {
 	mdb.harness.t.Helper()
 	mdb.harness.operations = append(mdb.harness.operations, &machineDeploymentOp{
-		namespace:         mdb.namespace,
-		name:              mdb.name,
-		clusterName:       mdb.clusterName,
-		replicas:          mdb.replicas,
-		nilReplicas:       mdb.nilReplicas,
-		version:           mdb.version,
-		phase:             mdb.phase,
-		hasStatus:         mdb.hasStatus,
-		statusReplicas:    mdb.statusReplicas,
-		readyReplicas:     mdb.readyReplicas,
-		updatedReplicas:   mdb.updatedReplicas,
-		availableReplicas: mdb.availableReplicas,
+		machineDeploymentCreateOptions: mdb.machineDeploymentCreateOptions,
 	})
 	return mdb.harness
 }

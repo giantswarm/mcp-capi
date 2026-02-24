@@ -44,40 +44,34 @@ type nodeInfoConfig struct {
 
 // NodeBuilder provides a fluent API for building Kubernetes Node resources with custom properties.
 type NodeBuilder struct {
-	harness       *Harness
-	name          string
-	providerID    string
-	unschedulable bool
-	conditions    []nodeCondition
-	addresses     []nodeAddress
-	taints        []nodeTaint
-	capacity      nodeResources
-	allocatable   nodeResources
-	nodeInfo      nodeInfoConfig
+	harness *Harness
+	nodeCreateOptions
 }
 
 // Node starts a new node builder with sensible defaults.
 func (h *Harness) Node(name string) *NodeBuilder {
 	return &NodeBuilder{
 		harness: h,
-		name:    name,
-		nodeInfo: nodeInfoConfig{
-			os:                      "linux",
-			osImage:                 "Ubuntu 22.04.3 LTS",
-			kernelVersion:           "5.15.0-91-generic",
-			containerRuntimeVersion: "containerd://1.7.2",
-			kubeletVersion:          "v1.29.0",
-			architecture:            "amd64",
-		},
-		capacity: nodeResources{
-			cpu:    "4",
-			memory: "8Gi",
-			pods:   "110",
-		},
-		allocatable: nodeResources{
-			cpu:    "3500m",
-			memory: "7Gi",
-			pods:   "110",
+		nodeCreateOptions: nodeCreateOptions{
+			name: name,
+			nodeInfo: nodeInfoConfig{
+				os:                      "linux",
+				osImage:                 "Ubuntu 22.04.3 LTS",
+				kernelVersion:           "5.15.0-91-generic",
+				containerRuntimeVersion: "containerd://1.7.2",
+				kubeletVersion:          "v1.29.0",
+				architecture:            "amd64",
+			},
+			capacity: nodeResources{
+				cpu:    "4",
+				memory: "8Gi",
+				pods:   "110",
+			},
+			allocatable: nodeResources{
+				cpu:    "3500m",
+				memory: "7Gi",
+				pods:   "110",
+			},
 		},
 	}
 }
@@ -174,15 +168,7 @@ func (nb *NodeBuilder) WithKubeletVersion(version string) *NodeBuilder {
 func (nb *NodeBuilder) Create() *Harness {
 	nb.harness.t.Helper()
 	nb.harness.operations = append(nb.harness.operations, &nodeBuilderOp{
-		name:          nb.name,
-		providerID:    nb.providerID,
-		unschedulable: nb.unschedulable,
-		conditions:    nb.conditions,
-		addresses:     nb.addresses,
-		taints:        nb.taints,
-		capacity:      nb.capacity,
-		allocatable:   nb.allocatable,
-		nodeInfo:      nb.nodeInfo,
+		nodeCreateOptions: nb.nodeCreateOptions,
 	})
 	return nb.harness
 }

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // operation represents a single deferred operation in the lazy execution model.
@@ -84,20 +82,14 @@ func (op *clusterOp) describe() string {
 }
 
 // clusterBuilderOp creates a cluster with optional provider, phase, version, machine settings, and conditions.
+// It embeds clusterCreateOptions for the core cluster fields and adds extra fields
+// for machines and control planes that are handled in execute().
 type clusterBuilderOp struct {
-	namespace         string
-	name              string
-	provider          string
-	phase             string
-	version           string
-	totalMachines     int
-	readyMachines     int
-	controlPlane      *controlPlaneConfig
-	conditions        []clusterv1.Condition
-	customInfraRef    *customRef // custom InfrastructureRef (overrides provider)
-	customCPRef       *customRef // custom ControlPlaneRef (overrides controlPlane)
-	controlPlaneReady *bool      // explicit ControlPlaneReady status
-	infraReady        *bool      // explicit InfrastructureReady status
+	clusterCreateOptions
+	totalMachines int
+	readyMachines int
+	controlPlane  *controlPlaneConfig
+	customCPRef   *customRef // custom ControlPlaneRef (overrides controlPlane)
 }
 
 func (op *clusterBuilderOp) execute(ctx context.Context, ec *executionContext) {
@@ -105,17 +97,7 @@ func (op *clusterBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Logf("creating cluster '%s/%s' (provider=%s, phase=%s, version=%s)", op.namespace, op.name, op.provider, op.phase, op.version)
 
 	// Create the cluster with all spec fields and status in minimal API calls
-	ec.k8sEnv.createClusterFull(ctx, clusterCreateOptions{
-		namespace:         op.namespace,
-		name:              op.name,
-		provider:          op.provider,
-		phase:             op.phase,
-		version:           op.version,
-		conditions:        op.conditions,
-		customInfraRef:    op.customInfraRef,
-		controlPlaneReady: op.controlPlaneReady,
-		infraReady:        op.infraReady,
-	})
+	ec.k8sEnv.createClusterFull(ctx, op.clusterCreateOptions)
 
 	// Create machines if specified
 	for i := 0; i < op.totalMachines; i++ {
@@ -156,31 +138,13 @@ func (op *clusterBuilderOp) describe() string {
 
 // nodeBuilderOp creates a Kubernetes Node resource with optional properties.
 type nodeBuilderOp struct {
-	name          string
-	providerID    string
-	unschedulable bool
-	conditions    []nodeCondition
-	addresses     []nodeAddress
-	taints        []nodeTaint
-	capacity      nodeResources
-	allocatable   nodeResources
-	nodeInfo      nodeInfoConfig
+	nodeCreateOptions
 }
 
 func (op *nodeBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating node '%s'", op.name)
-	ec.k8sEnv.createNode(ctx, nodeCreateOptions{
-		name:          op.name,
-		providerID:    op.providerID,
-		unschedulable: op.unschedulable,
-		conditions:    op.conditions,
-		addresses:     op.addresses,
-		taints:        op.taints,
-		capacity:      op.capacity,
-		allocatable:   op.allocatable,
-		nodeInfo:      op.nodeInfo,
-	})
+	ec.k8sEnv.createNode(ctx, op.nodeCreateOptions)
 }
 
 func (op *nodeBuilderOp) describe() string {
@@ -193,37 +157,13 @@ func (op *nodeBuilderOp) describe() string {
 
 // machineDeploymentOp creates a CAPI MachineDeployment resource.
 type machineDeploymentOp struct {
-	namespace         string
-	name              string
-	clusterName       string
-	replicas          int
-	nilReplicas       bool
-	version           string
-	phase             string
-	hasStatus         bool // explicit flag to trigger status update even with zero values
-	statusReplicas    int
-	readyReplicas     int
-	updatedReplicas   int
-	availableReplicas int
+	machineDeploymentCreateOptions
 }
 
 func (op *machineDeploymentOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating MachineDeployment '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
-	ec.k8sEnv.createMachineDeployment(ctx, machineDeploymentCreateOptions{
-		namespace:         op.namespace,
-		name:              op.name,
-		clusterName:       op.clusterName,
-		replicas:          op.replicas,
-		nilReplicas:       op.nilReplicas,
-		version:           op.version,
-		phase:             op.phase,
-		hasStatus:         op.hasStatus,
-		statusReplicas:    op.statusReplicas,
-		readyReplicas:     op.readyReplicas,
-		updatedReplicas:   op.updatedReplicas,
-		availableReplicas: op.availableReplicas,
-	})
+	ec.k8sEnv.createMachineDeployment(ctx, op.machineDeploymentCreateOptions)
 }
 
 func (op *machineDeploymentOp) describe() string {
@@ -232,51 +172,13 @@ func (op *machineDeploymentOp) describe() string {
 
 // machineSetOp creates a CAPI MachineSet resource.
 type machineSetOp struct {
-	namespace         string
-	name              string
-	clusterName       string
-	replicas          int
-	nilReplicas       bool
-	version           string
-	statusReplicas    int
-	readyReplicas     int
-	availableReplicas int
-	infraRefKind      string
-	infraRefName      string
-	bootstrapKind     string
-	bootstrapName     string
-	ownerMDName       string
-	ownerKind         string
-	ownerName         string
-	conditions        []machineSetCondition
-	failureReason     string
-	failureMessage    string
+	machineSetCreateOptions
 }
 
 func (op *machineSetOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating MachineSet '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
-	ec.k8sEnv.createMachineSet(ctx, machineSetCreateOptions{
-		namespace:         op.namespace,
-		name:              op.name,
-		clusterName:       op.clusterName,
-		replicas:          op.replicas,
-		nilReplicas:       op.nilReplicas,
-		version:           op.version,
-		statusReplicas:    op.statusReplicas,
-		readyReplicas:     op.readyReplicas,
-		availableReplicas: op.availableReplicas,
-		infraRefKind:      op.infraRefKind,
-		infraRefName:      op.infraRefName,
-		bootstrapKind:     op.bootstrapKind,
-		bootstrapName:     op.bootstrapName,
-		ownerMDName:       op.ownerMDName,
-		ownerKind:         op.ownerKind,
-		ownerName:         op.ownerName,
-		conditions:        op.conditions,
-		failureReason:     op.failureReason,
-		failureMessage:    op.failureMessage,
-	})
+	ec.k8sEnv.createMachineSet(ctx, op.machineSetCreateOptions)
 }
 
 func (op *machineSetOp) describe() string {
@@ -285,39 +187,13 @@ func (op *machineSetOp) describe() string {
 
 // machineBuilderOp creates a CAPI Machine resource with fine-grained field control.
 type machineBuilderOp struct {
-	namespace     string
-	name          string
-	clusterName   string
-	phase         string
-	version       string
-	providerID    string
-	nodeRefName   string
-	configRefKind string
-	configRefName string
-	infraRefKind  string
-	infraRefName  string
-	conditions    []machineCondition
-	addresses     []machineAddress
+	machineCustomCreateOptions
 }
 
 func (op *machineBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
 	ec.t.Logf("creating Machine '%s/%s' for cluster '%s'", op.namespace, op.name, op.clusterName)
-	ec.k8sEnv.createMachineCustom(ctx, machineCustomCreateOptions{
-		namespace:     op.namespace,
-		name:          op.name,
-		clusterName:   op.clusterName,
-		phase:         op.phase,
-		version:       op.version,
-		providerID:    op.providerID,
-		nodeRefName:   op.nodeRefName,
-		configRefKind: op.configRefKind,
-		configRefName: op.configRefName,
-		infraRefKind:  op.infraRefKind,
-		infraRefName:  op.infraRefName,
-		conditions:    op.conditions,
-		addresses:     op.addresses,
-	})
+	ec.k8sEnv.createMachineCustom(ctx, op.machineCustomCreateOptions)
 }
 
 func (op *machineBuilderOp) describe() string {

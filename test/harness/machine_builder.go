@@ -22,28 +22,18 @@ type machineAddress struct {
 // Use this for fine-grained control over machine fields like Bootstrap.ConfigRef,
 // InfrastructureRef, Version, and Conditions.
 type MachineBuilder struct {
-	harness       *Harness
-	namespace     string
-	name          string
-	clusterName   string
-	phase         string
-	version       string
-	providerID    string
-	nodeRefName   string
-	configRefKind string
-	configRefName string
-	infraRefKind  string
-	infraRefName  string
-	conditions    []machineCondition
-	addresses     []machineAddress
+	harness *Harness
+	machineCustomCreateOptions
 }
 
 // Machine starts a new machine builder.
 func (h *Harness) Machine(namespace, name string) *MachineBuilder {
 	return &MachineBuilder{
-		harness:   h,
-		namespace: namespace,
-		name:      name,
+		harness: h,
+		machineCustomCreateOptions: machineCustomCreateOptions{
+			namespace: namespace,
+			name:      name,
+		},
 	}
 }
 
@@ -159,19 +149,7 @@ func (mb *MachineBuilder) WithAddress(addrType, address string) *MachineBuilder 
 func (mb *MachineBuilder) Create() *Harness {
 	mb.harness.t.Helper()
 	mb.harness.operations = append(mb.harness.operations, &machineBuilderOp{
-		namespace:     mb.namespace,
-		name:          mb.name,
-		clusterName:   mb.clusterName,
-		phase:         mb.phase,
-		version:       mb.version,
-		providerID:    mb.providerID,
-		nodeRefName:   mb.nodeRefName,
-		configRefKind: mb.configRefKind,
-		configRefName: mb.configRefName,
-		infraRefKind:  mb.infraRefKind,
-		infraRefName:  mb.infraRefName,
-		conditions:    mb.conditions,
-		addresses:     mb.addresses,
+		machineCustomCreateOptions: mb.machineCustomCreateOptions,
 	})
 	return mb.harness
 }

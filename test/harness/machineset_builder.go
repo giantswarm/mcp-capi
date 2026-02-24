@@ -14,35 +14,19 @@ type machineSetCondition struct {
 
 // MachineSetBuilder provides a fluent API for building MachineSet resources.
 type MachineSetBuilder struct {
-	harness           *Harness
-	namespace         string
-	name              string
-	clusterName       string
-	replicas          int
-	nilReplicas       bool // if true, Spec.Replicas is nil (overrides replicas field)
-	version           string
-	statusReplicas    int
-	readyReplicas     int
-	availableReplicas int
-	infraRefKind      string
-	infraRefName      string
-	bootstrapKind     string
-	bootstrapName     string
-	ownerMDName       string
-	ownerKind         string // custom owner kind (defaults to "MachineDeployment" if ownerMDName is set)
-	ownerName         string // custom owner name (used with ownerKind)
-	failureReason     string
-	failureMessage    string
-	conditions        []machineSetCondition
+	harness *Harness
+	machineSetCreateOptions
 }
 
 // MachineSet starts a new MachineSet builder.
 func (h *Harness) MachineSet(namespace, name string) *MachineSetBuilder {
 	return &MachineSetBuilder{
-		harness:   h,
-		namespace: namespace,
-		name:      name,
-		replicas:  1,
+		harness: h,
+		machineSetCreateOptions: machineSetCreateOptions{
+			namespace: namespace,
+			name:      name,
+			replicas:  1,
+		},
 	}
 }
 
@@ -180,25 +164,7 @@ func (mscb *MachineSetConditionBuilder) Done() *MachineSetBuilder {
 func (msb *MachineSetBuilder) Create() *Harness {
 	msb.harness.t.Helper()
 	msb.harness.operations = append(msb.harness.operations, &machineSetOp{
-		namespace:         msb.namespace,
-		name:              msb.name,
-		clusterName:       msb.clusterName,
-		replicas:          msb.replicas,
-		nilReplicas:       msb.nilReplicas,
-		version:           msb.version,
-		statusReplicas:    msb.statusReplicas,
-		readyReplicas:     msb.readyReplicas,
-		availableReplicas: msb.availableReplicas,
-		infraRefKind:      msb.infraRefKind,
-		infraRefName:      msb.infraRefName,
-		bootstrapKind:     msb.bootstrapKind,
-		bootstrapName:     msb.bootstrapName,
-		ownerMDName:       msb.ownerMDName,
-		ownerKind:         msb.ownerKind,
-		ownerName:         msb.ownerName,
-		conditions:        msb.conditions,
-		failureReason:     msb.failureReason,
-		failureMessage:    msb.failureMessage,
+		machineSetCreateOptions: msb.machineSetCreateOptions,
 	})
 	return msb.harness
 }

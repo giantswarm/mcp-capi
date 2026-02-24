@@ -15,21 +15,11 @@ type controlPlaneConfig struct {
 
 // ClusterBuilder provides a fluent API for building cluster resources with custom properties.
 // Similar to ToolCall, it accumulates configuration and queues the operation when finalized.
+// It embeds clusterBuilderOp (which itself embeds clusterCreateOptions), so all fields
+// are promoted and accessible directly on the builder.
 type ClusterBuilder struct {
-	harness           *Harness
-	namespace         string
-	name              string
-	provider          string // "", "aws", "azure", "gcp", "vsphere", "vcd"
-	phase             string // cluster phase to set after creation
-	version           string // kubernetes version to set after creation
-	totalMachines     int    // number of machines to create
-	readyMachines     int    // number of machines with NodeRef (ready)
-	controlPlane      *controlPlaneConfig
-	conditions        []clusterv1.Condition // conditions to set on the cluster
-	customInfraRef    *customRef            // custom InfrastructureRef (overrides provider)
-	customCPRef       *customRef            // custom ControlPlaneRef (overrides controlPlane)
-	controlPlaneReady *bool                 // explicit control plane ready status
-	infraReady        *bool                 // explicit infrastructure ready status
+	harness *Harness
+	clusterBuilderOp
 }
 
 // customRef holds a custom object reference for InfrastructureRef or ControlPlaneRef.
@@ -41,9 +31,13 @@ type customRef struct {
 // Cluster starts a new cluster builder.
 func (h *Harness) Cluster(namespace, name string) *ClusterBuilder {
 	return &ClusterBuilder{
-		harness:   h,
-		namespace: namespace,
-		name:      name,
+		harness: h,
+		clusterBuilderOp: clusterBuilderOp{
+			clusterCreateOptions: clusterCreateOptions{
+				namespace: namespace,
+				name:      name,
+			},
+		},
 	}
 }
 
@@ -212,20 +206,7 @@ func (cpb *ControlPlaneBuilder) Done() *ClusterBuilder {
 // Create queues the cluster creation operation and returns to the harness.
 func (cb *ClusterBuilder) Create() *Harness {
 	cb.harness.t.Helper()
-	cb.harness.operations = append(cb.harness.operations, &clusterBuilderOp{
-		namespace:         cb.namespace,
-		name:              cb.name,
-		provider:          cb.provider,
-		phase:             cb.phase,
-		version:           cb.version,
-		totalMachines:     cb.totalMachines,
-		readyMachines:     cb.readyMachines,
-		controlPlane:      cb.controlPlane,
-		conditions:        cb.conditions,
-		customInfraRef:    cb.customInfraRef,
-		customCPRef:       cb.customCPRef,
-		controlPlaneReady: cb.controlPlaneReady,
-		infraReady:        cb.infraReady,
-	})
+	op := cb.clusterBuilderOp // value copy
+	cb.harness.operations = append(cb.harness.operations, &op)
 	return cb.harness
 }
