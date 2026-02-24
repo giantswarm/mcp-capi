@@ -94,9 +94,9 @@ func (op *clusterOp) describe() string {
 	return fmt.Sprintf("create cluster %q in namespace %q", op.name, op.namespace)
 }
 
-// clusterBuilderOp creates a cluster with optional provider, phase, version, machine settings, and conditions.
-// It embeds clusterCreateOptions for the core cluster fields and adds extra fields
-// for machines and control planes that are handled in execute().
+// clusterBuilderOp creates a cluster with optional provider, phase, version, conditions, and machine settings.
+// It embeds clusterCreateOptions for the core cluster fields (including conditions) and adds extra fields
+// for machines and control planes that are created as separate resources in execute().
 type clusterBuilderOp struct {
 	clusterCreateOptions
 	totalMachines int
@@ -133,20 +133,21 @@ func (op *clusterBuilderOp) execute(ctx context.Context, ec *executionContext) {
 }
 
 func (op *clusterBuilderOp) describe() string {
-	desc := fmt.Sprintf("create cluster %q in namespace %q", op.name, op.namespace)
+	var b strings.Builder
+	fmt.Fprintf(&b, "create cluster %q in namespace %q", op.name, op.namespace)
 	if op.provider != "" {
-		desc += fmt.Sprintf(" (provider: %s)", op.provider)
+		fmt.Fprintf(&b, " (provider: %s)", op.provider)
 	}
 	if op.phase != "" {
-		desc += fmt.Sprintf(" (phase: %s)", op.phase)
+		fmt.Fprintf(&b, " (phase: %s)", op.phase)
 	}
 	if op.version != "" {
-		desc += fmt.Sprintf(" (version: %s)", op.version)
+		fmt.Fprintf(&b, " (version: %s)", op.version)
 	}
 	if op.totalMachines > 0 {
-		desc += fmt.Sprintf(" (machines: %d/%d ready)", op.readyMachines, op.totalMachines)
+		fmt.Fprintf(&b, " (machines: %d/%d ready)", op.readyMachines, op.totalMachines)
 	}
-	return desc
+	return b.String()
 }
 
 // nodeBuilderOp creates a Kubernetes Node resource with optional properties.
