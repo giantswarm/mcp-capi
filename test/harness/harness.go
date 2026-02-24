@@ -223,6 +223,9 @@ func (cb *ClusterBuilder) WithVersion(version string) *ClusterBuilder {
 // WithMachines sets the number of machines to create and how many should be ready.
 // Ready machines will have a NodeRef set in their status.
 func (cb *ClusterBuilder) WithMachines(total, ready int) *ClusterBuilder {
+	if ready > total {
+		cb.harness.t.Fatalf("WithMachines: ready (%d) cannot exceed total (%d)", ready, total)
+	}
 	cb.totalMachines = total
 	cb.readyMachines = ready
 	return cb
