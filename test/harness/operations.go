@@ -33,6 +33,17 @@ type executionContext struct {
 	lastToolResult *callToolResult // stores the result of the last tool call for assertions
 }
 
+// requireLastToolResult returns the last tool call result, or fatals if no
+// preceding tool call has been executed. The opName parameter identifies the
+// calling operation for the error message.
+func (ec *executionContext) requireLastToolResult(opName string) *callToolResult {
+	ec.t.Helper()
+	if ec.lastToolResult == nil {
+		ec.t.Fatalf("%s called without a preceding tool call", opName)
+	}
+	return ec.lastToolResult
+}
+
 // namespaceOp creates a Kubernetes namespace.
 type namespaceOp struct {
 	name string
@@ -226,11 +237,9 @@ type assertContentOp struct {
 
 func (op *assertContentOp) execute(_ context.Context, ec *executionContext) {
 	ec.t.Helper()
-	if ec.lastToolResult == nil {
-		ec.t.Fatal("assertContent called without a preceding tool call")
-	}
+	result := ec.requireLastToolResult("assertContent")
 	fullGoldenPath := filepath.Join(op.toolName, op.goldenPath)
-	ec.lastToolResult.assertContent(fullGoldenPath)
+	result.assertContent(fullGoldenPath)
 }
 
 func (op *assertContentOp) describe() string {
@@ -247,11 +256,9 @@ type assertContentNormalizedOp struct {
 
 func (op *assertContentNormalizedOp) execute(_ context.Context, ec *executionContext) {
 	ec.t.Helper()
-	if ec.lastToolResult == nil {
-		ec.t.Fatal("assertContentNormalized called without a preceding tool call")
-	}
+	result := ec.requireLastToolResult("assertContentNormalized")
 	fullGoldenPath := filepath.Join(op.toolName, op.goldenPath)
-	ec.lastToolResult.assertContentNormalized(fullGoldenPath, op.normalizers)
+	result.assertContentNormalized(fullGoldenPath, op.normalizers)
 }
 
 func (op *assertContentNormalizedOp) describe() string {
@@ -268,11 +275,9 @@ type assertErrorOp struct {
 
 func (op *assertErrorOp) execute(_ context.Context, ec *executionContext) {
 	ec.t.Helper()
-	if ec.lastToolResult == nil {
-		ec.t.Fatal("assertError called without a preceding tool call")
-	}
+	result := ec.requireLastToolResult("assertError")
 	fullGoldenPath := filepath.Join(op.toolName, op.goldenPath)
-	ec.lastToolResult.assertError(fullGoldenPath)
+	result.assertError(fullGoldenPath)
 }
 
 func (op *assertErrorOp) describe() string {
