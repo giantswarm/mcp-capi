@@ -15,10 +15,12 @@ import (
 	"time"
 
 	"github.com/giantswarm/k8senv"
+	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -34,6 +36,15 @@ const (
 	kubeconfigContextName = "k8senv"
 	acquireTimeout        = 5 * time.Minute
 )
+
+// testUIDNamespace is a fixed UUID v4 used as the namespace for generating
+// deterministic v5 UIDs in test owner references.
+var testUIDNamespace = uuid.MustParse("a01b2c3d-e5f6-4890-abcd-ef1234567890")
+
+// deterministicUID generates a deterministic UUID v5 from a name string.
+func deterministicUID(name string) types.UID {
+	return types.UID(uuid.NewSHA1(testUIDNamespace, []byte(name)).String())
+}
 
 var (
 	// mgr is the package-level k8senv manager singleton.
@@ -626,7 +637,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 				APIVersion: "cluster.x-k8s.io/v1beta1",
 				Kind:       "MachineDeployment",
 				Name:       opts.ownerMDName,
-				UID:        "test-uid",
+				UID:        deterministicUID(opts.ownerMDName),
 				Controller: &isController,
 			},
 		}
@@ -637,7 +648,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 				APIVersion: "cluster.x-k8s.io/v1beta1",
 				Kind:       opts.ownerKind,
 				Name:       opts.ownerName,
-				UID:        "test-uid",
+				UID:        deterministicUID(opts.ownerName),
 				Controller: &isController,
 			},
 		}
