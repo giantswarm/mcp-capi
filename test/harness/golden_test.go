@@ -136,8 +136,8 @@ func TestCompareWithGolden(t *testing.T) {
 		if !strings.Contains(errMsg, "does not match golden file") {
 			t.Errorf("error should mention golden file mismatch, got: %v", err)
 		}
-		if !strings.Contains(errMsg, "-") && !strings.Contains(errMsg, "+") {
-			t.Errorf("error should contain diff markers, got: %v", err)
+		if !strings.Contains(errMsg, "(-expected +actual)") {
+			t.Errorf("error should contain diff header, got: %v", err)
 		}
 	})
 
