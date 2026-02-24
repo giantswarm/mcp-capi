@@ -1,0 +1,6 @@
+Cluster: test-clusters/partial-cluster
+Phase: 
+Ready: false
+Provider: azure
+Version: 
+Machines: 1/3 ready

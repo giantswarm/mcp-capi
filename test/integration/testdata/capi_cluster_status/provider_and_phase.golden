@@ -1,0 +1,6 @@
+Cluster: test-clusters/aws-cluster
+Phase: Provisioned
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
