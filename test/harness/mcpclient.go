@@ -20,7 +20,10 @@ const (
 	clientName = "mcp-capi-test-client"
 	// clientVersion is the semantic version of this test client.
 	clientVersion = "0.1.0"
-	// testdataDir is the directory containing test fixture files.
+	// testdataDir is a relative path to the directory containing golden files and
+	// test fixtures. Go tests run with their working directory set to the package
+	// directory, so this resolves to test/integration/testdata/ when integration
+	// tests in test/integration/ use the harness.
 	testdataDir = "testdata"
 )
 

@@ -47,6 +47,8 @@ func deterministicUID(name string) types.UID {
 
 var (
 	// mgr is the package-level k8senv manager singleton.
+	// mgr and mgrErr are written once inside mgrOnce.Do() and are read-only thereafter.
+	// The sync.Once provides the happens-before guarantee for all subsequent reads.
 	mgr     k8senv.Manager
 	mgrOnce sync.Once
 	mgrErr  error
@@ -109,6 +111,9 @@ func InitManager() error {
 
 // ShutdownManager stops the k8senv manager and releases all resources.
 // Should be called from TestMain after all tests complete.
+//
+// Safety: reading mgr without synchronization is safe here because mgr is
+// read-only after mgrOnce.Do() completes, and this runs after all tests finish.
 func ShutdownManager() {
 	if mgr != nil {
 		if err := mgr.Shutdown(); err != nil {
@@ -129,6 +134,9 @@ type testEnv struct {
 }
 
 // newTestEnv acquires a k8senv instance and sets up clients for integration testing.
+//
+// Safety: reading mgr is safe here because callers must call InitManager first,
+// so mgrOnce.Do() has completed and mgr is read-only.
 func newTestEnv(t TestingT) *testEnv {
 	t.Helper()
 
