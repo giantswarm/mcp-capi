@@ -30,6 +30,11 @@ func New(t TestingT) *Harness {
 	}
 
 	// Register cleanup to check for forgotten Execute()
+	//
+	// Safety: reading h.executed without synchronization is safe here because
+	// t.Cleanup functions run after the test function has returned, establishing
+	// a happens-before edge. All writes to h.executed (in Execute()) occur during
+	// the test body, so no concurrent writes are possible at cleanup time.
 	t.Cleanup(func() {
 		if !h.executed && len(h.operations) > 0 {
 			t.Errorf("harness has %d queued operations but Execute() was never called", len(h.operations))
