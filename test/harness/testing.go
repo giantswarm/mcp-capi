@@ -6,6 +6,9 @@ package harness
 // This interface defines only the methods actually used by the harness,
 // allowing the harness to work with any compatible test framework.
 type TestingT interface {
+	// Name returns the name of the running test or benchmark.
+	Name() string
+
 	// Helper marks the calling function as a test helper function.
 	// When printing file and line information, that function will be skipped.
 	Helper()
