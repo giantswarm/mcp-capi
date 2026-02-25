@@ -101,4 +101,57 @@ func TestCapiBackupCluster(t *testing.T) {
 			AssertContentNormalized("json_with_secrets.golden", harness.NormalizeTimestamp).
 			Execute()
 	})
+
+	t.Run("should exclude secrets when include_secrets is false", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "no-secrets-cluster").
+			CreateSecret(namespace, "no-secrets-cluster-kubeconfig", map[string][]byte{
+				"value": []byte("apiVersion: v1\nclusters:\n- cluster:\n    server: https://example.com\n"),
+			}).
+			ToolCall("capi_backup_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "no-secrets-cluster").
+			WithArg("include_secrets", false).
+			AssertContentNormalized("backup_secrets_excluded.golden", harness.NormalizeTimestamp).
+			Execute()
+	})
+
+	t.Run("should error on invalid output format", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "xml-format-cluster").
+			ToolCall("capi_backup_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "xml-format-cluster").
+			WithArg("output_format", "xml").
+			AssertContentNormalized("backup_invalid_format.golden", harness.NormalizeTimestamp).
+			Execute()
+	})
+
+	t.Run("should backup cluster with rich state", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "rich-backup-cluster").
+			WithProvider("aws").
+			WithPhase("Provisioned").
+			WithMachines(3, 2).
+			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
+			WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
+			Create().
+			ToolCall("capi_backup_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "rich-backup-cluster").
+			AssertContentNormalized("backup_rich_state.golden", harness.NormalizeTimestamp).
+			Execute()
+	})
 }

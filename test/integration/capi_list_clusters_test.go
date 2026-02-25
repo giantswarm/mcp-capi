@@ -94,6 +94,20 @@ func TestCapiListClusters(t *testing.T) {
 			Execute()
 	})
 
+	t.Run("should show paused cluster in list", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "active-cluster").WithProvider("aws").WithPhase("Provisioned").Create().
+			Cluster(namespace, "paused-cluster").WithProvider("azure").WithPaused(true).Create().
+			ToolCall("capi_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("list_with_paused.golden").
+			Execute()
+	})
+
 	t.Run("lists mixed providers in same namespace", func(t *testing.T) {
 		t.Parallel()
 		namespace := "test-clusters"
@@ -339,20 +353,20 @@ func TestCapiListClusters(t *testing.T) {
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster-1").WithProvider(provider).WithPhase("Provisioned").WithVersion("v1.28.0").WithMachines(3, 3).
-					WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
-					WithCondition("ControlPlaneReady").True().Reason("ControlPlaneInitialized").Message("Control plane is ready").Done().
-					WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
-					Create().
+				WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
+				WithCondition("ControlPlaneReady").True().Reason("ControlPlaneInitialized").Message("Control plane is ready").Done().
+				WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
+				Create().
 				Cluster(namespace, provider+"-cluster-2").WithProvider(provider).WithPhase("Provisioning").WithVersion("v1.29.0").WithMachines(2, 1).
-					WithCondition("Ready").False().Reason("WaitingForControlPlane").Message("Waiting for control plane to be ready").Done().
-					WithCondition("ControlPlaneReady").False().Reason("ScalingUp").Message("Control plane is scaling up").Done().
-					WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
-					Create().
+				WithCondition("Ready").False().Reason("WaitingForControlPlane").Message("Waiting for control plane to be ready").Done().
+				WithCondition("ControlPlaneReady").False().Reason("ScalingUp").Message("Control plane is scaling up").Done().
+				WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
+				Create().
 				Cluster(namespace, provider+"-cluster-3").WithProvider(provider).WithPhase("Pending").WithVersion("v1.30.0").WithMachines(5, 0).
-					WithCondition("Ready").False().Reason("ClusterNotReady").Message("Cluster is not ready").Done().
-					WithCondition("ControlPlaneReady").False().Reason("WaitingForInfrastructure").Message("Waiting for infrastructure").Done().
-					WithCondition("InfrastructureReady").False().Reason("Provisioning").Message("Infrastructure is being provisioned").Done().
-					Create().
+				WithCondition("Ready").False().Reason("ClusterNotReady").Message("Cluster is not ready").Done().
+				WithCondition("ControlPlaneReady").False().Reason("WaitingForInfrastructure").Message("Waiting for infrastructure").Done().
+				WithCondition("InfrastructureReady").False().Reason("Provisioning").Message("Infrastructure is being provisioned").Done().
+				Create().
 				ToolCall("capi_list_clusters").
 				WithArg("namespace", namespace).
 				AssertContent(provider + "_multiple_all_properties.golden").

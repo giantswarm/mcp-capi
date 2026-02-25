@@ -271,4 +271,20 @@ func TestCapiGetMachineSet(t *testing.T) {
 			AssertContent("with_multiple_conditions.golden").
 			Execute()
 	})
+
+	t.Run("should handle nil replicas", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineSet(namespace, "nil-rep-ms").ForCluster("test-cluster").WithNilReplicas().
+			WithStatus(2, 1, 1).Create().
+			ToolCall("capi_get_machineset").
+			WithArg("namespace", namespace).
+			WithArg("name", "nil-rep-ms").
+			AssertContent("nil_replicas.golden").
+			Execute()
+	})
 }

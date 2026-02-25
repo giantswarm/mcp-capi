@@ -303,6 +303,9 @@ type clusterCreateOptions struct {
 	provider          string
 	version           string
 	phase             string
+	paused            bool
+	labels            map[string]string
+	annotations       map[string]string
 	conditions        []clusterv1.Condition
 	customInfraRef    *customRef // custom InfrastructureRef (overrides provider)
 	controlPlaneReady *bool      // explicit ControlPlaneReady status
@@ -341,15 +344,23 @@ func providerInfraRef(provider string) (apiVersion, kind string) {
 func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOptions) {
 	te.t.Helper()
 
+	// Build labels: always include ClusterNameLabel, then merge caller-supplied labels
+	clusterLabels := map[string]string{
+		clusterv1.ClusterNameLabel: opts.name,
+	}
+	for k, v := range opts.labels {
+		clusterLabels[k] = v
+	}
+
 	cluster := &clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.name,
-			Namespace: opts.namespace,
-			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: opts.name,
-			},
+			Name:        opts.name,
+			Namespace:   opts.namespace,
+			Labels:      clusterLabels,
+			Annotations: opts.annotations,
 		},
 		Spec: clusterv1.ClusterSpec{
+			Paused: opts.paused,
 			ClusterNetwork: &clusterv1.ClusterNetwork{
 				Pods: &clusterv1.NetworkRanges{
 					CIDRBlocks: []string{"192.168.0.0/16"},
@@ -553,6 +564,14 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 		md.Spec.Template.Spec.Version = &opts.version
 	}
 
+	if opts.infraRefKind != "" {
+		md.Spec.Template.Spec.InfrastructureRef = corev1.ObjectReference{
+			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			Kind:       opts.infraRefKind,
+			Name:       opts.infraRefName,
+		}
+	}
+
 	if err := te.ctrlClient.Create(ctx, md); err != nil {
 		te.t.Fatalf("failed to create MachineDeployment %s/%s: %v", opts.namespace, opts.name, err)
 	}
@@ -581,6 +600,8 @@ type machineDeploymentCreateOptions struct {
 	nilReplicas       bool
 	version           string
 	phase             string
+	infraRefKind      string
+	infraRefName      string
 	hasStatus         bool // explicit flag to trigger status update even with zero values
 	statusReplicas    int32
 	readyReplicas     int32

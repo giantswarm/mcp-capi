@@ -1,0 +1,13 @@
+Azure Cluster: test-clusters/my-azure-cluster
+
+Cluster Information:
+  Phase: 
+  Infrastructure Ready: false
+  Control Plane Ready: false
+
+Infrastructure:
+  Kind: AzureCluster
+  Name: my-azure-cluster
+
+Note: For detailed Azure infrastructure information (resource group, vnet, etc.),
+you would need to query the AzureCluster resource directly.

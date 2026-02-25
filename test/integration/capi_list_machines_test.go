@@ -126,4 +126,50 @@ func TestCapiListMachines(t *testing.T) {
 			AssertContent("single_machine.golden").
 			Execute()
 	})
+
+	t.Run("should show machine with provider ID", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "pid-cluster").
+			Machine(namespace, "pid-machine").ForCluster("pid-cluster").
+			WithProviderID("aws://us-east-1/i-1234567890abcdef0").
+			WithPhase("Running").Create().
+			ToolCall("capi_list_machines").
+			WithArg("namespace", namespace).
+			AssertContent("with_provider_id.golden").
+			Execute()
+	})
+
+	t.Run("should show machine with empty phase", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "nophase-cluster").
+			Machine(namespace, "nophase-machine").ForCluster("nophase-cluster").Create().
+			ToolCall("capi_list_machines").
+			WithArg("namespace", namespace).
+			AssertContent("empty_phase.golden").
+			Execute()
+	})
+
+	t.Run("should show machine with node ref", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "noderef-cluster").
+			Machine(namespace, "noderef-machine").ForCluster("noderef-cluster").
+			WithNodeRef("worker-node-1").
+			WithPhase("Running").Create().
+			ToolCall("capi_list_machines").
+			WithArg("namespace", namespace).
+			AssertContent("with_node_ref.golden").
+			Execute()
+	})
 }

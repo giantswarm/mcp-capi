@@ -32,6 +32,9 @@ func BuildAllTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
 	// Machine tools
 	tools = append(tools, buildMachineTools(serverCtx)...)
 
+	// Provider tools
+	tools = append(tools, buildProviderTools(serverCtx)...)
+
 	return tools, nil
 }
 
@@ -394,6 +397,140 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 			mcp.WithString("node_name", mcp.Description("Name of the node (alternative to machine)")),
 		),
 		Handler: CreateNodeStatusHandler(serverCtx),
+	})
+
+	return tools
+}
+
+// buildProviderTools constructs and returns all read-only provider-specific tools.
+// This includes generic provider discovery, provider configuration lookup,
+// and per-provider cluster listing and detail retrieval for AWS, Azure, GCP,
+// and vSphere.
+func buildProviderTools(serverCtx *ServerContext) []ToolRegistration {
+	var tools []ToolRegistration
+
+	// Generic provider tools
+
+	// capi_list_infrastructure_providers
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_list_infrastructure_providers",
+			mcp.WithDescription("List available infrastructure providers"),
+		),
+		Handler: CreateListInfrastructureProvidersHandler(serverCtx),
+	})
+
+	// capi_get_provider_config
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_get_provider_config",
+			mcp.WithDescription("Get provider configuration details"),
+			mcp.WithString("provider", mcp.Required(), mcp.Description("Infrastructure provider (aws, azure, gcp, vsphere)")),
+		),
+		Handler: CreateGetProviderConfigHandler(serverCtx),
+	})
+
+	// AWS provider tools
+
+	// capi_aws_list_clusters
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_aws_list_clusters",
+			mcp.WithDescription("List AWS clusters"),
+			mcp.WithString("namespace", mcp.Description("Namespace to filter clusters (optional, empty for all)")),
+		),
+		Handler: CreateAWSListClustersHandler(serverCtx),
+	})
+
+	// capi_aws_get_cluster
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_aws_get_cluster",
+			mcp.WithDescription("Get detailed information about an AWS cluster"),
+			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
+			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
+		),
+		Handler: CreateAWSGetClusterHandler(serverCtx),
+	})
+
+	// capi_aws_get_machine_template
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_aws_get_machine_template",
+			mcp.WithDescription("Get AWS machine template details"),
+			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the machine template")),
+			mcp.WithString("name", mcp.Description("Name of the machine template (optional, lists all if empty)")),
+		),
+		Handler: CreateAWSGetMachineTemplateHandler(serverCtx),
+	})
+
+	// Azure provider tools
+
+	// capi_azure_list_clusters
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_azure_list_clusters",
+			mcp.WithDescription("List Azure clusters"),
+			mcp.WithString("namespace", mcp.Description("Namespace to filter clusters (optional, empty for all)")),
+		),
+		Handler: CreateAzureListClustersHandler(serverCtx),
+	})
+
+	// capi_azure_get_cluster
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_azure_get_cluster",
+			mcp.WithDescription("Get detailed information about an Azure cluster"),
+			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
+			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
+		),
+		Handler: CreateAzureGetClusterHandler(serverCtx),
+	})
+
+	// GCP provider tools
+
+	// capi_gcp_list_clusters
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_gcp_list_clusters",
+			mcp.WithDescription("List GCP clusters"),
+			mcp.WithString("namespace", mcp.Description("Namespace to filter clusters (optional, empty for all)")),
+		),
+		Handler: CreateGCPListClustersHandler(serverCtx),
+	})
+
+	// capi_gcp_get_cluster
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_gcp_get_cluster",
+			mcp.WithDescription("Get detailed information about a GCP cluster"),
+			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
+			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
+		),
+		Handler: CreateGCPGetClusterHandler(serverCtx),
+	})
+
+	// vSphere provider tools
+
+	// capi_vsphere_list_clusters
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_vsphere_list_clusters",
+			mcp.WithDescription("List vSphere clusters"),
+			mcp.WithString("namespace", mcp.Description("Namespace to filter clusters (optional, empty for all)")),
+		),
+		Handler: CreateVSphereListClustersHandler(serverCtx),
+	})
+
+	// capi_vsphere_get_cluster
+	tools = append(tools, ToolRegistration{
+		Tool: mcp.NewTool(
+			"capi_vsphere_get_cluster",
+			mcp.WithDescription("Get detailed information about a vSphere cluster"),
+			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
+			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
+		),
+		Handler: CreateVSphereGetClusterHandler(serverCtx),
 	})
 
 	return tools

@@ -190,4 +190,50 @@ func TestCapiListMachineDeployments(t *testing.T) {
 			AssertContent("nil_replicas.golden").
 			Execute()
 	})
+
+	t.Run("should return empty for non-existent cluster filter", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "real-cluster").
+			MachineDeployment(namespace, "md-real").ForCluster("real-cluster").WithReplicas(3).
+			WithStatus(3, 3, 3, 3).Create().
+			ToolCall("capi_list_machinedeployments").
+			WithArg("namespace", namespace).
+			WithArg("clusterName", "nonexistent").
+			AssertContent("filter_nonexistent_cluster.golden").
+			Execute()
+	})
+
+	t.Run("should handle zero replicas status", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineDeployment(namespace, "md-zero").ForCluster("test-cluster").WithReplicas(3).
+			WithStatus(0, 0, 0, 0).Create().
+			ToolCall("capi_list_machinedeployments").
+			WithArg("namespace", namespace).
+			AssertContent("zero_replicas_status.golden").
+			Execute()
+	})
+
+	t.Run("should show deployment without phase", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "test-cluster").
+			MachineDeployment(namespace, "md-nophase").ForCluster("test-cluster").WithReplicas(2).
+			WithStatus(2, 2, 2, 2).Create().
+			ToolCall("capi_list_machinedeployments").
+			WithArg("namespace", namespace).
+			AssertContent("no_phase.golden").
+			Execute()
+	})
 }

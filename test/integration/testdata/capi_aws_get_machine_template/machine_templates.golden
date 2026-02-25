@@ -1,0 +1,3 @@
+AWS Machine Templates in namespace test-clusters:
+
+Template: my-aws-template (used by MachineDeployment: my-aws-md)

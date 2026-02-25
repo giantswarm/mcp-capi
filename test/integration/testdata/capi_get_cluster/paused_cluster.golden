@@ -1,0 +1,7 @@
+Cluster: test-clusters/paused-cluster
+Phase: 
+Ready: false
+Paused: true
+Provider: aws
+Version: 
+Machines: 0/0 ready

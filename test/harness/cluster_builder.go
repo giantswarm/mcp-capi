@@ -47,6 +47,25 @@ func (cb *ClusterBuilder) WithProvider(provider string) *ClusterBuilder {
 	return cb
 }
 
+// WithPaused sets spec.paused on the cluster.
+func (cb *ClusterBuilder) WithPaused(paused bool) *ClusterBuilder {
+	cb.paused = paused
+	return cb
+}
+
+// WithLabels sets metadata.labels on the cluster. These labels are merged with
+// the default ClusterNameLabel that is always applied.
+func (cb *ClusterBuilder) WithLabels(labels map[string]string) *ClusterBuilder {
+	cb.labels = labels
+	return cb
+}
+
+// WithAnnotations sets metadata.annotations on the cluster.
+func (cb *ClusterBuilder) WithAnnotations(annotations map[string]string) *ClusterBuilder {
+	cb.annotations = annotations
+	return cb
+}
+
 // WithPhase sets the cluster phase to apply after creation.
 func (cb *ClusterBuilder) WithPhase(phase string) *ClusterBuilder {
 	cb.phase = phase

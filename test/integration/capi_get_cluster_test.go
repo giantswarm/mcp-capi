@@ -281,7 +281,7 @@ func TestCapiGetCluster(t *testing.T) {
 				ToolCall("capi_get_cluster").
 				WithArg("namespace", namespace).
 				WithArg("name", provider+"-full-cluster").
-				AssertContent(provider+"_all_properties.golden").
+				AssertContent(provider + "_all_properties.golden").
 				Execute()
 		})
 
@@ -298,10 +298,41 @@ func TestCapiGetCluster(t *testing.T) {
 				ToolCall("capi_get_cluster").
 				WithArg("namespace", namespace).
 				WithArg("name", provider+"-kcp-cluster").
-				AssertContent(provider+"_control_plane_version.golden").
+				AssertContent(provider + "_control_plane_version.golden").
 				Execute()
 		})
 	}
+
+	t.Run("should show paused cluster", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "paused-cluster").WithProvider("aws").WithPaused(true).Create().
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "paused-cluster").
+			AssertContent("paused_cluster.golden").
+			Execute()
+	})
+
+	t.Run("should show cluster with labels and annotations", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "metadata-cluster").WithProvider("aws").
+			WithLabels(map[string]string{"env": "prod", "team": "infra"}).
+			WithAnnotations(map[string]string{"description": "Production cluster"}).
+			Create().
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "metadata-cluster").
+			AssertContent("with_metadata.golden").
+			Execute()
+	})
 
 	t.Run("gets cluster with mixed conditions", func(t *testing.T) {
 		t.Parallel()

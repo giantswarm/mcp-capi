@@ -1,0 +1,6 @@
+Found 1 machine deployments:
+
+MachineDeployment: test-clusters/md-zero
+  Cluster: test-cluster
+  Replicas: 3
+

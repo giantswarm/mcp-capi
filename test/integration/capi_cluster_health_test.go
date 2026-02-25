@@ -300,4 +300,35 @@ func TestCapiClusterHealth(t *testing.T) {
 			AssertContent("all_recommendations.golden").
 			Execute()
 	})
+
+	t.Run("should show multiple error severity conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "multi-error").WithProvider("aws").
+			WithCondition("NetworkReady").False().Severity(clusterv1.ConditionSeverityError).Reason("NetworkFailed").Message("Network configuration failed").Done().
+			WithCondition("StorageReady").False().Severity(clusterv1.ConditionSeverityError).Reason("StorageFailed").Message("Storage provisioning failed").Done().
+			Create().
+			ToolCall("capi_cluster_health").
+			WithArg("namespace", namespace).
+			WithArg("name", "multi-error").
+			AssertContent("multiple_error_conditions.golden").
+			Execute()
+	})
+
+	t.Run("should show provisioning phase warning", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "provisioning-cluster").WithProvider("aws").WithPhase("Provisioning").Create().
+			ToolCall("capi_cluster_health").
+			WithArg("namespace", namespace).
+			WithArg("name", "provisioning-cluster").
+			AssertContent("provisioning_phase.golden").
+			Execute()
+	})
 }

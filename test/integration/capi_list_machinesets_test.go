@@ -176,4 +176,20 @@ func TestCapiListMachineSets(t *testing.T) {
 			AssertContent("orphaned.golden").
 			Execute()
 	})
+
+	t.Run("should return empty for non-existent cluster filter", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "real-cluster").
+			MachineSet(namespace, "ms-real").ForCluster("real-cluster").WithReplicas(3).
+			WithStatus(3, 3, 3).Create().
+			ToolCall("capi_list_machinesets").
+			WithArg("namespace", namespace).
+			WithArg("clusterName", "nonexistent").
+			AssertContent("filter_nonexistent_cluster.golden").
+			Execute()
+	})
 }

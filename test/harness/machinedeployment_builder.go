@@ -48,6 +48,14 @@ func (mdb *MachineDeploymentBuilder) WithPhase(phase string) *MachineDeploymentB
 	return mdb
 }
 
+// WithInfraRef sets the infrastructure reference on the MachineDeployment template spec.
+// This controls the Kind and Name of the infrastructure template used by machines.
+func (mdb *MachineDeploymentBuilder) WithInfraRef(kind, name string) *MachineDeploymentBuilder {
+	mdb.infraRefKind = kind
+	mdb.infraRefName = name
+	return mdb
+}
+
 // WithStatus sets the status replica counts.
 // Setting status explicitly triggers a status update even when all values are zero.
 func (mdb *MachineDeploymentBuilder) WithStatus(total, ready, updated, available int32) *MachineDeploymentBuilder {

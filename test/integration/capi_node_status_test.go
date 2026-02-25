@@ -207,4 +207,43 @@ func TestCapiNodeStatus(t *testing.T) {
 			AssertError("machine_not_found.golden").
 			Execute()
 	})
+
+	t.Run("should error with machine name but no namespace", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_node_status").
+			WithArg("machine_name", "some-machine").
+			AssertError("machine_name_without_namespace.golden").
+			Execute()
+	})
+
+	t.Run("should show node with no addresses", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			Node("no-addr-node").
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithTaint("node.kubernetes.io/not-ready", "", "NoSchedule").
+			Create().
+			ToolCall("capi_node_status").
+			WithArg("node_name", "no-addr-node").
+			AssertContentNormalized("no_addresses.golden", harness.NormalizeUID, harness.NormalizeTimestamp).
+			Execute()
+	})
+
+	t.Run("should show node with no taints", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			Node("no-taint-node").
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithAddress("InternalIP", "10.0.0.20").
+			WithAddress("Hostname", "no-taint-node").
+			Create().
+			ToolCall("capi_node_status").
+			WithArg("node_name", "no-taint-node").
+			AssertContentNormalized("no_taints.golden", harness.NormalizeUID, harness.NormalizeTimestamp).
+			Execute()
+	})
 }

@@ -1,0 +1,6 @@
+Found 1 machines:
+
+Machine: test-clusters/nophase-machine
+  Cluster: nophase-cluster
+  Ready: false
+
