@@ -85,4 +85,18 @@ func TestCapiAzureGetCluster(t *testing.T) {
 			AssertContent("azure_managed_cluster_details.golden").
 			Execute()
 	})
+
+	t.Run("should error for cluster with nil infrastructure ref", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "no-infra-cluster").Create().
+			ToolCall("capi_azure_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "no-infra-cluster").
+			AssertError("nil_infra_ref.golden").
+			Execute()
+	})
 }

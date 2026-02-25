@@ -246,4 +246,37 @@ func TestCapiNodeStatus(t *testing.T) {
 			AssertContentNormalized("no_taints.golden", harness.NormalizeUID, harness.NormalizeTimestamp).
 			Execute()
 	})
+
+	t.Run("shows node with custom system info", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			Node("custom-sysinfo-node").
+			WithSystemInfo("linux", "Flatcar Container Linux 3815.2.0", "6.6.13-flatcar", "containerd://1.7.13", "v1.30.2", "arm64").
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithAddress("InternalIP", "10.0.0.30").
+			WithAddress("Hostname", "custom-sysinfo-node").
+			Create().
+			ToolCall("capi_node_status").
+			WithArg("node_name", "custom-sysinfo-node").
+			AssertContentNormalized("custom_system_info.golden", harness.NormalizeUID, harness.NormalizeTimestamp).
+			Execute()
+	})
+
+	t.Run("shows node with custom capacity and allocatable resources", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			Node("custom-resources-node").
+			WithCapacity("16", "64Gi", "250").
+			WithAllocatable("15500m", "62Gi", "250").
+			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
+			WithAddress("InternalIP", "10.0.0.31").
+			WithAddress("Hostname", "custom-resources-node").
+			Create().
+			ToolCall("capi_node_status").
+			WithArg("node_name", "custom-resources-node").
+			AssertContentNormalized("custom_resources.golden", harness.NormalizeUID, harness.NormalizeTimestamp).
+			Execute()
+	})
 }

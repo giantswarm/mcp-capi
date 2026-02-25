@@ -105,6 +105,13 @@ func (cb *ClusterBuilder) WithControlPlaneRef(kind, name string) *ClusterBuilder
 	return cb
 }
 
+// WithNetwork sets custom pod and service CIDRs on the cluster's ClusterNetwork.
+// This overrides the default pod CIDR (192.168.0.0/16).
+func (cb *ClusterBuilder) WithNetwork(podCIDRs, serviceCIDRs []string) *ClusterBuilder {
+	cb.network = &networkConfig{podCIDRs: podCIDRs, serviceCIDRs: serviceCIDRs}
+	return cb
+}
+
 // WithControlPlaneReady explicitly sets the ControlPlaneReady status field on the cluster.
 func (cb *ClusterBuilder) WithControlPlaneReady(ready bool) *ClusterBuilder {
 	cb.controlPlaneReady = &ready

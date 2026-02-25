@@ -115,4 +115,20 @@ func TestCapiAWSGetCluster(t *testing.T) {
 			AssertError("nil_infra_ref.golden").
 			Execute()
 	})
+
+	t.Run("should show cluster network with pod and service CIDRs", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "my-aws-cluster").WithProvider("aws").
+			WithNetwork([]string{"10.244.0.0/16"}, []string{"10.96.0.0/12"}).
+			Create().
+			ToolCall("capi_aws_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "my-aws-cluster").
+			AssertContent("with_cluster_network.golden").
+			Execute()
+	})
 }

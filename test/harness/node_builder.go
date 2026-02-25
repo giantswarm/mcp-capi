@@ -105,6 +105,31 @@ func (nb *NodeBuilder) WithKubeletVersion(version string) *NodeBuilder {
 	return nb
 }
 
+// WithCapacity sets custom capacity resources on the node.
+func (nb *NodeBuilder) WithCapacity(cpu, memory, pods string) *NodeBuilder {
+	nb.capacity = nodeResources{cpu: cpu, memory: memory, pods: pods}
+	return nb
+}
+
+// WithAllocatable sets custom allocatable resources on the node.
+func (nb *NodeBuilder) WithAllocatable(cpu, memory, pods string) *NodeBuilder {
+	nb.allocatable = nodeResources{cpu: cpu, memory: memory, pods: pods}
+	return nb
+}
+
+// WithSystemInfo sets custom system information on the node.
+func (nb *NodeBuilder) WithSystemInfo(os, osImage, kernel, containerRuntime, kubelet, arch string) *NodeBuilder {
+	nb.nodeInfo = nodeInfoConfig{
+		osName:                  os,
+		osImage:                 osImage,
+		kernelVersion:           kernel,
+		containerRuntimeVersion: containerRuntime,
+		kubeletVersion:          kubelet,
+		architecture:            arch,
+	}
+	return nb
+}
+
 // Create queues the node creation operation and returns to the harness.
 func (nb *NodeBuilder) Create() *Harness {
 	nb.harness.t.Helper()

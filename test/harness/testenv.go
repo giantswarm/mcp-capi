@@ -295,6 +295,12 @@ func (te *testEnv) createCluster(ctx context.Context, namespace, name string) {
 	}
 }
 
+// networkConfig holds custom ClusterNetwork configuration.
+type networkConfig struct {
+	podCIDRs     []string
+	serviceCIDRs []string
+}
+
 // clusterCreateOptions holds all parameters for creating a fully-configured cluster
 // in minimal API calls.
 type clusterCreateOptions struct {
@@ -307,10 +313,11 @@ type clusterCreateOptions struct {
 	labels            map[string]string
 	annotations       map[string]string
 	conditions        []clusterv1.Condition
-	customInfraRef    *customRef // custom InfrastructureRef (overrides provider)
-	controlPlaneReady *bool      // explicit ControlPlaneReady status
-	infraReady        *bool      // explicit InfrastructureReady status
-	hasStatus         bool       // explicit flag to trigger status update even with zero values
+	customInfraRef    *customRef     // custom InfrastructureRef (overrides provider)
+	network           *networkConfig // custom ClusterNetwork (overrides default pod CIDR)
+	controlPlaneReady *bool          // explicit ControlPlaneReady status
+	infraReady        *bool          // explicit InfrastructureReady status
+	hasStatus         bool           // explicit flag to trigger status update even with zero values
 }
 
 // needsStatusUpdate reports whether any status fields are set that require
@@ -352,6 +359,26 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 		clusterLabels[k] = v
 	}
 
+	// Build ClusterNetwork: use custom config if provided, otherwise default pod CIDR
+	clusterNetwork := &clusterv1.ClusterNetwork{
+		Pods: &clusterv1.NetworkRanges{
+			CIDRBlocks: []string{"192.168.0.0/16"},
+		},
+	}
+	if opts.network != nil {
+		clusterNetwork = &clusterv1.ClusterNetwork{}
+		if len(opts.network.podCIDRs) > 0 {
+			clusterNetwork.Pods = &clusterv1.NetworkRanges{
+				CIDRBlocks: opts.network.podCIDRs,
+			}
+		}
+		if len(opts.network.serviceCIDRs) > 0 {
+			clusterNetwork.Services = &clusterv1.NetworkRanges{
+				CIDRBlocks: opts.network.serviceCIDRs,
+			}
+		}
+	}
+
 	cluster := &clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        opts.name,
@@ -360,12 +387,8 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 			Annotations: opts.annotations,
 		},
 		Spec: clusterv1.ClusterSpec{
-			Paused: opts.paused,
-			ClusterNetwork: &clusterv1.ClusterNetwork{
-				Pods: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
-				},
-			},
+			Paused:         opts.paused,
+			ClusterNetwork: clusterNetwork,
 		},
 	}
 
