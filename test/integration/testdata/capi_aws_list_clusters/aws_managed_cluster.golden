@@ -1,0 +1,8 @@
+AWS Clusters:
+
+Cluster: test-clusters/my-managed-cluster
+  Infrastructure: AWSManagedCluster
+  Phase: 
+  Ready: false
+
+Total AWS clusters: 1

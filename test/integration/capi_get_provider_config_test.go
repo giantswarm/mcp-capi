@@ -38,4 +38,43 @@ func TestCapiGetProviderConfig(t *testing.T) {
 			AssertError("unknown_provider.golden").
 			Execute()
 	})
+
+	t.Run("should get GCP provider config", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_get_provider_config").
+			WithArg("provider", "gcp").
+			AssertContent("gcp_config.golden").
+			Execute()
+	})
+
+	t.Run("should get vSphere provider config", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_get_provider_config").
+			WithArg("provider", "vsphere").
+			AssertContent("vsphere_config.golden").
+			Execute()
+	})
+
+	t.Run("should error when provider argument is missing", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_get_provider_config").
+			AssertError("missing_provider.golden").
+			Execute()
+	})
+
+	t.Run("should normalize provider name to lowercase", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_get_provider_config").
+			WithArg("provider", "AWS").
+			AssertContent("aws_config.golden").
+			Execute()
+	})
 }

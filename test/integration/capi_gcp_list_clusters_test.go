@@ -33,4 +33,17 @@ func TestCapiGCPListClusters(t *testing.T) {
 			AssertContent("no_gcp_clusters.golden").
 			Execute()
 	})
+
+	t.Run("should list GCPManagedCluster clusters", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "my-managed-cluster").WithCustomInfraRef("GCPManagedCluster", "my-managed-cluster").Create().
+			ToolCall("capi_gcp_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("gcp_managed_cluster.golden").
+			Execute()
+	})
 }

@@ -1,0 +1,1 @@
+internal error: failed to get cluster: failed to get cluster test-clusters/nonexistent-cluster: clusters.cluster.x-k8s.io "nonexistent-cluster" not found

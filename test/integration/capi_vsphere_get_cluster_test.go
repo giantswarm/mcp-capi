@@ -36,4 +36,39 @@ func TestCapiVSphereGetCluster(t *testing.T) {
 			AssertError("not_vsphere_cluster.golden").
 			Execute()
 	})
+
+	t.Run("should error when cluster not found", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			ToolCall("capi_vsphere_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "nonexistent-cluster").
+			AssertError("not_found.golden").
+			Execute()
+	})
+
+	t.Run("should error when namespace is missing", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_vsphere_get_cluster").
+			WithArg("name", "my-cluster").
+			AssertError("missing_namespace.golden").
+			Execute()
+	})
+
+	t.Run("should error when name is missing", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			ToolCall("capi_vsphere_get_cluster").
+			WithArg("namespace", namespace).
+			AssertError("missing_name.golden").
+			Execute()
+	})
 }

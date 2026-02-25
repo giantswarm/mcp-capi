@@ -33,4 +33,18 @@ func TestCapiVSphereListClusters(t *testing.T) {
 			AssertContent("no_vsphere_clusters.golden").
 			Execute()
 	})
+
+	t.Run("should filter out non-vSphere clusters", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "my-vsphere-cluster").WithProvider("vsphere").Create().
+			Cluster(namespace, "my-aws-cluster").WithProvider("aws").Create().
+			ToolCall("capi_vsphere_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("mixed_providers.golden").
+			Execute()
+	})
 }

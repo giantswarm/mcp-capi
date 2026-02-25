@@ -49,4 +49,70 @@ func TestCapiAWSGetCluster(t *testing.T) {
 			AssertError("not_found.golden").
 			Execute()
 	})
+
+	t.Run("should error when namespace is missing", func(t *testing.T) {
+		t.Parallel()
+
+		harness.New(t).
+			ToolCall("capi_aws_get_cluster").
+			WithArg("name", "my-cluster").
+			AssertError("missing_namespace.golden").
+			Execute()
+	})
+
+	t.Run("should error when name is missing", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			ToolCall("capi_aws_get_cluster").
+			WithArg("namespace", namespace).
+			AssertError("missing_name.golden").
+			Execute()
+	})
+
+	t.Run("should accept AWSManagedCluster kind", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "my-managed-cluster").WithCustomInfraRef("AWSManagedCluster", "my-managed-cluster").Create().
+			ToolCall("capi_aws_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "my-managed-cluster").
+			AssertContent("aws_managed_cluster_details.golden").
+			Execute()
+	})
+
+	t.Run("should show cluster conditions", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "my-aws-cluster").WithProvider("aws").
+			WithCondition("Ready").True().Reason("AllGood").Done().
+			Create().
+			ToolCall("capi_aws_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "my-aws-cluster").
+			AssertContent("with_conditions.golden").
+			Execute()
+	})
+
+	t.Run("should error for cluster with nil infrastructure ref", func(t *testing.T) {
+		t.Parallel()
+		namespace := "test-clusters"
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "no-infra-cluster").Create().
+			ToolCall("capi_aws_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "no-infra-cluster").
+			AssertError("nil_infra_ref.golden").
+			Execute()
+	})
 }
