@@ -1,0 +1,22 @@
+apiVersion: v2
+name: mcp-capi
+description: A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/giantswarm/mcp-capi
+icon: https://s.giantswarm.io/app-icons/giantswarm/1/dark.svg
+sources:
+  - https://github.com/giantswarm/mcp-capi
+keywords:
+  - mcp
+  - capi
+  - cluster-api
+  - model-context-protocol
+maintainers:
+  - name: Giant Swarm
+    email: team-planeteers@giantswarm.io
+annotations:
+  io.giantswarm.application.team: team-planeteers
+  io.giantswarm.application.audience: customers
+  io.giantswarm.application.managed: "true"
