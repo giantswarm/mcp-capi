@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "mcp-capi.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "mcp-capi.selectorLabels" . | nindent 6 }}
@@ -47,16 +45,14 @@ spec:
               containerPort: 8080
               protocol: TCP
           livenessProbe:
-            httpGet:
-              path: /healthz
+            tcpSocket:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /readyz
+            tcpSocket:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10

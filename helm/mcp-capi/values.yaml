@@ -12,7 +12,7 @@ fullnameOverride: ""
 
 serviceAccount:
   create: true
-  automount: true
+  automount: false
   annotations: {}
   name: ""
 
@@ -23,6 +23,7 @@ podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1000
   runAsGroup: 1000
+  fsGroup: 1000
   seccompProfile:
     type: RuntimeDefault
 
@@ -33,6 +34,10 @@ securityContext:
       - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
 
 service:
   type: ClusterIP
@@ -44,12 +49,6 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 80
 
 volumes: []
 volumeMounts: []
