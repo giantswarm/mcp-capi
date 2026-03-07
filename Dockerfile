@@ -1,32 +1,24 @@
-# Build stage
-FROM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.0 AS builder
 
-# Install git and ca-certificates for fetching dependencies
-RUN apk add --no-cache git ca-certificates
-
-# Set working directory
 WORKDIR /app
-
-# Copy go mod files
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
-# Copy source code
 COPY . .
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath \
+    -ldflags "-w -extldflags '-static'" \
+    -o mcp-capi .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o mcp-capi ./cmd/mcp-capi
-
-# Final stage
+FROM gsoci.azurecr.io/giantswarm/alpine:3.20.3-giantswarm AS certs
 FROM scratch
 
-# Copy ca-certificates for HTTPS
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=certs /etc/passwd /etc/passwd
+COPY --from=certs /etc/group /etc/group
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# Copy the binary
 COPY --from=builder /app/mcp-capi /mcp-capi
+USER giantswarm
 
-# Set the entrypoint
-ENTRYPOINT ["/mcp-capi"] 
+ENTRYPOINT ["/mcp-capi"]
