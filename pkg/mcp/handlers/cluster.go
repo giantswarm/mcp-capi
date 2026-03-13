@@ -8,6 +8,7 @@ import (
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // createCreateClusterHandler creates a handler for creating new CAPI clusters
@@ -118,10 +119,45 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
+		search, _ := arguments["search"].(string)
 
-		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
+		// Parse label_selector from arguments
+		var labelSelector map[string]string
+		if ls, ok := arguments["label_selector"].(map[string]interface{}); ok && len(ls) > 0 {
+			labelSelector = make(map[string]string)
+			for k, v := range ls {
+				if strVal, ok := v.(string); ok {
+					labelSelector[k] = strVal
+				}
+			}
+		}
+
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, labelSelector)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
+		}
+
+		// If a search term is provided, filter clusters by name or label values
+		if search != "" {
+			searchLower := strings.ToLower(search)
+			var filtered []clusterv1.Cluster
+			for _, cluster := range clusters.Items {
+				if strings.Contains(strings.ToLower(cluster.Name), searchLower) {
+					filtered = append(filtered, cluster)
+					continue
+				}
+				matched := false
+				for _, v := range cluster.Labels {
+					if strings.Contains(strings.ToLower(v), searchLower) {
+						matched = true
+						break
+					}
+				}
+				if matched {
+					filtered = append(filtered, cluster)
+				}
+			}
+			clusters.Items = filtered
 		}
 
 		var content strings.Builder
@@ -159,13 +195,59 @@ func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			return nil, fmt.Errorf("name argument is required")
 		}
 
+		// Try exact name match first
 		status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cluster status: %w", err)
+		if err == nil {
+			var content strings.Builder
+			content.WriteString(capi.FormatClusterInfo(status))
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: content.String(),
+					},
+				},
+			}, nil
 		}
 
+		// If exact name match failed, try matching against label values
+		matched, labelErr := serverCtx.CAPIClient.FindClustersByLabelValue(ctx, namespace, name)
+		if labelErr != nil || len(matched.Items) == 0 {
+			// Return the original error if label search also fails
+			return nil, fmt.Errorf("failed to get cluster %q: no cluster found by name or label value in namespace %s", name, namespace)
+		}
+
+		if len(matched.Items) == 1 {
+			// Single match found via labels - return its status
+			cluster := matched.Items[0]
+			status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get cluster status: %w", err)
+			}
+			var content strings.Builder
+			content.WriteString(fmt.Sprintf("Note: No cluster named %q found. Matched cluster by label value:\n\n", name))
+			content.WriteString(capi.FormatClusterInfo(status))
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: content.String(),
+					},
+				},
+			}, nil
+		}
+
+		// Multiple matches - list them for the user to disambiguate
 		var content strings.Builder
-		content.WriteString(capi.FormatClusterInfo(status))
+		content.WriteString(fmt.Sprintf("No cluster named %q found, but %d clusters matched the term in their labels:\n\n", name, len(matched.Items)))
+		for _, cluster := range matched.Items {
+			status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
+			if err == nil {
+				content.WriteString(capi.FormatClusterInfo(status))
+				content.WriteString("\n---\n\n")
+			}
+		}
+		content.WriteString("Please specify the exact cluster name from the list above.")
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{

@@ -63,8 +63,10 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 	tools = append(tools, ToolRegistration{
 		Tool: mcp.NewTool(
 			"capi_list_clusters",
-			mcp.WithDescription("List all CAPI clusters"),
+			mcp.WithDescription("List all CAPI clusters. Supports filtering by namespace, label key=value pairs, or searching by a term that matches any label value."),
 			mcp.WithString("namespace", mcp.Description("Namespace to filter clusters (optional, empty for all)")),
+			mcp.WithObject("label_selector", mcp.Description("Label key-value pairs to filter clusters (e.g. {\"env\": \"production\", \"team\": \"platform\"})")),
+			mcp.WithString("search", mcp.Description("Search term to match against cluster names and label values (case-insensitive)")),
 		),
 		Handler: CreateListClustersHandler(serverCtx),
 	})
@@ -73,9 +75,9 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 	tools = append(tools, ToolRegistration{
 		Tool: mcp.NewTool(
 			"capi_get_cluster",
-			mcp.WithDescription("Get detailed information about a specific cluster"),
+			mcp.WithDescription("Get detailed information about a specific cluster. The name is matched against the Kubernetes resource name first, and if not found, against label values (case-insensitive)."),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
-			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
+			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster (matched against resource name and label values)")),
 		),
 		Handler: CreateGetClusterHandler(serverCtx),
 	})

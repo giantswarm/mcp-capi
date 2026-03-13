@@ -20,7 +20,7 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace)
+		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
