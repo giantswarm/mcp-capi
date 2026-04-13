@@ -41,7 +41,9 @@ jobs:
 
       - name: Install kube-apiserver
         run: |
-          curl -fsSL "https://dl.k8s.io/v1.35.2/bin/linux/amd64/kube-apiserver" \
+          APISERVER_URL="https://dl.k8s.io/v1.35.2"
+          APISERVER_URL+="/bin/linux/amd64/kube-apiserver"
+          curl -fsSL "${APISERVER_URL}" \
             -o "$(go env GOPATH)/bin/kube-apiserver"
           chmod +x "$(go env GOPATH)/bin/kube-apiserver"
 
