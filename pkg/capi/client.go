@@ -115,12 +115,15 @@ func (c *Client) SetClients(k8sClient kubernetes.Interface, ctrlClient client.Cl
 }
 
 // ListClusters lists all CAPI clusters in the given namespace
-func (c *Client) ListClusters(ctx context.Context, namespace string) (*clusterv1.ClusterList, error) {
+func (c *Client) ListClusters(ctx context.Context, namespace string, labelSelector map[string]string) (*clusterv1.ClusterList, error) {
 	clusterList := &clusterv1.ClusterList{}
 
 	opts := []client.ListOption{}
 	if namespace != "" {
 		opts = append(opts, client.InNamespace(namespace))
+	}
+	if len(labelSelector) > 0 {
+		opts = append(opts, client.MatchingLabels(labelSelector))
 	}
 
 	if err := c.ctrlClient.List(ctx, clusterList, opts...); err != nil {
@@ -128,6 +131,28 @@ func (c *Client) ListClusters(ctx context.Context, namespace string) (*clusterv1
 	}
 
 	return clusterList, nil
+}
+
+// FindClustersByLabelValue searches for clusters where any label value matches the given search term.
+// This is useful when users refer to clusters by a human-friendly identifier stored in labels
+// (e.g. a "friendly-name" or "cluster-id" label) rather than the Kubernetes resource name.
+func (c *Client) FindClustersByLabelValue(ctx context.Context, namespace string, searchTerm string) (*clusterv1.ClusterList, error) {
+	allClusters, err := c.ListClusters(ctx, namespace, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	matched := &clusterv1.ClusterList{}
+	for _, cluster := range allClusters.Items {
+		for _, v := range cluster.Labels {
+			if strings.EqualFold(v, searchTerm) {
+				matched.Items = append(matched.Items, cluster)
+				break
+			}
+		}
+	}
+
+	return matched, nil
 }
 
 // GetCluster retrieves a specific cluster
