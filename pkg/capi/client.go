@@ -16,8 +16,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"             //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -174,8 +174,9 @@ func (c *Client) GetCluster(ctx context.Context, namespace, name string) (*clust
 func (c *Client) ListMachines(ctx context.Context, namespace, clusterName string) (*clusterv1.MachineList, error) {
 	machineList := &clusterv1.MachineList{}
 
-	opts := []client.ListOption{
-		client.InNamespace(namespace),
+	opts := []client.ListOption{}
+	if namespace != "" {
+		opts = append(opts, client.InNamespace(namespace))
 	}
 
 	if clusterName != "" {
@@ -1132,11 +1133,13 @@ func (c *Client) GetNodeStatus(ctx context.Context, opts NodeOperationOptions) (
 	return node, nil
 }
 
-// isControlPlaneMachine checks if a machine is a control plane machine by looking at its labels
+// isControlPlaneMachine checks if a machine is a control plane machine.
+// This is a v1beta1-compatible helper that replaces util.IsControlPlaneMachine
+// which now requires v1beta2 types.
 func isControlPlaneMachine(machine *clusterv1.Machine) bool {
 	if machine.Labels == nil {
 		return false
 	}
-	_, ok := machine.Labels[clusterv1.MachineControlPlaneLabel]
-	return ok
+	_, exists := machine.Labels[clusterv1.MachineControlPlaneLabel]
+	return exists
 }
