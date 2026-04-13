@@ -1,1 +1,1 @@
-internal error: failed to get cluster status: failed to get cluster test-clusters/does-not-exist: clusters.cluster.x-k8s.io "does-not-exist" not found
+internal error: failed to get cluster "does-not-exist": no cluster found by name or label value in namespace test-clusters
