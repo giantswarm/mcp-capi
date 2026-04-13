@@ -1,0 +1,20 @@
+Found 2 clusters:
+
+Cluster: test-clusters/azure-cluster-1
+Phase: 
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/azure-cluster-2
+Phase: 
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+

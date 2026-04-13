@@ -1,0 +1,18 @@
+MachineSet: test-clusters/full-ms
+
+Basic Information:
+  Cluster: test-cluster
+  Desired Replicas: 5
+
+Status:
+  Total Replicas: 5
+  Ready Replicas: 4
+  Available Replicas: 3
+
+Machine Template:
+  Kubernetes Version: v1.29.0
+  Infrastructure: AWSMachineTemplate/aws-mt
+  Bootstrap: KubeadmConfigTemplate/bootstrap-config
+
+Owners:
+  - MachineDeployment: parent-md

@@ -1,0 +1,6 @@
+Cluster: test-clusters/nocond-cluster
+Phase: Pending
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready

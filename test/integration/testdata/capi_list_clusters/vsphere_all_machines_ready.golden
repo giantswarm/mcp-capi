@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/vsphere-all-ready
+Phase: 
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 3/3 ready
+
+---
+

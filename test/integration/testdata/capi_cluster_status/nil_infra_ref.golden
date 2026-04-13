@@ -1,0 +1,6 @@
+Cluster: test-clusters/no-infra-cluster
+Phase: Pending
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready

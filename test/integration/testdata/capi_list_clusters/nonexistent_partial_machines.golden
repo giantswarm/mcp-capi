@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/nonexistent-partial
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 1/2 ready
+
+---
+

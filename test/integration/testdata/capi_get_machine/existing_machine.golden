@@ -1,0 +1,8 @@
+Machine: test-clusters/my-cluster-machine-0
+
+Basic Information:
+  Cluster: my-cluster
+
+Node Information:
+  Node Name: my-cluster-machine-0-node
+  Node UID: 

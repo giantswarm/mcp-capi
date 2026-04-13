@@ -1,0 +1,44 @@
+Found 3 clusters:
+
+Cluster: test-clusters/gcp-healthy
+Phase: 
+Ready: true
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  ControlPlaneReady: True (ControlPlaneInitialized)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/gcp-provisioning
+Phase: 
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (WaitingForControlPlane)
+  ControlPlaneReady: False (ScalingUp)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/gcp-unhealthy
+Phase: 
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (ClusterNotReady)
+  ControlPlaneReady: False (ControlPlaneUnhealthy)
+  InfrastructureReady: False (WaitingForInfrastructure)
+
+---
+

@@ -1,0 +1,6 @@
+Found 1 machine deployments in cluster cluster-a:
+
+MachineDeployment: test-clusters/md-a
+  Cluster: cluster-a
+  Replicas: 3
+

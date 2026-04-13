@@ -1,0 +1,9 @@
+Machine: test-clusters/noinfra-machine
+
+Basic Information:
+  Cluster: noinfra-cluster
+  Phase: Provisioning
+
+Bootstrap:
+  Kind: KubeadmConfig
+  Name: noinfra-bootstrap

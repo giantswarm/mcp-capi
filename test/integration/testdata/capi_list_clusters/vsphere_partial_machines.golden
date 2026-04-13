@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/vsphere-partial
+Phase: 
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 1/2 ready
+
+---
+

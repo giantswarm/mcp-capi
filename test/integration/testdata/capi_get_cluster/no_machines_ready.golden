@@ -1,0 +1,6 @@
+Cluster: test-clusters/no-ready-cluster
+Phase: 
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/4 ready

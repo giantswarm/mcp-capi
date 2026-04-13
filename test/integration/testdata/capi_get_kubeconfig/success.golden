@@ -1,0 +1,25 @@
+Kubeconfig for cluster test-clusters/my-cluster:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://my-cluster-api.example.com:6443
+  name: my-cluster
+contexts:
+- context:
+    cluster: my-cluster
+    user: my-cluster-admin
+  name: my-cluster
+current-context: my-cluster
+users:
+- name: my-cluster-admin
+  user:
+    client-certificate-data: dGVzdC1jZXJ0
+    client-key-data: dGVzdC1rZXk=
+```
+
+To use this kubeconfig:
+1. Save the content between the ``` markers to a file (e.g., cluster-kubeconfig.yaml)
+2. Use it with kubectl: kubectl --kubeconfig=cluster-kubeconfig.yaml get nodes

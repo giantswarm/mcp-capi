@@ -1,0 +1,11 @@
+Cluster: test-clusters/gcp-full-cluster
+Phase: Provisioned
+Ready: true
+Provider: gcp
+Version: v1.29.0
+Machines: 2/3 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  ControlPlaneReady: True (ControlPlaneInitialized)
+  InfrastructureReady: True (InfrastructureProvisioned)

@@ -1,0 +1,8 @@
+GCP Clusters:
+
+Cluster: test-clusters/my-managed-cluster
+  Infrastructure: GCPManagedCluster
+  Phase: 
+  Ready: false
+
+Total GCP clusters: 1

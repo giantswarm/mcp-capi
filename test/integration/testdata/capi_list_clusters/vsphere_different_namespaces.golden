@@ -1,0 +1,20 @@
+Found 2 clusters:
+
+Cluster: vsphere-ns-1/vsphere-cluster-1
+Phase: 
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: vsphere-ns-2/vsphere-cluster-2
+Phase: 
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/0 ready
+
+---
+

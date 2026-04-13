@@ -1,0 +1,29 @@
+Found 3 clusters:
+
+Cluster: test-clusters/test-cluster-1
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/test-cluster-2
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/test-cluster-3
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+

@@ -1,0 +1,47 @@
+Found 5 clusters:
+
+Cluster: test-clusters/vcd-deleting
+Phase: Deleting
+Ready: false
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vcd-failed
+Phase: Failed
+Ready: false
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vcd-pending
+Phase: Pending
+Ready: false
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vcd-provisioned
+Phase: Provisioned
+Ready: false
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vcd-provisioning
+Phase: Provisioning
+Ready: false
+Provider: vcd
+Version: 
+Machines: 0/0 ready
+
+---
+

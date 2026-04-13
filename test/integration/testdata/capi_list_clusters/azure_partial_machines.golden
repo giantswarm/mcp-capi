@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/azure-partial
+Phase: 
+Ready: false
+Provider: azure
+Version: 
+Machines: 1/2 ready
+
+---
+

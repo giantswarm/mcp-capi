@@ -1,0 +1,12 @@
+MachineSet: test-clusters/basic-ms
+
+Basic Information:
+  Cluster: test-cluster
+  Desired Replicas: 3
+
+Status:
+  Total Replicas: 3
+  Ready Replicas: 2
+  Available Replicas: 2
+
+Machine Template:

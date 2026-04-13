@@ -1,0 +1,14 @@
+Found 2 machine deployments:
+
+MachineDeployment: test-clusters/md-running
+  Cluster: test-cluster
+  Replicas: 3
+  Status: 3 ready / 0 updated / 3 available
+  Phase: Running
+
+MachineDeployment: test-clusters/md-scaling
+  Cluster: test-cluster
+  Replicas: 5
+  Status: 3 ready / 0 updated / 3 available
+  Phase: ScalingUp
+

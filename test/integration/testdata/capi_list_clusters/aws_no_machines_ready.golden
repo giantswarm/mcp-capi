@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/aws-none-ready
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/5 ready
+
+---
+

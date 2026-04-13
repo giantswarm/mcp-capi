@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: other-clusters/cluster-in-other-ns
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+

@@ -1,0 +1,9 @@
+Found 1 machine sets:
+
+MachineSet: test-clusters/ms-owned
+  Cluster: test-cluster
+  Replicas: 3
+  Ready: 2/3
+  Available: 2
+  Owner: MachineDeployment/parent-md
+

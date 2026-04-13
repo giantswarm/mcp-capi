@@ -1,0 +1,11 @@
+Cluster: test-clusters/mixed-cluster
+Phase: Provisioned
+Ready: true
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  ControlPlaneReady: False (CPNotReady)
+  InfrastructureReady: True (InfraReady)

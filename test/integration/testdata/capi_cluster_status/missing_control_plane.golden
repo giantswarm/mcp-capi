@@ -1,0 +1,6 @@
+Cluster: test-clusters/missing-cp-cluster
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
