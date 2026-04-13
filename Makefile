@@ -5,6 +5,8 @@
 #    https://github.com/giantswarm/devctl/blob/6a704f7e2a8b0f09e82b5bab88f17971af849711/pkg/gen/input/makefile/internal/file/Makefile.template
 #
 
+# include Makefile.*.mk (commented out as these files don't exist)
+
 # CAPI version to use for downloading CRDs
 export CAPI_VERSION ?= v1.11.2
 
@@ -23,7 +25,14 @@ export CAPVCD_VERSION ?= v1.3.2
 # CAPG (GCP provider) version to use for downloading CRDs
 export CAPG_VERSION ?= v1.10.0
 
-# include Makefile.*.mk (commented out as these files don't exist)
+# Maximum parallel test goroutines within each test binary.
+# Each parallel subtest acquires its own k8senv instance (kine + apiserver),
+# so this controls the peak number of concurrent API servers.
+TEST_PARALLEL ?= 4
+
+# Temporary directory for test artifacts (Go build cache, k8senv data, etc.).
+# Defaults to .tmp/ in the project root to avoid filling a small /tmp tmpfs.
+export TEST_TMPDIR := $(CURDIR)/.tmp
 
 ##@ General
 
@@ -100,17 +109,42 @@ lint-yaml: ## Run YAML linter
 	@# Exclude zz_generated files
 	@yamllint .github/workflows/auto-release.yaml .github/workflows/ci.yaml .goreleaser.yaml
 
+.PHONY: lint
+lint: ## Run golangci-lint
+	@echo "Running golangci-lint..."
+	@golangci-lint run ./...
+
 .PHONY: check
-check: lint-yaml ## Run YAML linter
+check: lint-yaml lint ## Run all linters (YAML + Go)
 
 ##@ Testing
 
 .PHONY: test
-test: ## Run go test and go vet
-	@echo "Running Go tests (with NO_COLOR=true)..."
-	@NO_COLOR=true go test -cover ./...
-	@echo "Running go vet..."
-	@go vet ./...
+test: ## Run all tests (unit + integration)
+	@echo "Running all tests..."
+	@mkdir -p $(TEST_TMPDIR)
+	@TMPDIR=$(TEST_TMPDIR) \
+	go test -parallel=$(TEST_PARALLEL) -count=1 -v ./...
+
+.PHONY: test-coverage
+test-coverage: ## Run all tests with coverage
+	@echo "Running all tests with coverage..."
+	@mkdir -p $(TEST_TMPDIR)
+	@TMPDIR=$(TEST_TMPDIR) \
+	go test -parallel=$(TEST_PARALLEL) -count=1 -v \
+		-coverprofile=coverage.out \
+		-covermode=atomic \
+		-coverpkg=./... \
+		./...
+
+.PHONY: test-single
+test-single: ## Run a single test (use FOCUS="pattern")
+	@echo "Running focused test..."
+	@mkdir -p $(TEST_TMPDIR)
+	@TMPDIR=$(TEST_TMPDIR) \
+	go test -parallel=$(TEST_PARALLEL) -count=1 -v \
+		-run "$(FOCUS)" \
+		./...
 
 # Note: These targets require Docker and 'act' to be installed.
 # See: https://github.com/nektos/act#installation
