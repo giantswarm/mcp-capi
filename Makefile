@@ -117,7 +117,7 @@ lint: ## Run golangci-lint
 	# @golangci-lint run ./...
 
 .PHONY: check
-check: lint-yaml lint ## Run all linters (YAML + Go)
+check: lint-yaml lint test ## Run all linters (YAML + Go)
 
 ##@ Testing
 
