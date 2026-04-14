@@ -1,0 +1,6 @@
+Cluster: test-clusters/only-cluster
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready

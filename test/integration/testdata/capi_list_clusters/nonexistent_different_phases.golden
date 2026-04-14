@@ -1,0 +1,47 @@
+Found 5 clusters:
+
+Cluster: test-clusters/nonexistent-deleting
+Phase: Deleting
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/nonexistent-failed
+Phase: Failed
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/nonexistent-pending
+Phase: Pending
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/nonexistent-provisioned
+Phase: Provisioned
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/nonexistent-provisioning
+Phase: Provisioning
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+

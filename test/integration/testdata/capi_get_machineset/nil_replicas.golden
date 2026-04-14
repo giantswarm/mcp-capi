@@ -1,0 +1,11 @@
+MachineSet: test-clusters/nil-rep-ms
+
+Basic Information:
+  Cluster: test-cluster
+
+Status:
+  Total Replicas: 2
+  Ready Replicas: 1
+  Available Replicas: 1
+
+Machine Template:

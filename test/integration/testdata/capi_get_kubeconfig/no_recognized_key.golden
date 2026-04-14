@@ -1,0 +1,1 @@
+internal error: failed to get kubeconfig: kubeconfig not found in secret, available keys: [cert]

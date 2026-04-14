@@ -1,0 +1,7 @@
+Found 1 machine sets:
+
+MachineSet: test-clusters/ms-nil-replicas
+  Cluster: test-cluster
+  Ready: 1/2
+  Available: 1
+

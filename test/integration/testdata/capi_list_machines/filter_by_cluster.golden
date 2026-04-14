@@ -1,0 +1,11 @@
+Found 2 machines in cluster cluster-a:
+
+Machine: test-clusters/cluster-a-machine-0
+  Cluster: cluster-a
+  Node: cluster-a-machine-0-node
+  Ready: false
+
+Machine: test-clusters/cluster-a-machine-1
+  Cluster: cluster-a
+  Ready: false
+

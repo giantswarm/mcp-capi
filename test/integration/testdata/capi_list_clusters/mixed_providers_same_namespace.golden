@@ -1,0 +1,29 @@
+Found 3 clusters:
+
+Cluster: test-clusters/aws-cluster
+Phase: Provisioned
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/azure-cluster
+Phase: Provisioned
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/gcp-cluster
+Phase: Pending
+Ready: false
+Provider: gcp
+Version: 
+Machines: 0/0 ready
+
+---
+

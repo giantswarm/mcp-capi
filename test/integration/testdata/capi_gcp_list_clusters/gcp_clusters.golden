@@ -1,0 +1,9 @@
+GCP Clusters:
+
+Cluster: test-clusters/my-gcp-cluster
+  Infrastructure: GCPCluster
+  Phase: 
+  Ready: false
+  Provider: GCP (confirmed)
+
+Total GCP clusters: 1

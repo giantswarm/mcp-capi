@@ -1,0 +1,41 @@
+Node: not-ready-node
+
+Basic Information:
+  UID: <UID>
+  Created: <TIMESTAMP>
+  Schedulable: true
+
+Node Info:
+  OS: linux (Ubuntu 22.04.3 LTS)
+  Kernel: 5.15.0-91-generic
+  Container Runtime: containerd://1.7.2
+  Kubelet: v1.29.0
+  Architecture: amd64
+
+Resources:
+  Capacity:
+    CPU: 4
+    Memory: 8Gi
+    Pods: 110
+  Allocatable:
+    CPU: 3500m
+    Memory: 7Gi
+    Pods: 110
+
+Conditions:
+  - Type: Ready
+    Status: False
+    Reason: KubeletNotReady
+    Message: container runtime network not ready
+  - Type: MemoryPressure
+    Status: False
+    Reason: KubeletHasSufficientMemory
+    Message: kubelet has sufficient memory available
+
+Addresses:
+  - InternalIP: 10.0.0.5
+  - Hostname: not-ready-node
+
+Taints:
+  - Key: node.kubernetes.io/not-ready
+    Effect: NoSchedule

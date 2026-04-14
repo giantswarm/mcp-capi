@@ -1,0 +1,16 @@
+Found 3 machines:
+
+Machine: test-clusters/cluster-x-machine-0
+  Cluster: cluster-x
+  Node: cluster-x-machine-0-node
+  Ready: false
+
+Machine: test-clusters/cluster-x-machine-1
+  Cluster: cluster-x
+  Ready: false
+
+Machine: test-clusters/cluster-y-machine-0
+  Cluster: cluster-y
+  Node: cluster-y-machine-0-node
+  Ready: false
+

@@ -1,0 +1,17 @@
+AWS Cluster: test-clusters/my-managed-cluster
+
+Cluster Information:
+  Phase: 
+  Infrastructure Ready: false
+  Control Plane Ready: false
+
+Infrastructure:
+  Kind: AWSManagedCluster
+  Name: my-managed-cluster
+  API Version: 
+
+Network Configuration:
+  Pod CIDR: 192.168.0.0/16
+
+Note: For detailed AWS infrastructure information (VPC, subnets, etc.),
+you would need to query the AWSCluster resource directly.

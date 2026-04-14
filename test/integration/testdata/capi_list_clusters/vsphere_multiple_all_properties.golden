@@ -1,0 +1,44 @@
+Found 3 clusters:
+
+Cluster: test-clusters/vsphere-cluster-1
+Phase: Provisioned
+Ready: true
+Provider: vsphere
+Version: v1.28.0
+Machines: 3/3 ready
+
+Conditions:
+  Ready: True (ClusterReady)
+  ControlPlaneReady: True (ControlPlaneInitialized)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/vsphere-cluster-2
+Phase: Provisioning
+Ready: false
+Provider: vsphere
+Version: v1.29.0
+Machines: 1/2 ready
+
+Conditions:
+  Ready: False (WaitingForControlPlane)
+  ControlPlaneReady: False (ScalingUp)
+  InfrastructureReady: True (InfrastructureProvisioned)
+
+---
+
+Cluster: test-clusters/vsphere-cluster-3
+Phase: Pending
+Ready: false
+Provider: vsphere
+Version: v1.30.0
+Machines: 0/5 ready
+
+Conditions:
+  Ready: False (ClusterNotReady)
+  ControlPlaneReady: False (WaitingForInfrastructure)
+  InfrastructureReady: False (Provisioning)
+
+---
+

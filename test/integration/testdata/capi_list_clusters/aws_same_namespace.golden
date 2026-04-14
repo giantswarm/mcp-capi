@@ -1,0 +1,20 @@
+Found 2 clusters:
+
+Cluster: test-clusters/aws-cluster-1
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/aws-cluster-2
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+

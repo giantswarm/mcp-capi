@@ -1,0 +1,16 @@
+MachineSet: test-clusters/cond-minimal-ms
+
+Basic Information:
+  Cluster: test-cluster
+  Desired Replicas: 2
+
+Status:
+  Total Replicas: 2
+  Ready Replicas: 2
+  Available Replicas: 2
+
+Machine Template:
+
+Conditions:
+  - Type: Ready
+    Status: True

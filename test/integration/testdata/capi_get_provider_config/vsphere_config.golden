@@ -1,0 +1,20 @@
+Configuration for VSPHERE Provider:
+
+vSphere Provider Configuration:
+  Required Credentials:
+    - VSPHERE_SERVER
+    - VSPHERE_USERNAME
+    - VSPHERE_PASSWORD
+  Required Settings:
+    - VSPHERE_DATACENTER
+    - VSPHERE_DATASTORE
+    - VSPHERE_NETWORK
+    - VSPHERE_RESOURCE_POOL
+  Optional:
+    - VSPHERE_FOLDER
+    - VSPHERE_TEMPLATE (VM template to clone)
+
+  Common Resources:
+    - VSphereCluster: Manages cluster-level settings
+    - VSphereMachine: Individual VM instances
+    - VSphereMachineTemplate: Template for creating machines

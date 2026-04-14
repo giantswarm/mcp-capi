@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/rosa-cluster
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+

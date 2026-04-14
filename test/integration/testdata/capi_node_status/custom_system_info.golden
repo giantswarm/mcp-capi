@@ -1,0 +1,37 @@
+Node: custom-sysinfo-node
+
+Basic Information:
+  UID: <UID>
+  Created: <TIMESTAMP>
+  Schedulable: true
+
+Node Info:
+  OS: linux (Flatcar Container Linux 3815.2.0)
+  Kernel: 6.6.13-flatcar
+  Container Runtime: containerd://1.7.13
+  Kubelet: v1.30.2
+  Architecture: arm64
+
+Resources:
+  Capacity:
+    CPU: 4
+    Memory: 8Gi
+    Pods: 110
+  Allocatable:
+    CPU: 3500m
+    Memory: 7Gi
+    Pods: 110
+
+Conditions:
+  - Type: Ready
+    Status: True
+    Reason: KubeletReady
+    Message: kubelet is posting ready status
+
+Addresses:
+  - InternalIP: 10.0.0.30
+  - Hostname: custom-sysinfo-node
+
+Taints:
+  - Key: node.kubernetes.io/not-ready
+    Effect: NoSchedule

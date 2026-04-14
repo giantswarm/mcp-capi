@@ -1,0 +1,22 @@
+❌ Cluster test-clusters/pending-cluster is UNHEALTHY
+
+Component Status:
+  • Control Plane: ❌ Not Ready
+  • Infrastructure: ❌ Not Ready
+  • Worker Nodes: ❌ Not Ready
+
+🔴 Issues:
+  • Control plane is not ready
+  • Infrastructure is not ready
+  • Only 0/0 machines are ready
+
+⚠️  Warnings:
+  • Cluster phase is 'Pending', expected 'Provisioned'
+
+📋 Recommendations:
+  • Check control plane pods and logs
+  • Verify API server connectivity
+  • Check infrastructure provider status
+  • Verify cloud resources are provisioned
+  • Check machine status with 'capi_list_machines'
+  • Review machine deployment events

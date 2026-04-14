@@ -126,9 +126,6 @@ release:
       name_template: mcp-capi_windows_amd64.exe
     - glob: ./dist/mcp-capi_windows_arm64*/mcp-capi.exe
       name_template: mcp-capi_windows_arm64.exe
-  # If set to true, will generate the release notes using github's api
-  # instead of using the changelog.
-  # Default is false.
 
 # Modelines
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj

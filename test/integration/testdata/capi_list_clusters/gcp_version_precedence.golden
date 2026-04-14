@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/gcp-cluster
+Phase: 
+Ready: false
+Provider: gcp
+Version: v1.28.0
+Machines: 0/0 ready
+
+---
+

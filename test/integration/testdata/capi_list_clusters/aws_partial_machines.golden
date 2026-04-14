@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/aws-partial
+Phase: 
+Ready: false
+Provider: aws
+Version: 
+Machines: 1/2 ready
+
+---
+

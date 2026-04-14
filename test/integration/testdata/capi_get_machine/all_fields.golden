@@ -1,0 +1,33 @@
+Machine: test-clusters/full-machine
+
+Basic Information:
+  Cluster: full-cluster
+  Phase: Running
+  Kubernetes Version: v1.29.0
+  Provider ID: aws:///us-east-1/i-1234567890
+
+Node Information:
+  Node Name: full-machine-node
+  Node UID: 
+
+Bootstrap:
+  Kind: KubeadmConfig
+  Name: full-machine-bootstrap
+
+Infrastructure:
+  Kind: AWSMachine
+  Name: full-machine-infra
+
+Conditions:
+  - Type: Ready
+    Status: True
+    Reason: MachineReady
+    Message: Machine is ready
+  - Type: InfrastructureReady
+    Status: True
+    Reason: InfraReady
+    Message: Infra provisioned
+
+Addresses:
+  - Type: InternalIP, Address: 10.0.1.5
+  - Type: ExternalIP, Address: 54.123.45.67

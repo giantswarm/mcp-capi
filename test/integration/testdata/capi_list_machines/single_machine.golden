@@ -1,0 +1,7 @@
+Found 1 machines:
+
+Machine: test-clusters/single-machine-cluster-machine-0
+  Cluster: single-machine-cluster
+  Node: single-machine-cluster-machine-0-node
+  Ready: false
+

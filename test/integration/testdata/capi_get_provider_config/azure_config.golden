@@ -1,0 +1,16 @@
+Configuration for AZURE Provider:
+
+Azure Provider Configuration:
+  Required Credentials:
+    - AZURE_SUBSCRIPTION_ID
+    - AZURE_TENANT_ID
+    - AZURE_CLIENT_ID
+    - AZURE_CLIENT_SECRET
+  Optional:
+    - AZURE_ENVIRONMENT (AzurePublicCloud, AzureGermanCloud, etc.)
+
+  Common Resources:
+    - AzureCluster: Manages resource group, vnet, subnets
+    - AzureMachine: Individual VM instances
+    - AzureMachineTemplate: Template for creating machines
+    - AzureManagedControlPlane: AKS-based control plane

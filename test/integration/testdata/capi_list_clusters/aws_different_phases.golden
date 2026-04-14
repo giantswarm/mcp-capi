@@ -1,0 +1,47 @@
+Found 5 clusters:
+
+Cluster: test-clusters/aws-deleting
+Phase: Deleting
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/aws-failed
+Phase: Failed
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/aws-pending
+Phase: Pending
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/aws-provisioned
+Phase: Provisioned
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/aws-provisioning
+Phase: Provisioning
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+

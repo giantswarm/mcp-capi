@@ -1,0 +1,6 @@
+Cluster: test-clusters/all-ready-cluster
+Phase: 
+Ready: false
+Provider: gcp
+Version: 
+Machines: 5/5 ready

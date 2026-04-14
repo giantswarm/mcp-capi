@@ -1,0 +1,13 @@
+MachineSet: test-clusters/bootstrap-ms
+
+Basic Information:
+  Cluster: test-cluster
+  Desired Replicas: 3
+
+Status:
+  Total Replicas: 3
+  Ready Replicas: 3
+  Available Replicas: 3
+
+Machine Template:
+  Bootstrap: KubeadmConfigTemplate/bootstrap-config

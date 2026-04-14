@@ -3,11 +3,12 @@ package capi
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"                      //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
 // ClusterStatus represents the status of a CAPI cluster
@@ -23,6 +24,9 @@ type ClusterStatus struct {
 	TotalMachines     int
 	ReadyMachines     int
 	Conditions        clusterv1.Conditions
+	Paused            bool
+	Labels            map[string]string
+	Annotations       map[string]string
 }
 
 // GetClusterStatus retrieves comprehensive status information for a cluster
@@ -40,6 +44,9 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 		ControlPlaneReady: cluster.Status.ControlPlaneReady,
 		InfraReady:        cluster.Status.InfrastructureReady,
 		Conditions:        cluster.Status.Conditions,
+		Paused:            cluster.Spec.Paused,
+		Labels:            cluster.Labels,
+		Annotations:       cluster.Annotations,
 	}
 
 	// Get version from cluster spec
@@ -66,6 +73,52 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 	if cluster.Spec.ControlPlaneRef != nil && status.Version == "" {
 		if cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
 			kcp, err := c.GetKubeadmControlPlane(ctx, namespace, cluster.Spec.ControlPlaneRef.Name)
+			if err == nil && kcp.Spec.Version != "" {
+				status.Version = kcp.Spec.Version
+			}
+		}
+	}
+
+	return status, nil
+}
+
+// GetClusterStatusFromList computes status for an already-fetched cluster using
+// pre-fetched machines. This avoids the per-cluster Get and ListMachines calls
+// that GetClusterStatus performs, making it suitable for bulk listing.
+func (c *Client) GetClusterStatusFromList(ctx context.Context, cluster *clusterv1.Cluster, machines []clusterv1.Machine) (*ClusterStatus, error) {
+	status := &ClusterStatus{
+		Name:              cluster.Name,
+		Namespace:         cluster.Namespace,
+		Phase:             string(cluster.Status.Phase),
+		Ready:             isConditionTrue(cluster.Status.Conditions, clusterv1.ReadyCondition),
+		ControlPlaneReady: cluster.Status.ControlPlaneReady,
+		InfraReady:        cluster.Status.InfrastructureReady,
+		Conditions:        cluster.Status.Conditions,
+		Paused:            cluster.Spec.Paused,
+		Labels:            cluster.Labels,
+		Annotations:       cluster.Annotations,
+	}
+
+	// Get version from cluster spec
+	if cluster.Spec.Topology != nil && cluster.Spec.Topology.Version != "" {
+		status.Version = cluster.Spec.Topology.Version
+	}
+
+	// Get provider information (pure function, no API call)
+	status.Provider = DetermineProvider(cluster)
+
+	// Count machines from pre-fetched slice
+	status.TotalMachines = len(machines)
+	for _, machine := range machines {
+		if machine.Status.NodeRef != nil {
+			status.ReadyMachines++
+		}
+	}
+
+	// Get control plane version if available
+	if cluster.Spec.ControlPlaneRef != nil && status.Version == "" {
+		if cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
+			kcp, err := c.GetKubeadmControlPlane(ctx, cluster.Namespace, cluster.Spec.ControlPlaneRef.Name)
 			if err == nil && kcp.Spec.Version != "" {
 				status.Version = kcp.Spec.Version
 			}
@@ -120,8 +173,8 @@ func GetControlPlaneStatus(kcp *controlplanev1.KubeadmControlPlane) string {
 		return "Ready"
 	}
 
-	if kcp.Status.UnavailableReplicas > 0 {
-		return fmt.Sprintf("Degraded (%d unavailable)", kcp.Status.UnavailableReplicas)
+	if kcp.Status.UnavailableReplicas > 0 { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+		return fmt.Sprintf("Degraded (%d unavailable)", kcp.Status.UnavailableReplicas) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	}
 
 	if kcp.Status.Replicas == 0 {
@@ -138,9 +191,28 @@ func FormatClusterInfo(status *ClusterStatus) string {
 	sb.WriteString(fmt.Sprintf("Cluster: %s/%s\n", status.Namespace, status.Name))
 	sb.WriteString(fmt.Sprintf("Phase: %s\n", status.Phase))
 	sb.WriteString(fmt.Sprintf("Ready: %v\n", status.Ready))
+	if status.Paused {
+		sb.WriteString("Paused: true\n")
+	}
 	sb.WriteString(fmt.Sprintf("Provider: %s\n", status.Provider))
 	sb.WriteString(fmt.Sprintf("Version: %s\n", status.Version))
 	sb.WriteString(fmt.Sprintf("Machines: %d/%d ready\n", status.ReadyMachines, status.TotalMachines))
+
+	if userLabels := filterUserLabels(status.Labels); len(userLabels) > 0 {
+		sb.WriteString("\nLabels:\n")
+		keys := sortedKeys(userLabels)
+		for _, k := range keys {
+			sb.WriteString(fmt.Sprintf("  %s: %s\n", k, userLabels[k]))
+		}
+	}
+
+	if len(status.Annotations) > 0 {
+		sb.WriteString("\nAnnotations:\n")
+		keys := sortedKeys(status.Annotations)
+		for _, k := range keys {
+			sb.WriteString(fmt.Sprintf("  %s: %s\n", k, status.Annotations[k]))
+		}
+	}
 
 	if len(status.Conditions) > 0 {
 		sb.WriteString("\nConditions:\n")
@@ -156,7 +228,9 @@ func FormatClusterInfo(status *ClusterStatus) string {
 	return sb.String()
 }
 
-// isConditionTrue checks if a condition with the given type is True
+// isConditionTrue checks if a condition with the given type has status True.
+// This is a v1beta1-compatible helper that replaces the conditions.IsTrue utility
+// which now requires v1beta2 types.
 func isConditionTrue(conditions clusterv1.Conditions, conditionType clusterv1.ConditionType) bool {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
@@ -164,4 +238,27 @@ func isConditionTrue(conditions clusterv1.Conditions, conditionType clusterv1.Co
 		}
 	}
 	return false
+}
+
+// filterUserLabels returns a copy of labels with internal CAPI labels removed.
+// Internal labels (those under the cluster.x-k8s.io domain) are set by the
+// system and are not useful for user-facing display.
+func filterUserLabels(labels map[string]string) map[string]string {
+	result := make(map[string]string)
+	for k, v := range labels {
+		if !strings.Contains(k, "cluster.x-k8s.io") {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+// sortedKeys returns the keys of a map in sorted order for deterministic output.
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

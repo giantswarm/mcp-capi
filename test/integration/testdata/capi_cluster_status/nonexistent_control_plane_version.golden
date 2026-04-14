@@ -1,0 +1,6 @@
+Cluster: test-clusters/nonexistent-kcp-cluster
+Phase: 
+Ready: false
+Provider: unknown
+Version: v1.30.0
+Machines: 0/0 ready

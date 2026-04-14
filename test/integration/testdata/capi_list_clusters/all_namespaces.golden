@@ -1,0 +1,29 @@
+Found 3 clusters:
+
+Cluster: multi-ns-1/cluster-ns2
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: multi-ns-2/cluster-ns3
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/cluster-ns1
+Phase: 
+Ready: false
+Provider: unknown
+Version: 
+Machines: 0/0 ready
+
+---
+

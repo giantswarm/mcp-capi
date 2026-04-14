@@ -1,0 +1,9 @@
+AWS Clusters:
+
+Cluster: test-clusters/my-aws-cluster
+  Infrastructure: AWSCluster
+  Phase: 
+  Ready: false
+  Provider: AWS (confirmed)
+
+Total AWS clusters: 1

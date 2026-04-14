@@ -1,0 +1,8 @@
+Found 1 machines:
+
+Machine: test-clusters/pid-machine
+  Cluster: pid-cluster
+  Phase: Running
+  Provider ID: aws://us-east-1/i-1234567890abcdef0
+  Ready: false
+

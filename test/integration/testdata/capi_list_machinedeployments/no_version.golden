@@ -1,0 +1,7 @@
+Found 1 machine deployments:
+
+MachineDeployment: test-clusters/md-noversion
+  Cluster: test-cluster
+  Replicas: 2
+  Status: 2 ready / 0 updated / 2 available
+

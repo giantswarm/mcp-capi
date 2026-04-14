@@ -1,0 +1,47 @@
+Found 5 clusters:
+
+Cluster: test-clusters/vsphere-deleting
+Phase: Deleting
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vsphere-failed
+Phase: Failed
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vsphere-pending
+Phase: Pending
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vsphere-provisioned
+Phase: Provisioned
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/vsphere-provisioning
+Phase: Provisioning
+Ready: false
+Provider: vsphere
+Version: 
+Machines: 0/0 ready
+
+---
+

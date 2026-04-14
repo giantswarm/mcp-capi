@@ -1,0 +1,11 @@
+Cluster: test-clusters/unhealthy-cluster
+Phase: 
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+Conditions:
+  Ready: False (ClusterNotReady)
+  ControlPlaneReady: False (ControlPlaneUnhealthy)
+  InfrastructureReady: False (WaitingForInfrastructure)

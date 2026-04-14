@@ -1,0 +1,21 @@
+Found 2 clusters:
+
+Cluster: test-clusters/active-cluster
+Phase: Provisioned
+Ready: false
+Provider: aws
+Version: 
+Machines: 0/0 ready
+
+---
+
+Cluster: test-clusters/paused-cluster
+Phase: 
+Ready: false
+Paused: true
+Provider: azure
+Version: 
+Machines: 0/0 ready
+
+---
+

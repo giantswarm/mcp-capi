@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/vcd-partial
+Phase: 
+Ready: false
+Provider: vcd
+Version: 
+Machines: 1/2 ready
+
+---
+

@@ -1,0 +1,6 @@
+Cluster: test-clusters/azure-kcp-cluster
+Phase: 
+Ready: false
+Provider: azure
+Version: v1.30.0
+Machines: 0/0 ready

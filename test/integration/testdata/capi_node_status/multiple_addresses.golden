@@ -1,0 +1,38 @@
+Node: multi-addr-node
+
+Basic Information:
+  UID: <UID>
+  Created: <TIMESTAMP>
+  Schedulable: true
+
+Node Info:
+  OS: linux (Ubuntu 22.04.3 LTS)
+  Kernel: 5.15.0-91-generic
+  Container Runtime: containerd://1.7.2
+  Kubelet: v1.29.0
+  Architecture: amd64
+
+Resources:
+  Capacity:
+    CPU: 4
+    Memory: 8Gi
+    Pods: 110
+  Allocatable:
+    CPU: 3500m
+    Memory: 7Gi
+    Pods: 110
+
+Conditions:
+  - Type: Ready
+    Status: True
+    Reason: KubeletReady
+    Message: kubelet is posting ready status
+
+Addresses:
+  - InternalIP: 10.0.0.10
+  - ExternalIP: 203.0.113.50
+  - Hostname: multi-addr-node
+
+Taints:
+  - Key: node.kubernetes.io/not-ready
+    Effect: NoSchedule

@@ -1,0 +1,10 @@
+AWS Machine Template: test-clusters/my-aws-template
+
+Note: Direct access to AWSMachineTemplate requires the AWS provider CRDs.
+In a full implementation, this would show:
+  - Instance type
+  - AMI ID
+  - Security groups
+  - SSH key name
+  - IAM instance profile
+  - User data configuration

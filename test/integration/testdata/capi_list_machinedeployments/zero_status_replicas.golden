@@ -1,0 +1,7 @@
+Found 1 machine deployments:
+
+MachineDeployment: test-clusters/md-new
+  Cluster: test-cluster
+  Replicas: 3
+  Kubernetes Version: v1.29.0
+

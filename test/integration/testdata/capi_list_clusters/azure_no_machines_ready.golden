@@ -1,0 +1,11 @@
+Found 1 clusters:
+
+Cluster: test-clusters/azure-none-ready
+Phase: 
+Ready: false
+Provider: azure
+Version: 
+Machines: 0/5 ready
+
+---
+
