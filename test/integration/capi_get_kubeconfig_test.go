@@ -11,7 +11,7 @@ func TestCapiGetKubeconfig(t *testing.T) {
 
 	t.Run("returns error for non-existent cluster kubeconfig", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -24,7 +24,7 @@ func TestCapiGetKubeconfig(t *testing.T) {
 
 	t.Run("retrieves kubeconfig successfully", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		kubeconfigData := `apiVersion: v1
 kind: Config
@@ -58,7 +58,7 @@ users:
 
 	t.Run("retrieves kubeconfig from data key", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		kubeconfigData := `apiVersion: v1
 kind: Config
@@ -91,7 +91,7 @@ clusters:
 
 	t.Run("returns error without name argument", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -103,7 +103,7 @@ clusters:
 
 	t.Run("returns error when secret has no recognized key", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -119,7 +119,7 @@ clusters:
 
 	t.Run("returns empty kubeconfig when value key is empty", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -135,7 +135,7 @@ clusters:
 
 	t.Run("prefers value key over data key", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

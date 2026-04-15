@@ -107,13 +107,20 @@ type clusterBuilderOp struct {
 
 func (op *clusterBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	ec.t.Helper()
-	ec.t.Logf("creating cluster '%s/%s' (provider=%s, phase=%s, version=%s)", op.namespace, op.name, op.provider, op.phase, op.version)
+	ec.t.Logf(
+		"creating cluster '%s/%s' (provider=%s, phase=%s, version=%s)",
+		op.namespace,
+		op.name,
+		op.provider,
+		op.phase,
+		op.version,
+	)
 
 	// Create the cluster with all spec fields and status in minimal API calls
 	ec.k8sEnv.createClusterFull(ctx, op.clusterCreateOptions)
 
 	// Create machines if specified
-	for i := 0; i < op.totalMachines; i++ {
+	for i := range op.totalMachines {
 		machineName := fmt.Sprintf("%s-machine-%d", op.name, i)
 		ready := i < op.readyMachines // First N machines are ready
 		ec.k8sEnv.createMachine(ctx, op.namespace, op.name, machineName, ready)
@@ -122,7 +129,13 @@ func (op *clusterBuilderOp) execute(ctx context.Context, ec *executionContext) {
 	// Create control plane if specified
 	if op.controlPlane != nil && op.controlPlane.kind == "KubeadmControlPlane" {
 		kcpName := op.name + "-control-plane"
-		ec.k8sEnv.createKubeadmControlPlane(ctx, op.namespace, kcpName, op.controlPlane.version, op.controlPlane.replicas)
+		ec.k8sEnv.createKubeadmControlPlane(
+			ctx,
+			op.namespace,
+			kcpName,
+			op.controlPlane.version,
+			op.controlPlane.replicas,
+		)
 		ec.k8sEnv.setClusterControlPlaneRef(ctx, op.namespace, op.name, kcpName)
 	}
 
@@ -181,7 +194,12 @@ func (op *machineDeploymentOp) execute(ctx context.Context, ec *executionContext
 }
 
 func (op *machineDeploymentOp) describe() string {
-	return fmt.Sprintf("create MachineDeployment %q in namespace %q for cluster %q", op.name, op.namespace, op.clusterName)
+	return fmt.Sprintf(
+		"create MachineDeployment %q in namespace %q for cluster %q",
+		op.name,
+		op.namespace,
+		op.clusterName,
+	)
 }
 
 // machineSetOp creates a CAPI MachineSet resource.

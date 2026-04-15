@@ -1,8 +1,11 @@
+// Package handlers provides MCP tool handler functions for CAPI cluster operations.
 package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
@@ -11,7 +14,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
-// createCreateClusterHandler creates a handler for creating new CAPI clusters
+// CreateCreateClusterHandler creates a handler for creating new CAPI clusters
 func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
@@ -19,28 +22,26 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		// Required parameters
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		provider, ok := arguments["provider"].(string)
 		if !ok || provider == "" {
-			return nil, fmt.Errorf("provider argument is required")
+			return nil, errors.New("provider argument is required")
 		}
 
 		// Validate provider
 		validProviders := []string{"aws", "azure", "gcp", "vsphere"}
-		isValidProvider := false
-		for _, vp := range validProviders {
-			if provider == vp {
-				isValidProvider = true
-				break
-			}
-		}
+		isValidProvider := slices.Contains(validProviders, provider)
 		if !isValidProvider {
-			return nil, fmt.Errorf("invalid provider %s. Must be one of: %s", provider, strings.Join(validProviders, ", "))
+			return nil, fmt.Errorf(
+				"invalid provider %s. Must be one of: %s",
+				provider,
+				strings.Join(validProviders, ", "),
+			)
 		}
 
 		// Optional parameters with defaults
@@ -80,41 +81,25 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("failed to create cluster: %w", err)
 		}
 
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster '%s' creation initiated successfully!\n\n", name))
-		content.WriteString("Cluster Details:\n")
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Name))
-		content.WriteString(fmt.Sprintf("  Namespace: %s\n", cluster.Namespace))
-		content.WriteString(fmt.Sprintf("  Provider: %s\n", provider))
-		content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", kubernetesVersion))
-		content.WriteString(fmt.Sprintf("  Control Plane Nodes: %d\n", controlPlaneCount))
-		content.WriteString(fmt.Sprintf("  Worker Nodes: %d\n", workerCount))
-		if region != "" {
-			content.WriteString(fmt.Sprintf("  Region: %s\n", region))
-		}
-		if instanceType != "" {
-			content.WriteString(fmt.Sprintf("  Instance Type: %s\n", instanceType))
-		}
-		content.WriteString("\n⚠️  Note: This is a basic implementation that creates only the Cluster resource.\n")
-		content.WriteString("In a production setup, you would need to:\n")
-		content.WriteString("1. Create the infrastructure-specific cluster resource (e.g., AWSCluster)\n")
-		content.WriteString("2. Create the control plane (e.g., KubeadmControlPlane)\n")
-		content.WriteString("3. Create machine deployments for worker nodes\n")
-		content.WriteString("4. Configure networking, storage, and other cluster settings\n\n")
-		content.WriteString("Monitor cluster creation with: capi_cluster_status\n")
+		text := formatCreateClusterDetails(
+			name, cluster.Name, cluster.Namespace,
+			provider, kubernetesVersion,
+			controlPlaneCount, workerCount,
+			region, instanceType,
+		)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
 					Type: "text",
-					Text: content.String(),
+					Text: text,
 				},
 			},
 		}, nil
 	}
 }
 
-// createListClustersHandler creates a handler for listing CAPI clusters
+// CreateListClustersHandler creates a handler for listing CAPI clusters
 func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
@@ -122,15 +107,7 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		search, _ := arguments["search"].(string)
 
 		// Parse label_selector from arguments
-		var labelSelector map[string]string
-		if ls, ok := arguments["label_selector"].(map[string]interface{}); ok && len(ls) > 0 {
-			labelSelector = make(map[string]string)
-			for k, v := range ls {
-				if strVal, ok := v.(string); ok {
-					labelSelector[k] = strVal
-				}
-			}
-		}
+		labelSelector := parseLabelSelector(arguments)
 
 		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, labelSelector)
 		if err != nil {
@@ -139,25 +116,7 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 
 		// If a search term is provided, filter clusters by name or label values
 		if search != "" {
-			searchLower := strings.ToLower(search)
-			var filtered []clusterv1.Cluster
-			for _, cluster := range clusters.Items {
-				if strings.Contains(strings.ToLower(cluster.Name), searchLower) {
-					filtered = append(filtered, cluster)
-					continue
-				}
-				matched := false
-				for _, v := range cluster.Labels {
-					if strings.Contains(strings.ToLower(v), searchLower) {
-						matched = true
-						break
-					}
-				}
-				if matched {
-					filtered = append(filtered, cluster)
-				}
-			}
-			clusters.Items = filtered
+			clusters.Items = filterClustersBySearch(clusters.Items, search)
 		}
 
 		// Bulk fetch all machines in the namespace to avoid N+1 queries
@@ -166,16 +125,11 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 			return nil, fmt.Errorf("failed to list machines: %w", err)
 		}
 
-		// Group machines by cluster name
-		machinesByCluster := make(map[string][]clusterv1.Machine)
-		for _, m := range allMachines.Items {
-			clusterName := m.Labels[clusterv1.ClusterNameLabel]
-			key := m.Namespace + "/" + clusterName
-			machinesByCluster[key] = append(machinesByCluster[key], m)
-		}
+		// Group machines by cluster name for efficient lookup
+		machinesByCluster := groupMachinesByCluster(allMachines.Items)
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d clusters:\n\n", len(clusters.Items)))
+		fmt.Fprintf(&content, "Found %d clusters:\n\n", len(clusters.Items))
 
 		for i := range clusters.Items {
 			cluster := &clusters.Items[i]
@@ -198,95 +152,84 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 	}
 }
 
-// createGetClusterHandler creates a handler for getting a specific cluster
+// CreateGetClusterHandler creates a handler for getting a specific cluster
 func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		// Try exact name match first
 		status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, namespace, name)
 		if err == nil {
-			var content strings.Builder
-			content.WriteString(capi.FormatClusterInfo(status))
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: content.String(),
-					},
-				},
-			}, nil
+			return textResult(capi.FormatClusterInfo(status)), nil
 		}
 
-		// If exact name match failed, try matching against label values
-		matched, labelErr := serverCtx.CAPIClient.FindClustersByLabelValue(ctx, namespace, name)
-		if labelErr != nil || len(matched.Items) == 0 {
-			// Return the original error if label search also fails
-			return nil, fmt.Errorf("failed to get cluster %q: no cluster found by name or label value in namespace %s", name, namespace)
-		}
-
-		if len(matched.Items) == 1 {
-			// Single match found via labels - return its status
-			cluster := matched.Items[0]
-			status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get cluster status: %w", err)
-			}
-			var content strings.Builder
-			content.WriteString(fmt.Sprintf("Note: No cluster named %q found. Matched cluster by label value:\n\n", name))
-			content.WriteString(capi.FormatClusterInfo(status))
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: content.String(),
-					},
-				},
-			}, nil
-		}
-
-		// Multiple matches - list them for the user to disambiguate
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("No cluster named %q found, but %d clusters matched the term in their labels:\n\n", name, len(matched.Items)))
-		for _, cluster := range matched.Items {
-			status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
-			if err == nil {
-				content.WriteString(capi.FormatClusterInfo(status))
-				content.WriteString("\n---\n\n")
-			}
-		}
-		content.WriteString("Please specify the exact cluster name from the list above.")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		// If exact name match failed, fall back to label-value search
+		return serverCtx.getClusterByLabelFallback(ctx, namespace, name)
 	}
 }
 
-// createClusterStatusHandler creates a handler for getting detailed cluster status
+// getClusterByLabelFallback searches for clusters whose label values match name
+// and returns an appropriate response when no exact name match exists.
+func (s *ServerContext) getClusterByLabelFallback(
+	ctx context.Context, namespace, name string,
+) (*mcp.CallToolResult, error) {
+	matched, labelErr := s.CAPIClient.FindClustersByLabelValue(ctx, namespace, name)
+	if labelErr != nil || len(matched.Items) == 0 {
+		return nil, fmt.Errorf(
+			"failed to get cluster %q: no cluster found by name or label value in namespace %s",
+			name,
+			namespace,
+		)
+	}
+
+	if len(matched.Items) == 1 {
+		cluster := matched.Items[0]
+		status, err := s.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cluster status: %w", err)
+		}
+		var b strings.Builder
+		fmt.Fprintf(&b, "Note: No cluster named %q found. Matched cluster by label value:\n\n", name)
+		b.WriteString(capi.FormatClusterInfo(status))
+		return textResult(b.String()), nil
+	}
+
+	// Multiple matches - list them for the user to disambiguate
+	var b strings.Builder
+	fmt.Fprintf(&b, "No cluster named %q found, but %d clusters matched the term in their labels:\n\n",
+		name, len(matched.Items),
+	)
+	for i := range matched.Items {
+		cluster := &matched.Items[i]
+		status, err := s.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
+		if err == nil {
+			b.WriteString(capi.FormatClusterInfo(status))
+			b.WriteString("\n---\n\n")
+		}
+	}
+	b.WriteString("Please specify the exact cluster name from the list above.")
+	return textResult(b.String()), nil
+}
+
+// CreateClusterStatusHandler creates a handler for getting detailed cluster status
 func CreateClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, namespace, name)
@@ -308,17 +251,17 @@ func CreateClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 	}
 }
 
-// createClusterHealthHandler creates a handler for checking cluster health
+// CreateClusterHealthHandler creates a handler for checking cluster health
 func CreateClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		health, err := serverCtx.CAPIClient.GetClusterHealth(ctx, namespace, name)
@@ -326,63 +269,175 @@ func CreateClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("failed to get cluster health: %w", err)
 		}
 
-		var content strings.Builder
-
-		// Overall status
-		if health.Healthy {
-			content.WriteString(fmt.Sprintf("✅ Cluster %s/%s is HEALTHY\n\n", namespace, name))
-		} else {
-			content.WriteString(fmt.Sprintf("❌ Cluster %s/%s is UNHEALTHY\n\n", namespace, name))
-		}
-
-		// Component status
-		content.WriteString("Component Status:\n")
-		content.WriteString(fmt.Sprintf("  • Control Plane: %s\n", formatHealthStatus(health.ControlPlaneReady)))
-		content.WriteString(fmt.Sprintf("  • Infrastructure: %s\n", formatHealthStatus(health.InfraReady)))
-		content.WriteString(fmt.Sprintf("  • Worker Nodes: %s\n", formatHealthStatus(health.WorkersReady)))
-
-		// Issues
-		if len(health.Issues) > 0 {
-			content.WriteString("\n🔴 Issues:\n")
-			for _, issue := range health.Issues {
-				content.WriteString(fmt.Sprintf("  • %s\n", issue))
-			}
-		}
-
-		// Warnings
-		if len(health.Warnings) > 0 {
-			content.WriteString("\n⚠️  Warnings:\n")
-			for _, warning := range health.Warnings {
-				content.WriteString(fmt.Sprintf("  • %s\n", warning))
-			}
-		}
-
-		// Recommendations
-		if !health.Healthy {
-			content.WriteString("\n📋 Recommendations:\n")
-			if !health.ControlPlaneReady {
-				content.WriteString("  • Check control plane pods and logs\n")
-				content.WriteString("  • Verify API server connectivity\n")
-			}
-			if !health.InfraReady {
-				content.WriteString("  • Check infrastructure provider status\n")
-				content.WriteString("  • Verify cloud resources are provisioned\n")
-			}
-			if !health.WorkersReady {
-				content.WriteString("  • Check machine status with 'capi_list_machines'\n")
-				content.WriteString("  • Review machine deployment events\n")
-			}
-		}
-
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
 					Type: "text",
-					Text: content.String(),
+					Text: formatHealthReport(namespace, name, health),
 				},
 			},
 		}, nil
 	}
+}
+
+// formatCreateClusterDetails formats the cluster creation success response.
+func formatCreateClusterDetails(
+	name, clusterName, namespace, provider, kubernetesVersion string,
+	controlPlaneCount, workerCount int32,
+	region, instanceType string,
+) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "✅ Cluster '%s' creation initiated successfully!\n\n", name)
+	b.WriteString("Cluster Details:\n")
+	fmt.Fprintf(&b, "  Name: %s\n", clusterName)
+	fmt.Fprintf(&b, "  Namespace: %s\n", namespace)
+	fmt.Fprintf(&b, "  Provider: %s\n", provider)
+	fmt.Fprintf(&b, "  Kubernetes Version: %s\n", kubernetesVersion)
+	fmt.Fprintf(&b, "  Control Plane Nodes: %d\n", controlPlaneCount)
+	fmt.Fprintf(&b, "  Worker Nodes: %d\n", workerCount)
+	if region != "" {
+		fmt.Fprintf(&b, "  Region: %s\n", region)
+	}
+	if instanceType != "" {
+		fmt.Fprintf(&b, "  Instance Type: %s\n", instanceType)
+	}
+	b.WriteString("\n⚠️  Note: This is a basic implementation that creates only the Cluster resource.\n")
+	b.WriteString("In a production setup, you would need to:\n")
+	b.WriteString("1. Create the infrastructure-specific cluster resource (e.g., AWSCluster)\n")
+	b.WriteString("2. Create the control plane (e.g., KubeadmControlPlane)\n")
+	b.WriteString("3. Create machine deployments for worker nodes\n")
+	b.WriteString("4. Configure networking, storage, and other cluster settings\n\n")
+	b.WriteString("Monitor cluster creation with: capi_cluster_status\n")
+	return b.String()
+}
+
+// textResult wraps a plain text string in a CallToolResult.
+func textResult(text string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: text,
+			},
+		},
+	}
+}
+
+// parseLabelSelector extracts a string label selector map from the raw MCP arguments map.
+func parseLabelSelector(arguments map[string]any) map[string]string {
+	ls, ok := arguments["label_selector"].(map[string]any)
+	if !ok || len(ls) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(ls))
+	for k, v := range ls {
+		if strVal, ok := v.(string); ok {
+			result[k] = strVal
+		}
+	}
+	return result
+}
+
+// groupMachinesByCluster groups a slice of machines by "namespace/clusterName" key.
+func groupMachinesByCluster(machines []clusterv1.Machine) map[string][]clusterv1.Machine {
+	result := make(map[string][]clusterv1.Machine)
+	for i := range machines {
+		m := &machines[i]
+		clusterName := m.Labels[clusterv1.ClusterNameLabel]
+		key := m.Namespace + "/" + clusterName
+		result[key] = append(result[key], *m)
+	}
+	return result
+}
+
+// filterClustersBySearch returns a filtered slice of clusters whose name or label
+// values contain the given search term (case-insensitive).
+func filterClustersBySearch(items []clusterv1.Cluster, search string) []clusterv1.Cluster {
+	searchLower := strings.ToLower(search)
+	var filtered []clusterv1.Cluster
+	for i := range items {
+		c := &items[i]
+		if strings.Contains(strings.ToLower(c.Name), searchLower) {
+			filtered = append(filtered, *c)
+			continue
+		}
+		for _, v := range c.Labels {
+			if strings.Contains(strings.ToLower(v), searchLower) {
+				filtered = append(filtered, *c)
+				break
+			}
+		}
+	}
+	return filtered
+}
+
+// formatHealthReport formats the health check response for a cluster.
+func formatHealthReport(namespace, name string, health *capi.ClusterHealthStatus) string {
+	var b strings.Builder
+	if health.Healthy {
+		fmt.Fprintf(&b, "✅ Cluster %s/%s is HEALTHY\n\n", namespace, name)
+	} else {
+		fmt.Fprintf(&b, "❌ Cluster %s/%s is UNHEALTHY\n\n", namespace, name)
+	}
+	b.WriteString("Component Status:\n")
+	fmt.Fprintf(&b, "  • Control Plane: %s\n", formatHealthStatus(health.ControlPlaneReady))
+	fmt.Fprintf(&b, "  • Infrastructure: %s\n", formatHealthStatus(health.InfraReady))
+	fmt.Fprintf(&b, "  • Worker Nodes: %s\n", formatHealthStatus(health.WorkersReady))
+	if len(health.Issues) > 0 {
+		b.WriteString("\n🔴 Issues:\n")
+		for _, issue := range health.Issues {
+			fmt.Fprintf(&b, "  • %s\n", issue)
+		}
+	}
+	if len(health.Warnings) > 0 {
+		b.WriteString("\n⚠️  Warnings:\n")
+		for _, warning := range health.Warnings {
+			fmt.Fprintf(&b, "  • %s\n", warning)
+		}
+	}
+	if !health.Healthy {
+		b.WriteString("\n📋 Recommendations:\n")
+		if !health.ControlPlaneReady {
+			b.WriteString("  • Check control plane pods and logs\n")
+			b.WriteString("  • Verify API server connectivity\n")
+		}
+		if !health.InfraReady {
+			b.WriteString("  • Check infrastructure provider status\n")
+			b.WriteString("  • Verify cloud resources are provisioned\n")
+		}
+		if !health.WorkersReady {
+			b.WriteString("  • Check machine status with 'capi_list_machines'\n")
+			b.WriteString("  • Review machine deployment events\n")
+		}
+	}
+	return b.String()
+}
+
+// formatMetadataMap formats a label or annotation map as a string, one entry per line.
+func formatMetadataMap(b *strings.Builder, entries map[string]string) {
+	if len(entries) > 0 {
+		for k, v := range entries {
+			fmt.Fprintf(b, "  %s: %s\n", k, v)
+		}
+	} else {
+		b.WriteString("  (none)\n")
+	}
+}
+
+// formatMetadataChanges formats what labels or annotations were added/removed.
+func formatMetadataChanges(b *strings.Builder, section string, changes map[string]string) {
+	if len(changes) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "%s updated:\n", section)
+	for k, v := range changes {
+		if v == "" {
+			fmt.Fprintf(b, "  ✗ Removed: %s\n", k)
+		} else {
+			fmt.Fprintf(b, "  ✓ Set: %s=%s\n", k, v)
+		}
+	}
+	b.WriteString("\n")
 }
 
 // formatHealthStatus returns a formatted string for component health status
@@ -393,25 +448,25 @@ func formatHealthStatus(ready bool) string {
 	return "❌ Not Ready"
 }
 
-// createScaleClusterHandler creates a handler for scaling clusters
+// CreateScaleClusterHandler creates a handler for scaling clusters
 func CreateScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 		target, ok := arguments["target"].(string)
 		if !ok || target == "" {
-			return nil, fmt.Errorf("target argument is required")
+			return nil, errors.New("target argument is required")
 		}
 		replicas, ok := arguments["replicas"].(float64)
 		if !ok {
-			return nil, fmt.Errorf("replicas argument is required and must be a number")
+			return nil, errors.New("replicas argument is required and must be a number")
 		}
 		machineDeployment, _ := arguments["machineDeployment"].(string)
 
@@ -431,17 +486,17 @@ func CreateScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 	}
 }
 
-// createGetKubeconfigHandler creates a handler for retrieving cluster kubeconfig
+// CreateGetKubeconfigHandler creates a handler for retrieving cluster kubeconfig
 func CreateGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		kubeconfig, err := serverCtx.CAPIClient.GetKubeconfig(ctx, namespace, name)
@@ -450,7 +505,7 @@ func CreateGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Kubeconfig for cluster %s/%s:\n\n", namespace, name))
+		fmt.Fprintf(&content, "Kubeconfig for cluster %s/%s:\n\n", namespace, name)
 		content.WriteString("```yaml\n")
 		content.WriteString(kubeconfig)
 		content.WriteString("\n```\n\n")
@@ -469,91 +524,94 @@ func CreateGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 	}
 }
 
-// createPauseClusterHandler creates a handler for pausing cluster reconciliation
+// pauseResumeAction is a function that pauses or resumes a cluster.
+type pauseResumeAction func(ctx context.Context, namespace, name string) error
+
+// clusterPauseResumeHandler is a shared helper for pause and resume handlers.
+// actionFn performs the actual pause or resume operation. statusVerb is the past-tense
+// verb for the success line (e.g. "paused" or "resumed"). details are the body lines
+// printed after the status line.
+func clusterPauseResumeHandler(
+	actionName string,
+	actionFn pauseResumeAction,
+	statusVerb string,
+	details []string,
+) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		arguments := request.GetArguments()
+		namespace, ok := arguments["namespace"].(string)
+		if !ok || namespace == "" {
+			return nil, errors.New("namespace argument is required")
+		}
+		name, ok := arguments["name"].(string)
+		if !ok || name == "" {
+			return nil, errors.New("name argument is required")
+		}
+
+		if err := actionFn(ctx, namespace, name); err != nil {
+			return nil, fmt.Errorf("failed to %s cluster: %w", actionName, err)
+		}
+
+		var content strings.Builder
+		fmt.Fprintf(&content, "✅ Cluster %s/%s has been %s\n\n", namespace, name, statusVerb)
+		for _, line := range details {
+			content.WriteString(line)
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: content.String(),
+				},
+			},
+		}, nil
+	}
+}
+
+// CreatePauseClusterHandler creates a handler for pausing cluster reconciliation
 func CreatePauseClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		name, ok := arguments["name"].(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
-		}
-
-		err := serverCtx.CAPIClient.PauseCluster(ctx, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to pause cluster: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster %s/%s has been paused\n\n", namespace, name))
-		content.WriteString("The cluster reconciliation has been stopped. This means:\n")
-		content.WriteString("- CAPI controllers will not make any changes to the cluster\n")
-		content.WriteString("- The cluster will not be updated or scaled automatically\n")
-		content.WriteString("- Manual operations can be performed safely\n\n")
-		content.WriteString("To resume normal operations, use the capi_resume_cluster tool.")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return clusterPauseResumeHandler(
+		"pause",
+		serverCtx.CAPIClient.PauseCluster,
+		"paused",
+		[]string{
+			"The cluster reconciliation has been stopped. This means:\n",
+			"- CAPI controllers will not make any changes to the cluster\n",
+			"- The cluster will not be updated or scaled automatically\n",
+			"- Manual operations can be performed safely\n\n",
+			"To resume normal operations, use the capi_resume_cluster tool.",
+		},
+	)
 }
 
-// createResumeClusterHandler creates a handler for resuming cluster reconciliation
+// CreateResumeClusterHandler creates a handler for resuming cluster reconciliation
 func CreateResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		name, ok := arguments["name"].(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
-		}
-
-		err := serverCtx.CAPIClient.ResumeCluster(ctx, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resume cluster: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster %s/%s has been resumed\n\n", namespace, name))
-		content.WriteString("The cluster reconciliation has been restarted. This means:\n")
-		content.WriteString("- CAPI controllers will now reconcile the cluster normally\n")
-		content.WriteString("- Any pending updates or changes will be applied\n")
-		content.WriteString("- Automatic scaling and updates are re-enabled\n\n")
-		content.WriteString("The cluster is now under normal CAPI management.")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return clusterPauseResumeHandler(
+		"resume",
+		serverCtx.CAPIClient.ResumeCluster,
+		"resumed",
+		[]string{
+			"The cluster reconciliation has been restarted. This means:\n",
+			"- CAPI controllers will now reconcile the cluster normally\n",
+			"- Any pending updates or changes will be applied\n",
+			"- Automatic scaling and updates are re-enabled\n\n",
+			"The cluster is now under normal CAPI management.",
+		},
+	)
 }
 
-// createDeleteClusterHandler creates a handler for deleting a cluster
+// CreateDeleteClusterHandler creates a handler for deleting a cluster
 func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 		force, _ := arguments["force"].(bool)
 
@@ -598,7 +656,7 @@ func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("failed to delete cluster: %w", err)
 		}
 
-		content.WriteString(fmt.Sprintf("\n✅ Cluster %s/%s deletion initiated successfully.\n\n", namespace, name))
+		fmt.Fprintf(&content, "\n✅ Cluster %s/%s deletion initiated successfully.\n\n", namespace, name)
 		content.WriteString("Note: The actual deletion process may take several minutes as:\n")
 		content.WriteString("- All cluster resources are being cleaned up\n")
 		content.WriteString("- Infrastructure resources are being deprovisioned\n")
@@ -616,21 +674,21 @@ func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 	}
 }
 
-// createUpgradeClusterHandler creates a handler for upgrading cluster Kubernetes version
+// CreateUpgradeClusterHandler creates a handler for upgrading cluster Kubernetes version
 func CreateUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 		targetVersion, ok := arguments["target_version"].(string)
 		if !ok || targetVersion == "" {
-			return nil, fmt.Errorf("target_version argument is required")
+			return nil, errors.New("target_version argument is required")
 		}
 
 		// Default to upgrading workers
@@ -646,11 +704,11 @@ func CreateUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🚀 Initiating cluster upgrade for %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🚀 Initiating cluster upgrade for %s/%s\n\n", namespace, name)
 		content.WriteString("Current State:\n")
-		content.WriteString(fmt.Sprintf("  • Current Version: %s\n", status.Version))
-		content.WriteString(fmt.Sprintf("  • Target Version: %s\n", targetVersion))
-		content.WriteString(fmt.Sprintf("  • Upgrade Workers: %v\n\n", upgradeWorkers))
+		fmt.Fprintf(&content, "  • Current Version: %s\n", status.Version)
+		fmt.Fprintf(&content, "  • Target Version: %s\n", targetVersion)
+		fmt.Fprintf(&content, "  • Upgrade Workers: %v\n\n", upgradeWorkers)
 
 		// Perform the upgrade
 		opts := capi.UpgradeClusterOptions{
@@ -694,22 +752,22 @@ func CreateUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 	}
 }
 
-// createUpdateClusterHandler creates a handler for updating cluster metadata
+// CreateUpdateClusterHandler creates a handler for updating cluster metadata
 func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		// Get labels and annotations from arguments
-		labels, _ := arguments["labels"].(map[string]interface{})
-		annotations, _ := arguments["annotations"].(map[string]interface{})
+		labels, _ := arguments["labels"].(map[string]any)
+		annotations, _ := arguments["annotations"].(map[string]any)
 
 		// Convert interface{} maps to string maps
 		labelMap := make(map[string]string)
@@ -740,52 +798,16 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster %s/%s updated successfully!\n\n", namespace, name))
-
-		// Show what was updated
-		if len(labelMap) > 0 {
-			content.WriteString("Labels updated:\n")
-			for k, v := range labelMap {
-				if v == "" {
-					content.WriteString(fmt.Sprintf("  ✗ Removed: %s\n", k))
-				} else {
-					content.WriteString(fmt.Sprintf("  ✓ Set: %s=%s\n", k, v))
-				}
-			}
-			content.WriteString("\n")
-		}
-
-		if len(annotationMap) > 0 {
-			content.WriteString("Annotations updated:\n")
-			for k, v := range annotationMap {
-				if v == "" {
-					content.WriteString(fmt.Sprintf("  ✗ Removed: %s\n", k))
-				} else {
-					content.WriteString(fmt.Sprintf("  ✓ Set: %s=%s\n", k, v))
-				}
-			}
-			content.WriteString("\n")
-		}
+		fmt.Fprintf(&content, "✅ Cluster %s/%s updated successfully!\n\n", namespace, name)
+		formatMetadataChanges(&content, "Labels", labelMap)
+		formatMetadataChanges(&content, "Annotations", annotationMap)
 
 		// Show current metadata
 		content.WriteString("Current metadata:\n")
 		content.WriteString("Labels:\n")
-		if len(cluster.Labels) > 0 {
-			for k, v := range cluster.Labels {
-				content.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
-			}
-		} else {
-			content.WriteString("  (none)\n")
-		}
-
+		formatMetadataMap(&content, cluster.Labels)
 		content.WriteString("\nAnnotations:\n")
-		if len(cluster.Annotations) > 0 {
-			for k, v := range cluster.Annotations {
-				content.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
-			}
-		} else {
-			content.WriteString("  (none)\n")
-		}
+		formatMetadataMap(&content, cluster.Annotations)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -798,17 +820,17 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 	}
 }
 
-// createMoveClusterHandler creates a handler for moving clusters between management clusters
+// CreateMoveClusterHandler creates a handler for moving clusters between management clusters
 func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		targetKubeconfig, _ := arguments["target_kubeconfig"].(string)
@@ -831,7 +853,7 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🚀 Cluster Move Preparation for %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🚀 Cluster Move Preparation for %s/%s\n\n", namespace, name)
 
 		if dryRun {
 			content.WriteString("⚠️  DRY RUN MODE - No actual changes will be made\n\n")
@@ -845,18 +867,22 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 
 		content.WriteString("```bash\n")
 		content.WriteString("# Pause the cluster first\n")
-		content.WriteString(fmt.Sprintf("kubectl patch cluster %s -n %s --type merge -p '{\"spec\":{\"paused\":true}}'\n\n", name, namespace))
+		fmt.Fprintf(&content,
+			"kubectl patch cluster %s -n %s --type merge -p '{\"spec\":{\"paused\":true}}'\n\n",
+			name,
+			namespace,
+		)
 
 		content.WriteString("# Move the cluster\n")
 		if targetKubeconfig != "" {
-			content.WriteString(fmt.Sprintf("clusterctl move --to-kubeconfig=%s", targetKubeconfig))
+			content.WriteString("clusterctl move --to-kubeconfig=" + targetKubeconfig)
 		} else {
 			content.WriteString("clusterctl move --to-kubeconfig=<target-kubeconfig>")
 		}
 		if targetNamespace != "" && targetNamespace != namespace {
-			content.WriteString(fmt.Sprintf(" --namespace %s --to-namespace %s", namespace, targetNamespace))
+			fmt.Fprintf(&content, " --namespace %s --to-namespace %s", namespace, targetNamespace)
 		} else {
-			content.WriteString(fmt.Sprintf(" --namespace %s", namespace))
+			content.WriteString(" --namespace " + namespace)
 		}
 		content.WriteString("\n")
 		content.WriteString("```\n\n")
@@ -883,17 +909,17 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	}
 }
 
-// createBackupClusterHandler creates a handler for backing up cluster configurations
+// CreateBackupClusterHandler creates a handler for backing up cluster configurations
 func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		includeSecrets, _ := arguments["include_secrets"].(bool)
@@ -916,11 +942,11 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("📦 Cluster Backup for %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "📦 Cluster Backup for %s/%s\n\n", namespace, name)
 
 		content.WriteString("Backup Configuration:\n")
-		content.WriteString(fmt.Sprintf("  • Format: %s\n", outputFormat))
-		content.WriteString(fmt.Sprintf("  • Include Secrets: %v\n\n", includeSecrets))
+		fmt.Fprintf(&content, "  • Format: %s\n", outputFormat)
+		fmt.Fprintf(&content, "  • Include Secrets: %v\n\n", includeSecrets)
 
 		content.WriteString("📋 Backup Instructions:\n")
 		content.WriteString("1. Save the backup content below to a file\n")
@@ -948,8 +974,8 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		content.WriteString("\n```\n\n")
 
 		content.WriteString("💾 To save this backup:\n")
-		content.WriteString(fmt.Sprintf("1. Copy the content between the ``` markers\n"))
-		content.WriteString(fmt.Sprintf("2. Save to a file: cluster-%s-%s-backup.%s\n", namespace, name, outputFormat))
+		content.WriteString("1. Copy the content between the ``` markers\n")
+		fmt.Fprintf(&content, "2. Save to a file: cluster-%s-%s-backup.%s\n", namespace, name, outputFormat)
 		content.WriteString("3. Encrypt if it contains secrets\n")
 
 		return &mcp.CallToolResult{

@@ -3,9 +3,8 @@ package integration_test
 import (
 	"testing"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-
 	"github.com/giantswarm/mcp-capi/test/harness"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
 func TestCapiClusterHealth(t *testing.T) {
@@ -13,7 +12,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns error for non-existent cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -26,7 +25,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns healthy status for basic cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -40,14 +39,16 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns unhealthy status when control plane is not ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "unhealthy-cp").WithProvider("aws").
 			WithCondition("Ready").False().Reason("ClusterNotReady").Message("Cluster has issues").Done().
-			WithCondition("ControlPlaneReady").False().Reason("ControlPlaneUnhealthy").Message("Control plane has unhealthy replicas").Done().
-			WithCondition("InfrastructureReady").False().Reason("WaitingForInfrastructure").Message("Infrastructure provisioning failed").Done().
+			WithCondition("ControlPlaneReady").
+			False().Reason("ControlPlaneUnhealthy").Message("Control plane has unhealthy replicas").Done().
+			WithCondition("InfrastructureReady").
+			False().Reason("WaitingForInfrastructure").Message("Infrastructure provisioning failed").Done().
 			Create().
 			ToolCall("capi_cluster_health").
 			WithArg("namespace", namespace).
@@ -58,7 +59,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns unhealthy status with partial machine readiness", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -72,7 +73,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns healthy status with all machines ready and provisioned phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -88,7 +89,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns warning for non-provisioned phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -112,7 +113,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns error when name argument is missing", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -124,7 +125,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows infra-specific recommendations when CP ready but infra not ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -141,7 +142,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows CP-specific recommendations when CP not ready but infra ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -158,7 +159,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows only worker recommendations when CP and infra ready but no machines", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -175,12 +176,15 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows condition with Error severity in Issues section", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "error-condition").WithProvider("aws").
-			WithCondition("NetworkReady").False().Severity(clusterv1.ConditionSeverityError).Reason("NetworkFailed").Message("Network configuration failed").Done().
+			WithCondition("NetworkReady").
+			False().
+			Severity(clusterv1.ConditionSeverityError).
+			Reason("NetworkFailed").Message("Network configuration failed").Done().
 			Create().
 			ToolCall("capi_cluster_health").
 			WithArg("namespace", namespace).
@@ -191,12 +195,15 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows condition with Warning severity in Warnings section", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "warning-condition").WithProvider("aws").
-			WithCondition("CertificatesExpiring").False().Severity(clusterv1.ConditionSeverityWarning).Reason("CertsExpiringSoon").Message("Certificates will expire in 30 days").Done().
+			WithCondition("CertificatesExpiring").
+			False().
+			Severity(clusterv1.ConditionSeverityWarning).
+			Reason("CertsExpiringSoon").Message("Certificates will expire in 30 days").Done().
 			Create().
 			ToolCall("capi_cluster_health").
 			WithArg("namespace", namespace).
@@ -207,7 +214,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("reports workers not ready when zero machines exist", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -225,7 +232,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns warning for Failed phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -239,7 +246,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns warning for Deleting phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -253,7 +260,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("does not generate phase warning for empty phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -268,13 +275,19 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows both issues and warnings for combined error and warning conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "combined-conditions").WithProvider("aws").
-			WithCondition("NetworkReady").False().Severity(clusterv1.ConditionSeverityError).Reason("NetworkFailed").Message("Network configuration failed").Done().
-			WithCondition("CertificatesExpiring").False().Severity(clusterv1.ConditionSeverityWarning).Reason("CertsExpiringSoon").Message("Certificates will expire in 30 days").Done().
+			WithCondition("NetworkReady").
+			False().
+			Severity(clusterv1.ConditionSeverityError).
+			Reason("NetworkFailed").Message("Network configuration failed").Done().
+			WithCondition("CertificatesExpiring").
+			False().
+			Severity(clusterv1.ConditionSeverityWarning).
+			Reason("CertsExpiringSoon").Message("Certificates will expire in 30 days").Done().
 			Create().
 			ToolCall("capi_cluster_health").
 			WithArg("namespace", namespace).
@@ -285,7 +298,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows all recommendation sections when CP infra and workers are all not ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -303,13 +316,19 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("should show multiple error severity conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "multi-error").WithProvider("aws").
-			WithCondition("NetworkReady").False().Severity(clusterv1.ConditionSeverityError).Reason("NetworkFailed").Message("Network configuration failed").Done().
-			WithCondition("StorageReady").False().Severity(clusterv1.ConditionSeverityError).Reason("StorageFailed").Message("Storage provisioning failed").Done().
+			WithCondition("NetworkReady").
+			False().
+			Severity(clusterv1.ConditionSeverityError).
+			Reason("NetworkFailed").Message("Network configuration failed").Done().
+			WithCondition("StorageReady").
+			False().
+			Severity(clusterv1.ConditionSeverityError).
+			Reason("StorageFailed").Message("Storage provisioning failed").Done().
 			Create().
 			ToolCall("capi_cluster_health").
 			WithArg("namespace", namespace).
@@ -320,7 +339,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("should show provisioning phase warning", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

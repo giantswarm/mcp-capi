@@ -2,91 +2,48 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
 // AWS Provider Tools
 
-// createAWSListClustersHandler lists AWS clusters
+// CreateAWSListClustersHandler lists AWS clusters
 func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, _ := arguments["namespace"].(string)
-
-		// List all clusters
-		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list clusters: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString("AWS Clusters:\n\n")
-
-		awsClusterCount := 0
-		for _, cluster := range clusters.Items {
-			// Check if this is an AWS cluster
-			if cluster.Spec.InfrastructureRef != nil &&
-				(cluster.Spec.InfrastructureRef.Kind == "AWSCluster" ||
-					cluster.Spec.InfrastructureRef.Kind == "AWSManagedCluster") {
-				awsClusterCount++
-
-				content.WriteString(fmt.Sprintf("Cluster: %s/%s\n", cluster.Namespace, cluster.Name))
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind))
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
-
-				// Try to get provider information
-				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
-				if provider == capi.ProviderAWS {
-					content.WriteString("  Provider: AWS (confirmed)\n")
-				}
-
-				content.WriteString("\n")
-			}
-		}
-
-		if awsClusterCount == 0 {
-			content.WriteString("No AWS clusters found.\n")
-		} else {
-			content.WriteString(fmt.Sprintf("Total AWS clusters: %d\n", awsClusterCount))
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return buildListClustersHandler(serverCtx, providerListConfig{
+		header:        "AWS Clusters:\n\n",
+		infraKinds:    []string{"AWSCluster", "AWSManagedCluster"},
+		provider:      capi.ProviderAWS,
+		providerLabel: "AWS",
+		noneMsg:       "No AWS clusters found.\n",
+		totalFmt:      "Total AWS clusters: %d\n",
+	})
 }
 
-// createAWSGetClusterHandler gets details of an AWS cluster
+// CreateAWSGetClusterHandler gets details of an AWS cluster
 func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
-		// Get the cluster
 		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}
 
-		// Verify it's an AWS cluster
 		if cluster.Spec.InfrastructureRef == nil ||
 			(cluster.Spec.InfrastructureRef.Kind != "AWSCluster" &&
 				cluster.Spec.InfrastructureRef.Kind != "AWSManagedCluster") {
@@ -94,43 +51,10 @@ func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("AWS Cluster: %s/%s\n\n", namespace, name))
-
-		// Basic cluster info
-		content.WriteString("Cluster Information:\n")
-		content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-		content.WriteString(fmt.Sprintf("  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady))
-		content.WriteString(fmt.Sprintf("  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady))
-
-		// Infrastructure reference
-		content.WriteString("\nInfrastructure:\n")
-		content.WriteString(fmt.Sprintf("  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind))
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Spec.InfrastructureRef.Name))
-		content.WriteString(fmt.Sprintf("  API Version: %s\n", cluster.Spec.InfrastructureRef.APIVersion))
-
-		// Network configuration
-		if cluster.Spec.ClusterNetwork != nil {
-			content.WriteString("\nNetwork Configuration:\n")
-			if cluster.Spec.ClusterNetwork.Pods != nil && len(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 {
-				content.WriteString(fmt.Sprintf("  Pod CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks, ", ")))
-			}
-			if cluster.Spec.ClusterNetwork.Services != nil && len(cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
-				content.WriteString(fmt.Sprintf("  Service CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Services.CIDRBlocks, ", ")))
-			}
-		}
-
-		// Conditions
-		if len(cluster.Status.Conditions) > 0 {
-			content.WriteString("\nConditions:\n")
-			for _, condition := range cluster.Status.Conditions {
-				content.WriteString(fmt.Sprintf("  - %s: %s", condition.Type, condition.Status))
-				if condition.Reason != "" {
-					content.WriteString(fmt.Sprintf(" (%s)", condition.Reason))
-				}
-				content.WriteString("\n")
-			}
-		}
-
+		fmt.Fprintf(&content, "AWS Cluster: %s/%s\n\n", namespace, name)
+		writeAWSClusterBasicInfo(&content, cluster)
+		writeAWSNetworkConfig(&content, cluster)
+		writeAWSConditions(&content, cluster)
 		content.WriteString("\nNote: For detailed AWS infrastructure information (VPC, subnets, etc.),\n")
 		content.WriteString("you would need to query the AWSCluster resource directly.\n")
 
@@ -145,13 +69,13 @@ func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 	}
 }
 
-// createAWSGetMachineTemplateHandler gets AWS machine templates
+// CreateAWSGetMachineTemplateHandler gets AWS machine templates
 func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, _ := arguments["name"].(string)
 
@@ -159,7 +83,7 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 
 		if name != "" {
 			// Get specific machine template
-			content.WriteString(fmt.Sprintf("AWS Machine Template: %s/%s\n\n", namespace, name))
+			fmt.Fprintf(&content, "AWS Machine Template: %s/%s\n\n", namespace, name)
 			content.WriteString("Note: Direct access to AWSMachineTemplate requires the AWS provider CRDs.\n")
 			content.WriteString("In a full implementation, this would show:\n")
 			content.WriteString("  - Instance type\n")
@@ -170,7 +94,7 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 			content.WriteString("  - User data configuration\n")
 		} else {
 			// List all machine templates
-			content.WriteString(fmt.Sprintf("AWS Machine Templates in namespace %s:\n\n", namespace))
+			fmt.Fprintf(&content, "AWS Machine Templates in namespace %s:\n\n", namespace)
 
 			// In a real implementation, we would list AWSMachineTemplate resources
 			// For now, we'll check for machine deployments and their templates
@@ -180,11 +104,12 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 			}
 
 			awsTemplateCount := 0
-			for _, md := range mds.Items {
+			for i := range mds.Items {
+				md := &mds.Items[i]
 				if md.Spec.Template.Spec.InfrastructureRef.Kind == "AWSMachineTemplate" {
 					awsTemplateCount++
-					content.WriteString(fmt.Sprintf("Template: %s (used by MachineDeployment: %s)\n",
-						md.Spec.Template.Spec.InfrastructureRef.Name, md.Name))
+					fmt.Fprintf(&content, "Template: %s (used by MachineDeployment: %s)\n",
+						md.Spec.Template.Spec.InfrastructureRef.Name, md.Name)
 				}
 			}
 
@@ -206,81 +131,86 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 
 // Placeholder handlers for provider-specific operations
 
-// createAWSCreateClusterHandler creates AWS-specific cluster configuration
-func CreateAWSCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var content strings.Builder
-		content.WriteString("AWS Cluster Creation (Placeholder)\n\n")
-		content.WriteString("This tool would create AWS-specific cluster resources including:\n")
-		content.WriteString("- AWSCluster resource with VPC, subnet, and security group configuration\n")
-		content.WriteString("- IAM roles and policies for cluster components\n")
-		content.WriteString("- S3 buckets for OIDC discovery (if using IRSA)\n")
-		content.WriteString("- Load balancers for API server access\n\n")
-		content.WriteString("Required parameters would include:\n")
-		content.WriteString("- Region\n")
-		content.WriteString("- VPC CIDR\n")
-		content.WriteString("- Availability zones\n")
-		content.WriteString("- Instance types\n")
-		content.WriteString("- SSH key name\n")
+// CreateAWSCreateClusterHandler creates AWS-specific cluster configuration (placeholder)
+func CreateAWSCreateClusterHandler(_ *ServerContext) server.ToolHandlerFunc {
+	return buildPlaceholderHandler("AWS Cluster Creation (Placeholder)\n\n" +
+		"This tool would create AWS-specific cluster resources including:\n" +
+		"- AWSCluster resource with VPC, subnet, and security group configuration\n" +
+		"- IAM roles and policies for cluster components\n" +
+		"- S3 buckets for OIDC discovery (if using IRSA)\n" +
+		"- Load balancers for API server access\n\n" +
+		"Required parameters would include:\n" +
+		"- Region\n" +
+		"- VPC CIDR\n" +
+		"- Availability zones\n" +
+		"- Instance types\n" +
+		"- SSH key name\n")
+}
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+// CreateAWSUpdateVPCHandler updates AWS VPC configuration (placeholder)
+func CreateAWSUpdateVPCHandler(_ *ServerContext) server.ToolHandlerFunc {
+	return buildPlaceholderHandler("AWS VPC Update (Placeholder)\n\n" +
+		"This tool would update AWS VPC configuration for CAPI clusters.\n" +
+		"Operations would include:\n" +
+		"- Adding/removing subnets\n" +
+		"- Updating route tables\n" +
+		"- Modifying security group rules\n" +
+		"- Configuring VPC peering\n\n" +
+		"Note: VPC updates must be done carefully to avoid disrupting running clusters.\n")
+}
+
+// CreateAWSManageSecurityGroupsHandler manages AWS security groups (placeholder)
+func CreateAWSManageSecurityGroupsHandler(_ *ServerContext) server.ToolHandlerFunc {
+	return buildPlaceholderHandler("AWS Security Groups Management (Placeholder)\n\n" +
+		"This tool would manage security groups for CAPI AWS clusters.\n" +
+		"Operations would include:\n" +
+		"- Adding/removing ingress rules\n" +
+		"- Adding/removing egress rules\n" +
+		"- Creating new security groups\n" +
+		"- Attaching security groups to instances\n\n" +
+		"Common use cases:\n" +
+		"- Opening ports for additional services\n" +
+		"- Restricting access to specific IP ranges\n" +
+		"- Enabling inter-cluster communication\n")
+}
+
+// writeAWSClusterBasicInfo writes basic cluster status and infrastructure info to the builder.
+func writeAWSClusterBasicInfo(w *strings.Builder, cluster *clusterv1.Cluster) {
+	w.WriteString("Cluster Information:\n")
+	fmt.Fprintf(w, "  Phase: %s\n", cluster.Status.Phase)
+	fmt.Fprintf(w, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
+	fmt.Fprintf(w, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
+	w.WriteString("\nInfrastructure:\n")
+	fmt.Fprintf(w, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
+	fmt.Fprintf(w, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
+	fmt.Fprintf(w, "  API Version: %s\n", cluster.Spec.InfrastructureRef.APIVersion)
+}
+
+// writeAWSNetworkConfig writes network configuration details to the builder if present.
+func writeAWSNetworkConfig(w *strings.Builder, cluster *clusterv1.Cluster) {
+	if cluster.Spec.ClusterNetwork == nil {
+		return
+	}
+	w.WriteString("\nNetwork Configuration:\n")
+	if cluster.Spec.ClusterNetwork.Pods != nil && len(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 {
+		fmt.Fprintf(w, "  Pod CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks, ", "))
+	}
+	if cluster.Spec.ClusterNetwork.Services != nil && len(cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
+		fmt.Fprintf(w, "  Service CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Services.CIDRBlocks, ", "))
 	}
 }
 
-// createAWSUpdateVPCHandler updates AWS VPC configuration
-func CreateAWSUpdateVPCHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var content strings.Builder
-		content.WriteString("AWS VPC Update (Placeholder)\n\n")
-		content.WriteString("This tool would update AWS VPC configuration for CAPI clusters.\n")
-		content.WriteString("Operations would include:\n")
-		content.WriteString("- Adding/removing subnets\n")
-		content.WriteString("- Updating route tables\n")
-		content.WriteString("- Modifying security group rules\n")
-		content.WriteString("- Configuring VPC peering\n\n")
-		content.WriteString("Note: VPC updates must be done carefully to avoid disrupting running clusters.\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+// writeAWSConditions writes cluster conditions to the builder if any exist.
+func writeAWSConditions(w *strings.Builder, cluster *clusterv1.Cluster) {
+	if len(cluster.Status.Conditions) == 0 {
+		return
 	}
-}
-
-// createAWSManageSecurityGroupsHandler manages AWS security groups
-func CreateAWSManageSecurityGroupsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var content strings.Builder
-		content.WriteString("AWS Security Groups Management (Placeholder)\n\n")
-		content.WriteString("This tool would manage security groups for CAPI AWS clusters.\n")
-		content.WriteString("Operations would include:\n")
-		content.WriteString("- Adding/removing ingress rules\n")
-		content.WriteString("- Adding/removing egress rules\n")
-		content.WriteString("- Creating new security groups\n")
-		content.WriteString("- Attaching security groups to instances\n\n")
-		content.WriteString("Common use cases:\n")
-		content.WriteString("- Opening ports for additional services\n")
-		content.WriteString("- Restricting access to specific IP ranges\n")
-		content.WriteString("- Enabling inter-cluster communication\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+	w.WriteString("\nConditions:\n")
+	for _, condition := range cluster.Status.Conditions {
+		fmt.Fprintf(w, "  - %s: %s", condition.Type, condition.Status)
+		if condition.Reason != "" {
+			fmt.Fprintf(w, " (%s)", condition.Reason)
+		}
+		w.WriteString("\n")
 	}
 }

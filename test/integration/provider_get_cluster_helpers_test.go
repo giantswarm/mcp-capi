@@ -6,34 +6,45 @@ import (
 	"github.com/giantswarm/mcp-capi/test/harness"
 )
 
-func TestCapiVSphereGetCluster(t *testing.T) {
+// providerGetClusterConfig holds the provider-specific parameters for the get cluster test suite.
+type providerGetClusterConfig struct {
+	provider      string
+	toolName      string
+	managedKind   string
+	clusterPrefix string
+}
+
+// runProviderGetClusterTests runs the standard set of get-cluster tests for a provider.
+func runProviderGetClusterTests(t *testing.T, cfg providerGetClusterConfig) {
+	t.Helper()
 	t.Parallel()
 
-	t.Run("should get vSphere cluster details", func(t *testing.T) {
+	t.Run("should get "+cfg.provider+" cluster details", func(t *testing.T) {
 		t.Parallel()
 		namespace := testNamespace
+		clusterName := "my-" + cfg.provider + "-cluster"
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			Cluster(namespace, "my-vsphere-cluster").WithProvider("vsphere").Create().
-			ToolCall("capi_vsphere_get_cluster").
+			Cluster(namespace, clusterName).WithProvider(cfg.provider).Create().
+			ToolCall(cfg.toolName).
 			WithArg("namespace", namespace).
-			WithArg("name", "my-vsphere-cluster").
-			AssertContent("vsphere_cluster_details.golden").
+			WithArg("name", clusterName).
+			AssertContent(cfg.provider + "_cluster_details.golden").
 			Execute()
 	})
 
-	t.Run("should error for non-vSphere cluster", func(t *testing.T) {
+	t.Run("should error for non-"+cfg.provider+" cluster", func(t *testing.T) {
 		t.Parallel()
 		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "my-aws-cluster").WithProvider("aws").Create().
-			ToolCall("capi_vsphere_get_cluster").
+			ToolCall(cfg.toolName).
 			WithArg("namespace", namespace).
 			WithArg("name", "my-aws-cluster").
-			AssertError("not_vsphere_cluster.golden").
+			AssertError("not_" + cfg.provider + "_cluster.golden").
 			Execute()
 	})
 
@@ -43,7 +54,7 @@ func TestCapiVSphereGetCluster(t *testing.T) {
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			ToolCall("capi_vsphere_get_cluster").
+			ToolCall(cfg.toolName).
 			WithArg("namespace", namespace).
 			WithArg("name", "nonexistent-cluster").
 			AssertError("not_found.golden").
@@ -54,7 +65,7 @@ func TestCapiVSphereGetCluster(t *testing.T) {
 		t.Parallel()
 
 		harness.New(t).
-			ToolCall("capi_vsphere_get_cluster").
+			ToolCall(cfg.toolName).
 			WithArg("name", "my-cluster").
 			AssertError("missing_namespace.golden").
 			Execute()
@@ -66,9 +77,24 @@ func TestCapiVSphereGetCluster(t *testing.T) {
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			ToolCall("capi_vsphere_get_cluster").
+			ToolCall(cfg.toolName).
 			WithArg("namespace", namespace).
 			AssertError("missing_name.golden").
+			Execute()
+	})
+
+	t.Run("should accept "+cfg.managedKind+" kind", func(t *testing.T) {
+		t.Parallel()
+		namespace := testNamespace
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "my-managed-cluster").
+			WithCustomInfraRef(cfg.managedKind, "my-managed-cluster").Create().
+			ToolCall(cfg.toolName).
+			WithArg("namespace", namespace).
+			WithArg("name", "my-managed-cluster").
+			AssertContent(cfg.provider + "_managed_cluster_details.golden").
 			Execute()
 	})
 
@@ -79,7 +105,7 @@ func TestCapiVSphereGetCluster(t *testing.T) {
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "no-infra-cluster").Create().
-			ToolCall("capi_vsphere_get_cluster").
+			ToolCall(cfg.toolName).
 			WithArg("namespace", namespace).
 			WithArg("name", "no-infra-cluster").
 			AssertError("nil_infra_ref.golden").

@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
@@ -13,71 +15,29 @@ import (
 
 // vSphere Provider Tools
 
-// createVSphereListClustersHandler lists vSphere clusters
+// CreateVSphereListClustersHandler lists vSphere clusters
 func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, _ := arguments["namespace"].(string)
-
-		// List all clusters
-		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list clusters: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString("vSphere Clusters:\n\n")
-
-		vsphereClusterCount := 0
-		for _, cluster := range clusters.Items {
-			// Check if this is a vSphere cluster
-			if cluster.Spec.InfrastructureRef != nil &&
-				cluster.Spec.InfrastructureRef.Kind == "VSphereCluster" {
-				vsphereClusterCount++
-
-				content.WriteString(fmt.Sprintf("Cluster: %s/%s\n", cluster.Namespace, cluster.Name))
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind))
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
-
-				// Try to get provider information
-				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
-				if provider == capi.ProviderVSphere {
-					content.WriteString("  Provider: vSphere (confirmed)\n")
-				}
-
-				content.WriteString("\n")
-			}
-		}
-
-		if vsphereClusterCount == 0 {
-			content.WriteString("No vSphere clusters found.\n")
-		} else {
-			content.WriteString(fmt.Sprintf("Total vSphere clusters: %d\n", vsphereClusterCount))
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return buildListClustersHandler(serverCtx, providerListConfig{
+		header:        "vSphere Clusters:\n\n",
+		infraKinds:    []string{"VSphereCluster"},
+		provider:      capi.ProviderVSphere,
+		providerLabel: "vSphere",
+		noneMsg:       "No vSphere clusters found.\n",
+		totalFmt:      "Total vSphere clusters: %d\n",
+	})
 }
 
-// createVSphereGetClusterHandler gets details of a vSphere cluster
+// CreateVSphereGetClusterHandler gets details of a vSphere cluster
 func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		// Get the cluster
@@ -93,18 +53,18 @@ func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("vSphere Cluster: %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "vSphere Cluster: %s/%s\n\n", namespace, name)
 
 		// Basic cluster info
 		content.WriteString("Cluster Information:\n")
-		content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-		content.WriteString(fmt.Sprintf("  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady))
-		content.WriteString(fmt.Sprintf("  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady))
+		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
+		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
 
 		// Infrastructure reference
 		content.WriteString("\nInfrastructure:\n")
-		content.WriteString(fmt.Sprintf("  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind))
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Spec.InfrastructureRef.Name))
+		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
+		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
 
 		content.WriteString("\nNote: For detailed vSphere infrastructure information (datacenter, datastore, etc.),\n")
 		content.WriteString("you would need to query the VSphereCluster resource directly.\n")
@@ -120,46 +80,30 @@ func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 	}
 }
 
-// createVSphereManageVMsHandler manages vSphere VMs
-func CreateVSphereManageVMsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var content strings.Builder
-		content.WriteString("vSphere VM Management (Placeholder)\n\n")
-		content.WriteString("This tool would manage vSphere VMs for CAPI clusters.\n")
-		content.WriteString("Operations would include:\n")
-		content.WriteString("- Listing VMs in a cluster\n")
-		content.WriteString("- Power operations (on/off/restart)\n")
-		content.WriteString("- VM cloning from templates\n")
-		content.WriteString("- Resource allocation changes\n")
-		content.WriteString("- Snapshot management\n\n")
-		content.WriteString("vSphere-specific features:\n")
-		content.WriteString("- DRS rules configuration\n")
-		content.WriteString("- Storage vMotion\n")
-		content.WriteString("- VM folder organization\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+// CreateVSphereManageVMsHandler manages vSphere VMs (placeholder)
+func CreateVSphereManageVMsHandler(_ *ServerContext) server.ToolHandlerFunc {
+	return buildPlaceholderHandler("vSphere VM Management (Placeholder)\n\n" +
+		"This tool would manage vSphere VMs for CAPI clusters.\n" +
+		"Operations would include:\n" +
+		"- Listing VMs in a cluster\n" +
+		"- Power operations (on/off/restart)\n" +
+		"- VM cloning from templates\n" +
+		"- Resource allocation changes\n" +
+		"- Snapshot management\n\n" +
+		"vSphere-specific features:\n" +
+		"- DRS rules configuration\n" +
+		"- Storage vMotion\n" +
+		"- VM folder organization\n")
 }
 
-// Helper function to filter clusters by provider
+// filterClustersByProvider filters clusters by infrastructure provider kinds.
 func filterClustersByProvider(clusters *clusterv1.ClusterList, providerKinds []string) []*clusterv1.Cluster {
-	var filtered []*clusterv1.Cluster
+	filtered := make([]*clusterv1.Cluster, 0, len(clusters.Items))
 	for i := range clusters.Items {
 		cluster := &clusters.Items[i]
-		if cluster.Spec.InfrastructureRef != nil {
-			for _, kind := range providerKinds {
-				if cluster.Spec.InfrastructureRef.Kind == kind {
-					filtered = append(filtered, cluster)
-					break
-				}
-			}
+		if cluster.Spec.InfrastructureRef != nil &&
+			slices.Contains(providerKinds, cluster.Spec.InfrastructureRef.Kind) {
+			filtered = append(filtered, cluster)
 		}
 	}
 	return filtered

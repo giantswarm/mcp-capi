@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -34,6 +34,9 @@ import (
 const (
 	kubeconfigContextName = "k8senv"
 	acquireTimeout        = 5 * time.Minute
+
+	// infraAPIVersion is the API version for CAPI infrastructure references.
+	infraAPIVersion = "infrastructure.cluster.x-k8s.io/v1beta1"
 )
 
 // testUIDNamespace is a fixed UUID v4 used as the namespace for generating
@@ -47,11 +50,11 @@ func deterministicUID(name string) types.UID {
 
 var (
 	// mgr is the package-level k8senv manager singleton.
-	// mgr and mgrErr are written once inside mgrOnce.Do() and are read-only thereafter.
+	// mgr and errMgr are written once inside mgrOnce.Do() and are read-only thereafter.
 	// The sync.Once provides the happens-before guarantee for all subsequent reads.
 	mgr     k8senv.Manager
 	mgrOnce sync.Once
-	mgrErr  error
+	errMgr  error
 )
 
 // InitManager initializes the k8senv manager with CAPI CRDs.
@@ -68,11 +71,11 @@ var (
 func InitManager() error {
 	mgrOnce.Do(func() {
 		// Silence k8senv logs during tests
-		k8senv.SetLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
+		k8senv.SetLogger(slog.New(slog.DiscardHandler))
 
 		crdPath, err := getCRDPath()
 		if err != nil {
-			mgrErr = fmt.Errorf("getting CRD path: %w", err)
+			errMgr = fmt.Errorf("getting CRD path: %w", err)
 			return
 		}
 
@@ -82,11 +85,11 @@ func InitManager() error {
 		if raw := os.Getenv("HARNESS_POOL_SIZE"); raw != "" {
 			v, err := strconv.Atoi(raw)
 			if err != nil {
-				mgrErr = fmt.Errorf("invalid HARNESS_POOL_SIZE %q: %w", raw, err)
+				errMgr = fmt.Errorf("invalid HARNESS_POOL_SIZE %q: %w", raw, err)
 				return
 			}
 			if v <= 0 {
-				mgrErr = fmt.Errorf("invalid HARNESS_POOL_SIZE %q: must be a positive integer", raw)
+				errMgr = fmt.Errorf("invalid HARNESS_POOL_SIZE %q: must be a positive integer", raw)
 				return
 			}
 			poolSize = v
@@ -101,11 +104,11 @@ func InitManager() error {
 		defer cancel()
 
 		if err := mgr.Initialize(ctx); err != nil {
-			mgrErr = fmt.Errorf("initializing k8senv: %w", err)
+			errMgr = fmt.Errorf("initializing k8senv: %w", err)
 			return
 		}
 	})
-	return mgrErr
+	return errMgr
 }
 
 // ShutdownManager stops the k8senv manager and releases all resources.
@@ -332,70 +335,40 @@ func providerInfraRef(provider string) (apiVersion, kind string) {
 	case "aws":
 		return "infrastructure.cluster.x-k8s.io/v1beta2", "AWSCluster"
 	case "azure":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "AzureCluster"
+		return infraAPIVersion, "AzureCluster"
 	case "gcp":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "GCPCluster"
+		return infraAPIVersion, "GCPCluster"
 	case "vsphere":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "VSphereCluster"
+		return infraAPIVersion, "VSphereCluster"
 	case "vcd":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "VCDCluster"
+		return infraAPIVersion, "VCDCluster"
 	default:
 		return "", ""
 	}
 }
 
-// createClusterFull creates a fully-configured CAPI Cluster in minimal API calls.
-// It sets InfrastructureRef and Topology on the initial Create (avoiding Get+Update),
-// and combines phase + conditions into a single Status().Update() when both are present.
-func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOptions) {
-	te.t.Helper()
-
-	// Build labels: always include ClusterNameLabel, then merge caller-supplied labels
-	clusterLabels := map[string]string{
-		clusterv1.ClusterNameLabel: opts.name,
-	}
-	for k, v := range opts.labels {
-		clusterLabels[k] = v
-	}
-
-	// Build ClusterNetwork: use custom config if provided, otherwise default pod CIDR
-	clusterNetwork := &clusterv1.ClusterNetwork{
-		Pods: &clusterv1.NetworkRanges{
-			CIDRBlocks: []string{"192.168.0.0/16"},
-		},
-	}
-	if opts.network != nil {
-		clusterNetwork = &clusterv1.ClusterNetwork{}
-		if len(opts.network.podCIDRs) > 0 {
-			clusterNetwork.Pods = &clusterv1.NetworkRanges{
-				CIDRBlocks: opts.network.podCIDRs,
-			}
-		}
-		if len(opts.network.serviceCIDRs) > 0 {
-			clusterNetwork.Services = &clusterv1.NetworkRanges{
-				CIDRBlocks: opts.network.serviceCIDRs,
-			}
+// buildClusterNetwork returns the ClusterNetwork for a test cluster.
+func buildClusterNetwork(opts clusterCreateOptions) *clusterv1.ClusterNetwork {
+	if opts.network == nil {
+		return &clusterv1.ClusterNetwork{
+			Pods: &clusterv1.NetworkRanges{CIDRBlocks: []string{"192.168.0.0/16"}},
 		}
 	}
-
-	cluster := &clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        opts.name,
-			Namespace:   opts.namespace,
-			Labels:      clusterLabels,
-			Annotations: opts.annotations,
-		},
-		Spec: clusterv1.ClusterSpec{
-			Paused:         opts.paused,
-			ClusterNetwork: clusterNetwork,
-		},
+	net := &clusterv1.ClusterNetwork{}
+	if len(opts.network.podCIDRs) > 0 {
+		net.Pods = &clusterv1.NetworkRanges{CIDRBlocks: opts.network.podCIDRs}
 	}
+	if len(opts.network.serviceCIDRs) > 0 {
+		net.Services = &clusterv1.NetworkRanges{CIDRBlocks: opts.network.serviceCIDRs}
+	}
+	return net
+}
 
-	// Set infrastructure ref before Create
+// setInfrastructureRef sets the InfrastructureRef on a cluster based on the create options.
+func setInfrastructureRef(cluster *clusterv1.Cluster, opts clusterCreateOptions) {
 	if opts.customInfraRef != nil {
-		// Custom InfrastructureRef overrides provider
 		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIVersion,
 			Kind:       opts.customInfraRef.kind,
 			Name:       opts.customInfraRef.name,
 			Namespace:  opts.namespace,
@@ -410,8 +383,32 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 			}
 		}
 	}
+}
 
-	// Set version via Topology before Create (avoids Get+Update round-trip)
+// createClusterFull creates a fully-configured CAPI Cluster in minimal API calls.
+// It sets InfrastructureRef and Topology on the initial Create (avoiding Get+Update),
+// and combines phase + conditions into a single Status().Update() when both are present.
+func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOptions) {
+	te.t.Helper()
+
+	clusterLabels := map[string]string{clusterv1.ClusterNameLabel: opts.name}
+	maps.Copy(clusterLabels, opts.labels)
+
+	cluster := &clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        opts.name,
+			Namespace:   opts.namespace,
+			Labels:      clusterLabels,
+			Annotations: opts.annotations,
+		},
+		Spec: clusterv1.ClusterSpec{
+			Paused:         opts.paused,
+			ClusterNetwork: buildClusterNetwork(opts),
+		},
+	}
+
+	setInfrastructureRef(cluster, opts)
+
 	if opts.version != "" {
 		cluster.Spec.Topology = &clusterv1.Topology{
 			Class:   "default",
@@ -423,7 +420,6 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 		te.t.Fatalf("failed to create cluster %s/%s: %v", opts.namespace, opts.name, err)
 	}
 
-	// Combine phase + conditions + status booleans into a single Status().Update() when possible
 	if opts.needsStatusUpdate() {
 		if opts.phase != "" {
 			cluster.Status.Phase = opts.phase
@@ -497,7 +493,7 @@ func (te *testEnv) createKubeadmControlPlane(ctx context.Context, namespace, nam
 			Replicas: &replicas,
 			MachineTemplate: controlplanev1.KubeadmControlPlaneMachineTemplate{
 				InfrastructureRef: corev1.ObjectReference{
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+					APIVersion: infraAPIVersion,
 					Kind:       "GenericInfrastructureMachineTemplate",
 					Name:       name + "-machine-template",
 				},
@@ -588,7 +584,7 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 
 	if opts.infraRefKind != "" {
 		md.Spec.Template.Spec.InfrastructureRef = corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIVersion,
 			Kind:       opts.infraRefKind,
 			Name:       opts.infraRefName,
 		}
@@ -683,7 +679,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 
 	if opts.infraRefKind != "" {
 		ms.Spec.Template.Spec.InfrastructureRef = corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIVersion,
 			Kind:       opts.infraRefKind,
 			Name:       opts.infraRefName,
 		}
@@ -921,7 +917,7 @@ func (te *testEnv) createMachineCustom(ctx context.Context, opts machineCustomCr
 
 	if opts.infraRefKind != "" {
 		machine.Spec.InfrastructureRef = corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIVersion,
 			Kind:       opts.infraRefKind,
 			Name:       opts.infraRefName,
 		}
@@ -1014,5 +1010,8 @@ func writeKubeconfig(config *rest.Config, outputPath string) error {
 	}
 
 	// Write to file
-	return clientcmd.WriteToFile(kubeconfig, outputPath)
+	if err := clientcmd.WriteToFile(kubeconfig, outputPath); err != nil {
+		return fmt.Errorf("writing kubeconfig to %s: %w", outputPath, err)
+	}
+	return nil
 }

@@ -15,7 +15,7 @@ type TestingT interface {
 
 	// Cleanup registers a function to be called when the test completes.
 	// Cleanup functions are called in last-in-first-out order.
-	Cleanup(func())
+	Cleanup(f func())
 
 	// Log formats its arguments using default formatting and records the text in the log.
 	Log(args ...any)

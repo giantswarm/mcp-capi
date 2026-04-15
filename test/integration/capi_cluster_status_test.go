@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/giantswarm/mcp-capi/test/harness"
@@ -32,7 +31,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("returns error for non-existent cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -45,7 +44,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status of a basic cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -59,7 +58,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with provider and phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -73,7 +72,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with version from topology", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -87,7 +86,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with partial machine readiness", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -101,7 +100,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with all machines ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -115,7 +114,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with no machines ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -129,14 +128,16 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "healthy-cluster").WithProvider("aws").
 			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
-			WithCondition("ControlPlaneReady").True().Reason("ControlPlaneInitialized").Message("Control plane is ready").Done().
-			WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
+			WithCondition("ControlPlaneReady").
+			True().Reason("ControlPlaneInitialized").Message("Control plane is ready").Done().
+			WithCondition("InfrastructureReady").
+			True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
 			Create().
 			ToolCall("capi_cluster_status").
 			WithArg("namespace", namespace).
@@ -147,14 +148,16 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with unhealthy conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
 			Cluster(namespace, "unhealthy-cluster").WithProvider("azure").
 			WithCondition("Ready").False().Reason("ClusterNotReady").Message("Cluster has issues").Done().
-			WithCondition("ControlPlaneReady").False().Reason("ControlPlaneUnhealthy").Message("Control plane has unhealthy replicas").Done().
-			WithCondition("InfrastructureReady").False().Reason("WaitingForInfrastructure").Message("Infrastructure provisioning failed").Done().
+			WithCondition("ControlPlaneReady").
+			False().Reason("ControlPlaneUnhealthy").Message("Control plane has unhealthy replicas").Done().
+			WithCondition("InfrastructureReady").
+			False().Reason("WaitingForInfrastructure").Message("Infrastructure provisioning failed").Done().
 			Create().
 			ToolCall("capi_cluster_status").
 			WithArg("namespace", namespace).
@@ -165,7 +168,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with version from control plane", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -182,7 +185,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with version precedence over control plane", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -200,14 +203,17 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with all properties", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			Cluster(namespace, "full-cluster").WithProvider("aws").WithPhase("Provisioned").WithVersion("v1.29.0").WithMachines(3, 3).
+			Cluster(namespace, "full-cluster").
+			WithProvider("aws").WithPhase("Provisioned").WithVersion("v1.29.0").WithMachines(3, 3).
 			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
-			WithCondition("ControlPlaneReady").True().Reason("ControlPlaneInitialized").Message("Control plane is ready").Done().
-			WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
+			WithCondition("ControlPlaneReady").
+			True().Reason("ControlPlaneInitialized").Message("Control plane is ready").Done().
+			WithCondition("InfrastructureReady").
+			True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
 			Create().
 			ToolCall("capi_cluster_status").
 			WithArg("namespace", namespace).
@@ -218,7 +224,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with unknown infrastructure provider", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -234,7 +240,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with non-kubeadm control plane", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -251,7 +257,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with missing control plane resource", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -266,46 +272,11 @@ func TestCapiClusterStatus(t *testing.T) {
 			Execute()
 	})
 
-	for _, provider := range providers {
-		t.Run(fmt.Sprintf("gets %s cluster status with all properties", provider), func(t *testing.T) {
-			t.Parallel()
-			namespace := "test-clusters"
-
-			harness.New(t).
-				CreateNamespace(namespace).
-				Cluster(namespace, provider+"-full-cluster").WithProvider(provider).WithPhase("Provisioned").WithVersion("v1.29.0").WithMachines(3, 2).
-				WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
-				WithCondition("ControlPlaneReady").True().Reason("ControlPlaneInitialized").Message("Control plane is ready").Done().
-				WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
-				Create().
-				ToolCall("capi_cluster_status").
-				WithArg("namespace", namespace).
-				WithArg("name", provider+"-full-cluster").
-				AssertContent(provider + "_all_properties.golden").
-				Execute()
-		})
-
-		t.Run(fmt.Sprintf("gets %s cluster status with version from control plane", provider), func(t *testing.T) {
-			t.Parallel()
-			namespace := "test-clusters"
-
-			harness.New(t).
-				CreateNamespace(namespace).
-				Cluster(namespace, provider+"-kcp-cluster").
-				WithProvider(provider).
-				WithKubeadmControlPlane().Version("v1.30.0").Done().
-				Create().
-				ToolCall("capi_cluster_status").
-				WithArg("namespace", namespace).
-				WithArg("name", provider+"-kcp-cluster").
-				AssertContent(provider + "_control_plane_version.golden").
-				Execute()
-		})
-	}
+	runProviderClusterDetailsTests(t, "capi_cluster_status", "gets")
 
 	t.Run("should show paused cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -319,7 +290,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("should show cluster with labels and annotations", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -336,7 +307,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with mixed conditions ready true cp false", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -353,7 +324,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with mixed conditions ready false infra true", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -370,7 +341,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with no conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -385,7 +356,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("gets status with nil control plane ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -402,7 +373,7 @@ func TestCapiClusterStatus(t *testing.T) {
 
 	t.Run("shows status for cluster with nil infrastructure ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

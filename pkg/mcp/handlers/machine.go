@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,219 +10,133 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	v1 "k8s.io/api/core/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
-// createListMachinesHandler creates a handler for listing CAPI machines
-func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+// listResult holds the items and count from a list API call.
+type listResult struct {
+	count  int
+	format func(w *strings.Builder)
+}
+
+// newListHandler creates a handler that lists resources with optional cluster name filtering.
+func newListHandler(
+	serverCtx *ServerContext,
+	resourceName string,
+	listFn func(ctx context.Context, c *capi.Client, ns, cluster string) (*listResult, error),
+) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		clusterName, _ := arguments["clusterName"].(string)
 
-		machines, err := serverCtx.CAPIClient.ListMachines(ctx, namespace, clusterName)
+		result, err := listFn(ctx, serverCtx.CAPIClient, namespace, clusterName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to list machines: %w", err)
+			return nil, fmt.Errorf("failed to list %s: %w", resourceName, err)
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d machines", len(machines.Items)))
+		fmt.Fprintf(&content, "Found %d %s", result.count, resourceName)
 		if clusterName != "" {
-			content.WriteString(fmt.Sprintf(" in cluster %s", clusterName))
+			content.WriteString(" in cluster " + clusterName)
 		}
 		content.WriteString(":\n\n")
+		result.format(&content)
 
-		for _, machine := range machines.Items {
-			content.WriteString(fmt.Sprintf("Machine: %s/%s\n", machine.Namespace, machine.Name))
-			content.WriteString(fmt.Sprintf("  Cluster: %s\n", machine.Spec.ClusterName))
-			if machine.Status.Phase != "" {
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", machine.Status.Phase))
-			}
-			if machine.Status.NodeRef != nil {
-				content.WriteString(fmt.Sprintf("  Node: %s\n", machine.Status.NodeRef.Name))
-			}
-			if machine.Spec.ProviderID != nil {
-				content.WriteString(fmt.Sprintf("  Provider ID: %s\n", *machine.Spec.ProviderID))
-			}
-			// Check if machine has Ready condition
-			ready := false
-			for _, condition := range machine.Status.Conditions {
-				if condition.Type == "Ready" && condition.Status == "True" {
-					ready = true
-					break
-				}
-			}
-			content.WriteString(fmt.Sprintf("  Ready: %v\n", ready))
-			content.WriteString("\n")
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(content.String()), nil
 	}
 }
 
-// createListMachineDeploymentsHandler creates a handler for listing CAPI machine deployments
-func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+// newGetHandler creates a handler that gets a single resource by namespace and name.
+func newGetHandler(
+	serverCtx *ServerContext,
+	resourceName string,
+	getFn func(ctx context.Context, c *capi.Client, ns, name string) (string, error),
+) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		clusterName, _ := arguments["clusterName"].(string)
-
-		mds, err := serverCtx.CAPIClient.ListMachineDeployments(ctx, namespace, clusterName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list machine deployments: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d machine deployments", len(mds.Items)))
-		if clusterName != "" {
-			content.WriteString(fmt.Sprintf(" in cluster %s", clusterName))
-		}
-		content.WriteString(":\n\n")
-
-		for _, md := range mds.Items {
-			content.WriteString(fmt.Sprintf("MachineDeployment: %s/%s\n", md.Namespace, md.Name))
-			content.WriteString(fmt.Sprintf("  Cluster: %s\n", md.Spec.ClusterName))
-			if md.Spec.Replicas != nil {
-			content.WriteString(fmt.Sprintf("  Replicas: %d\n", *md.Spec.Replicas))
-		}
-			if md.Status.Replicas > 0 {
-				content.WriteString(fmt.Sprintf("  Status: %d ready / %d updated / %d available\n",
-					md.Status.ReadyReplicas,
-					md.Status.UpdatedReplicas,
-					md.Status.AvailableReplicas))
-			}
-			if md.Status.Phase != "" {
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", md.Status.Phase))
-			}
-			if md.Spec.Template.Spec.Version != nil {
-				content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", *md.Spec.Template.Spec.Version))
-			}
-			content.WriteString("\n")
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
-}
-
-// createGetMachineHandler creates a handler for getting detailed machine information
-func CreateGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
-		machine, err := serverCtx.CAPIClient.GetMachine(ctx, namespace, name)
+		text, err := getFn(ctx, serverCtx.CAPIClient, namespace, name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get machine: %w", err)
+			return nil, fmt.Errorf("failed to get %s: %w", resourceName, err)
 		}
 
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Machine: %s/%s\n\n", machine.Namespace, machine.Name))
-
-		// Basic information
-		content.WriteString("Basic Information:\n")
-		content.WriteString(fmt.Sprintf("  Cluster: %s\n", machine.Spec.ClusterName))
-		if machine.Status.Phase != "" {
-			content.WriteString(fmt.Sprintf("  Phase: %s\n", machine.Status.Phase))
-		}
-		if machine.Spec.Version != nil {
-			content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", *machine.Spec.Version))
-		}
-		if machine.Spec.ProviderID != nil {
-			content.WriteString(fmt.Sprintf("  Provider ID: %s\n", *machine.Spec.ProviderID))
-		}
-
-		// Node information
-		if machine.Status.NodeRef != nil {
-			content.WriteString(fmt.Sprintf("\nNode Information:\n"))
-			content.WriteString(fmt.Sprintf("  Node Name: %s\n", machine.Status.NodeRef.Name))
-			content.WriteString(fmt.Sprintf("  Node UID: %s\n", machine.Status.NodeRef.UID))
-		}
-
-		// Bootstrap information
-		if machine.Spec.Bootstrap.ConfigRef != nil {
-			content.WriteString(fmt.Sprintf("\nBootstrap:\n"))
-			content.WriteString(fmt.Sprintf("  Kind: %s\n", machine.Spec.Bootstrap.ConfigRef.Kind))
-			content.WriteString(fmt.Sprintf("  Name: %s\n", machine.Spec.Bootstrap.ConfigRef.Name))
-		}
-
-		// Infrastructure information
-		if machine.Spec.InfrastructureRef.Kind != "" {
-			content.WriteString(fmt.Sprintf("\nInfrastructure:\n"))
-			content.WriteString(fmt.Sprintf("  Kind: %s\n", machine.Spec.InfrastructureRef.Kind))
-			content.WriteString(fmt.Sprintf("  Name: %s\n", machine.Spec.InfrastructureRef.Name))
-		}
-
-		// Conditions
-		if len(machine.Status.Conditions) > 0 {
-			content.WriteString("\nConditions:\n")
-			for _, condition := range machine.Status.Conditions {
-				content.WriteString(fmt.Sprintf("  - Type: %s\n", condition.Type))
-				content.WriteString(fmt.Sprintf("    Status: %s\n", condition.Status))
-				if condition.Reason != "" {
-					content.WriteString(fmt.Sprintf("    Reason: %s\n", condition.Reason))
-				}
-				if condition.Message != "" {
-					content.WriteString(fmt.Sprintf("    Message: %s\n", condition.Message))
-				}
-			}
-		}
-
-		// Addresses
-		if len(machine.Status.Addresses) > 0 {
-			content.WriteString("\nAddresses:\n")
-			for _, addr := range machine.Status.Addresses {
-				content.WriteString(fmt.Sprintf("  - Type: %s, Address: %s\n", addr.Type, addr.Address))
-			}
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(text), nil
 	}
 }
 
-// createDeleteMachineHandler creates a handler for deleting CAPI machines
+// CreateListMachinesHandler creates a handler for listing CAPI machines
+func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return newListHandler(serverCtx, "machines",
+		func(ctx context.Context, c *capi.Client, ns, cluster string) (*listResult, error) {
+			machines, err := c.ListMachines(ctx, ns, cluster)
+			if err != nil {
+				return nil, err
+			}
+			return &listResult{
+				count: len(machines.Items),
+				format: func(w *strings.Builder) {
+					for i := range machines.Items {
+						formatMachineListItem(w, &machines.Items[i])
+					}
+				},
+			}, nil
+		})
+}
+
+// CreateListMachineDeploymentsHandler creates a handler for listing CAPI machine deployments
+func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return newListHandler(serverCtx, "machine deployments",
+		func(ctx context.Context, c *capi.Client, ns, cluster string) (*listResult, error) {
+			mds, err := c.ListMachineDeployments(ctx, ns, cluster)
+			if err != nil {
+				return nil, err
+			}
+			return &listResult{
+				count: len(mds.Items),
+				format: func(w *strings.Builder) {
+					for i := range mds.Items {
+						formatMachineDeploymentListItem(w, &mds.Items[i])
+					}
+				},
+			}, nil
+		})
+}
+
+// CreateGetMachineHandler creates a handler for getting detailed machine information
+func CreateGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
+	return newGetHandler(serverCtx, "machine",
+		func(ctx context.Context, c *capi.Client, ns, name string) (string, error) {
+			machine, err := c.GetMachine(ctx, ns, name)
+			if err != nil {
+				return "", err
+			}
+			return formatMachineDetails(machine), nil
+		})
+}
+
+// CreateDeleteMachineHandler creates a handler for deleting CAPI machines
 func CreateDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		force, _ := arguments["force"].(bool)
@@ -237,36 +152,29 @@ func CreateDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully initiated deletion of machine %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Successfully initiated deletion of machine %s/%s\n\n", namespace, name)
 		content.WriteString("Note: Machine deletion is asynchronous. The machine will be:\n")
 		content.WriteString("1. Drained (if it has a node)\n")
 		content.WriteString("2. Removed from the cluster\n")
 		content.WriteString("3. Infrastructure resources cleaned up\n\n")
 		content.WriteString("Monitor deletion progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_get_machine --namespace %s --name %s\n", namespace, name))
+		fmt.Fprintf(&content, "  capi_get_machine --namespace %s --name %s\n", namespace, name)
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(content.String()), nil
 	}
 }
 
-// createRemediateMachineHandler creates a handler for triggering machine remediation
+// CreateRemediateMachineHandler creates a handler for triggering machine remediation
 func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		// Get current machine status first
@@ -285,11 +193,11 @@ func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🔧 Triggered remediation for machine %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🔧 Triggered remediation for machine %s/%s\n\n", namespace, name)
 		content.WriteString("Current Machine Status:\n")
-		content.WriteString(fmt.Sprintf("  • Phase: %s\n", machine.Status.Phase))
+		fmt.Fprintf(&content, "  • Phase: %s\n", machine.Status.Phase)
 		if machine.Status.NodeRef != nil {
-			content.WriteString(fmt.Sprintf("  • Node: %s\n", machine.Status.NodeRef.Name))
+			fmt.Fprintf(&content, "  • Node: %s\n", machine.Status.NodeRef.Name)
 		}
 		content.WriteString("\nRemediation Process:\n")
 		content.WriteString("1. Machine will be marked for remediation\n")
@@ -299,133 +207,52 @@ func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 		content.WriteString("   - Node may be rebooted\n")
 		content.WriteString("   - Custom remediation may be applied\n\n")
 		content.WriteString("Monitor remediation progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_get_machine --namespace %s --name %s\n", namespace, name))
+		fmt.Fprintf(&content, "  capi_get_machine --namespace %s --name %s\n", namespace, name)
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(content.String()), nil
 	}
 }
 
-// createCreateMachineDeploymentHandler creates a handler for creating new machine deployments
+// CreateCreateMachineDeploymentHandler creates a handler for creating new machine deployments
 func CreateCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		name, ok := arguments["name"].(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
-		}
-		clusterName, ok := arguments["cluster_name"].(string)
-		if !ok || clusterName == "" {
-			return nil, fmt.Errorf("cluster_name argument is required")
-		}
-
-		// Get replicas
-		replicas := int32(1)
-		if r, ok := arguments["replicas"].(float64); ok {
-			replicas = int32(r)
-		}
-
-		// Get infrastructure reference
-		infraKind, _ := arguments["infra_kind"].(string)
-		infraName, _ := arguments["infra_name"].(string)
-		infraAPIVersion, _ := arguments["infra_api_version"].(string)
-
-		if infraKind == "" || infraName == "" {
-			return mcp.NewToolResultError("infra_kind and infra_name are required"), nil
-		}
-
-		// Get bootstrap reference
-		bootstrapKind, _ := arguments["bootstrap_kind"].(string)
-		bootstrapName, _ := arguments["bootstrap_name"].(string)
-		bootstrapAPIVersion, _ := arguments["bootstrap_api_version"].(string)
-
-		if bootstrapKind == "" || bootstrapName == "" {
-			return mcp.NewToolResultError("bootstrap_kind and bootstrap_name are required"), nil
-		}
-
-		version, _ := arguments["version"].(string)
-		if version == "" {
-			version = "v1.29.0" // Default version
+		opts, names, errResult := parseMachineDeploymentCreateArgs(arguments)
+		if errResult != nil {
+			return errResult, nil
 		}
 
 		// Create the machine deployment
-		md, err := serverCtx.CAPIClient.CreateMachineDeployment(ctx, capi.CreateMachineDeploymentOptions{
-			Namespace:   namespace,
-			Name:        name,
-			ClusterName: clusterName,
-			Replicas:    replicas,
-			InfrastructureRef: v1.ObjectReference{
-				Kind:       infraKind,
-				Name:       infraName,
-				APIVersion: infraAPIVersion,
-			},
-			BootstrapConfigRef: v1.ObjectReference{
-				Kind:       bootstrapKind,
-				Name:       bootstrapName,
-				APIVersion: bootstrapAPIVersion,
-			},
-			Version: version,
-		})
+		md, err := serverCtx.CAPIClient.CreateMachineDeployment(ctx, *opts)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to create machine deployment: %v", err)), nil
 		}
 
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully created machine deployment %s/%s\n\n", namespace, name))
-		content.WriteString("Configuration:\n")
-		content.WriteString(fmt.Sprintf("  • Cluster: %s\n", clusterName))
-		content.WriteString(fmt.Sprintf("  • Replicas: %d\n", replicas))
-		content.WriteString(fmt.Sprintf("  • Version: %s\n", version))
-		content.WriteString(fmt.Sprintf("  • Infrastructure: %s/%s\n", infraKind, infraName))
-		content.WriteString(fmt.Sprintf("  • Bootstrap: %s/%s\n", bootstrapKind, bootstrapName))
-		if md.Spec.MinReadySeconds != nil {
-			content.WriteString(fmt.Sprintf("  • Min Ready Seconds: %d\n", *md.Spec.MinReadySeconds))
-		}
-		content.WriteString("\nNote: Before creating a MachineDeployment, ensure you have:\n")
-		content.WriteString("1. Created the infrastructure template (e.g., AWSMachineTemplate)\n")
-		content.WriteString("2. Created the bootstrap config template (e.g., KubeadmConfigTemplate)\n\n")
-		content.WriteString("Monitor the deployment with:\n")
-		content.WriteString(fmt.Sprintf("  capi_list_machines --cluster %s\n", clusterName))
-		content.WriteString("\nScale the deployment with:\n")
-		content.WriteString(fmt.Sprintf("  capi_scale_machinedeployment --namespace %s --name %s --replicas <count>\n", namespace, name))
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		text := formatCreateMachineDeploymentResult(
+			opts.Namespace, opts.Name, opts.ClusterName, opts.Version,
+			names.infraKind, names.infraName, names.bootstrapKind, names.bootstrapName,
+			opts.Replicas, md,
+		)
+		return mcp.NewToolResultText(text), nil
 	}
 }
 
-// createScaleMachineDeploymentHandler creates a handler for scaling machine deployments
+// CreateScaleMachineDeploymentHandler creates a handler for scaling machine deployments
 func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		replicasFloat, ok := arguments["replicas"].(float64)
 		if !ok {
-			return nil, fmt.Errorf("replicas argument is required")
+			return nil, errors.New("replicas argument is required")
 		}
 		replicas := int32(replicasFloat)
 
@@ -435,18 +262,7 @@ func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get machine deployment: %v", err)), nil
 		}
 
-		var currentReplicas int32
-		found := false
-		for _, md := range list.Items {
-			if md.Name == name {
-				if md.Spec.Replicas != nil {
-					currentReplicas = *md.Spec.Replicas
-				}
-				found = true
-				break
-			}
-		}
-
+		currentReplicas, found := findMachineDeploymentReplicas(list.Items, name)
 		if !found {
 			return mcp.NewToolResultError(fmt.Sprintf("Machine deployment %s/%s not found", namespace, name)), nil
 		}
@@ -457,98 +273,25 @@ func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to scale machine deployment: %v", err)), nil
 		}
 
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully scaled machine deployment %s/%s\n\n", namespace, name))
-		content.WriteString("Scaling Operation:\n")
-		content.WriteString(fmt.Sprintf("  • Previous Replicas: %d\n", currentReplicas))
-		content.WriteString(fmt.Sprintf("  • New Replicas: %d\n", replicas))
-
-		if replicas > currentReplicas {
-			content.WriteString(fmt.Sprintf("  • Action: Scaling UP by %d nodes\n", replicas-currentReplicas))
-			content.WriteString("\nNew nodes will be:\n")
-			content.WriteString("1. Provisioned by the infrastructure provider\n")
-			content.WriteString("2. Bootstrapped with Kubernetes\n")
-			content.WriteString("3. Joined to the cluster\n")
-		} else if replicas < currentReplicas {
-			content.WriteString(fmt.Sprintf("  • Action: Scaling DOWN by %d nodes\n", currentReplicas-replicas))
-			content.WriteString("\nNodes will be:\n")
-			content.WriteString("1. Cordoned to prevent new workloads\n")
-			content.WriteString("2. Drained to move existing workloads\n")
-			content.WriteString("3. Removed from the cluster\n")
-			content.WriteString("4. Infrastructure resources cleaned up\n")
-		} else {
-			content.WriteString("  • Action: No change (same replica count)\n")
-		}
-
-		content.WriteString("\nMonitor scaling progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_list_machines --namespace %s\n", namespace))
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		text := formatScaleMachineDeploymentResult(namespace, name, currentReplicas, replicas)
+		return mcp.NewToolResultText(text), nil
 	}
 }
 
-// createUpdateMachineDeploymentHandler creates a handler for updating machine deployment configuration
+// CreateUpdateMachineDeploymentHandler creates a handler for updating machine deployment configuration
 func CreateUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
-		// Parse optional parameters
-		opts := capi.UpdateMachineDeploymentOptions{
-			Namespace: namespace,
-			Name:      name,
-		}
-
-		// Version update
-		if version, ok := arguments["version"].(string); ok && version != "" {
-			opts.Version = &version
-		}
-
-		// Replicas update
-		if replicasFloat, ok := arguments["replicas"].(float64); ok {
-			replicas := int32(replicasFloat)
-			opts.Replicas = &replicas
-		}
-
-		// MinReadySeconds update
-		if minReadyFloat, ok := arguments["min_ready_seconds"].(float64); ok {
-			minReady := int32(minReadyFloat)
-			opts.MinReadySeconds = &minReady
-		}
-
-		// Labels update
-		if labels, ok := arguments["labels"].(map[string]interface{}); ok {
-			opts.Labels = make(map[string]string)
-			for k, v := range labels {
-				if strVal, ok := v.(string); ok {
-					opts.Labels[k] = strVal
-				}
-			}
-		}
-
-		// Annotations update
-		if annotations, ok := arguments["annotations"].(map[string]interface{}); ok {
-			opts.Annotations = make(map[string]string)
-			for k, v := range annotations {
-				if strVal, ok := v.(string); ok {
-					opts.Annotations[k] = strVal
-				}
-			}
-		}
+		opts := parseMachineDeploymentUpdateOpts(namespace, name, arguments)
 
 		// Update the machine deployment
 		md, err := serverCtx.CAPIClient.UpdateMachineDeployment(ctx, opts)
@@ -556,53 +299,21 @@ func CreateUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to update machine deployment: %v", err)), nil
 		}
 
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully updated machine deployment %s/%s\n\n", namespace, name))
-		content.WriteString("Updated Configuration:\n")
-
-		if opts.Version != nil {
-			content.WriteString(fmt.Sprintf("  • Version: %s\n", *opts.Version))
-		}
-		if opts.Replicas != nil {
-			content.WriteString(fmt.Sprintf("  • Replicas: %d\n", *opts.Replicas))
-		}
-		if opts.MinReadySeconds != nil {
-			content.WriteString(fmt.Sprintf("  • Min Ready Seconds: %d\n", *opts.MinReadySeconds))
-		}
-		if len(opts.Labels) > 0 {
-			content.WriteString("  • Labels updated\n")
-		}
-		if len(opts.Annotations) > 0 {
-			content.WriteString("  • Annotations updated\n")
-		}
-
-		content.WriteString("\nCurrent Status:\n")
-		content.WriteString(fmt.Sprintf("  • Ready Replicas: %d\n", md.Status.ReadyReplicas))
-		content.WriteString(fmt.Sprintf("  • Updated Replicas: %d\n", md.Status.UpdatedReplicas))
-		content.WriteString(fmt.Sprintf("  • Available Replicas: %d\n", md.Status.AvailableReplicas))
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(formatUpdateMachineDeploymentResult(namespace, name, opts, md)), nil
 	}
 }
 
-// createRolloutMachineDeploymentHandler creates a handler for triggering machine deployment rollout
+// CreateRolloutMachineDeploymentHandler creates a handler for triggering machine deployment rollout
 func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
+			return nil, errors.New("namespace argument is required")
 		}
 		name, ok := arguments["name"].(string)
 		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
+			return nil, errors.New("name argument is required")
 		}
 
 		reason, _ := arguments["reason"].(string)
@@ -618,10 +329,10 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🔄 Successfully triggered rollout for machine deployment %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🔄 Successfully triggered rollout for machine deployment %s/%s\n\n", namespace, name)
 
 		if reason != "" {
-			content.WriteString(fmt.Sprintf("Reason: %s\n\n", reason))
+			fmt.Fprintf(&content, "Reason: %s\n\n", reason)
 		}
 
 		content.WriteString("Rollout Process:\n")
@@ -631,169 +342,45 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 		content.WriteString("4. Health checks ensure machines are ready before proceeding\n\n")
 
 		content.WriteString("Monitor rollout progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_list_machines --namespace %s --cluster <cluster-name>\n", namespace))
-		content.WriteString(fmt.Sprintf("  capi_list_machinedeployments --namespace %s\n", namespace))
+		fmt.Fprintf(&content, "  capi_list_machines --namespace %s --cluster <cluster-name>\n", namespace)
+		fmt.Fprintf(&content, "  capi_list_machinedeployments --namespace %s\n", namespace)
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(content.String()), nil
 	}
 }
 
-// createListMachineSetsHandler creates a handler for listing machine sets
+// CreateListMachineSetsHandler creates a handler for listing machine sets
 func CreateListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		clusterName, _ := arguments["clusterName"].(string)
-
-		machineSets, err := serverCtx.CAPIClient.ListMachineSets(ctx, namespace, clusterName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list machine sets: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d machine sets", len(machineSets.Items)))
-		if clusterName != "" {
-			content.WriteString(fmt.Sprintf(" in cluster %s", clusterName))
-		}
-		content.WriteString(":\n\n")
-
-		for _, ms := range machineSets.Items {
-			content.WriteString(fmt.Sprintf("MachineSet: %s/%s\n", ms.Namespace, ms.Name))
-			content.WriteString(fmt.Sprintf("  Cluster: %s\n", ms.Spec.ClusterName))
-			if ms.Spec.Replicas != nil {
-				content.WriteString(fmt.Sprintf("  Replicas: %d\n", *ms.Spec.Replicas))
+	return newListHandler(serverCtx, "machine sets",
+		func(ctx context.Context, c *capi.Client, ns, cluster string) (*listResult, error) {
+			machineSets, err := c.ListMachineSets(ctx, ns, cluster)
+			if err != nil {
+				return nil, err
 			}
-			content.WriteString(fmt.Sprintf("  Ready: %d/%d\n", ms.Status.ReadyReplicas, ms.Status.Replicas))
-			content.WriteString(fmt.Sprintf("  Available: %d\n", ms.Status.AvailableReplicas))
-
-			// Show owner reference (usually MachineDeployment)
-			for _, owner := range ms.OwnerReferences {
-				if owner.Kind == "MachineDeployment" {
-					content.WriteString(fmt.Sprintf("  Owner: MachineDeployment/%s\n", owner.Name))
-				}
-			}
-
-			// Show machine template
-			if ms.Spec.Template.Spec.InfrastructureRef.Name != "" {
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s/%s\n",
-					ms.Spec.Template.Spec.InfrastructureRef.Kind,
-					ms.Spec.Template.Spec.InfrastructureRef.Name))
-			}
-			content.WriteString("\n")
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
+			return &listResult{
+				count: len(machineSets.Items),
+				format: func(w *strings.Builder) {
+					for i := range machineSets.Items {
+						formatMachineSetListItem(w, &machineSets.Items[i])
+					}
 				},
-			},
-		}, nil
-	}
+			}, nil
+		})
 }
 
-// createGetMachineSetHandler creates a handler for getting machine set details
+// CreateGetMachineSetHandler creates a handler for getting machine set details
 func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		name, ok := arguments["name"].(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
-		}
-
-		ms, err := serverCtx.CAPIClient.GetMachineSet(ctx, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get machine set: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("MachineSet: %s/%s\n\n", ms.Namespace, ms.Name))
-
-		// Basic information
-		content.WriteString("Basic Information:\n")
-		content.WriteString(fmt.Sprintf("  Cluster: %s\n", ms.Spec.ClusterName))
-		if ms.Spec.Replicas != nil {
-			content.WriteString(fmt.Sprintf("  Desired Replicas: %d\n", *ms.Spec.Replicas))
-		}
-
-		// Status
-		content.WriteString("\nStatus:\n")
-		content.WriteString(fmt.Sprintf("  Total Replicas: %d\n", ms.Status.Replicas))
-		content.WriteString(fmt.Sprintf("  Ready Replicas: %d\n", ms.Status.ReadyReplicas))
-		content.WriteString(fmt.Sprintf("  Available Replicas: %d\n", ms.Status.AvailableReplicas))
-		if ms.Status.FailureReason != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-			content.WriteString(fmt.Sprintf("  Failure Reason: %s\n", *ms.Status.FailureReason)) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-		}
-		if ms.Status.FailureMessage != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-			content.WriteString(fmt.Sprintf("  Failure Message: %s\n", *ms.Status.FailureMessage)) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-		}
-
-		// Machine template
-		content.WriteString("\nMachine Template:\n")
-		if ms.Spec.Template.Spec.Version != nil {
-			content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", *ms.Spec.Template.Spec.Version))
-		}
-		if ms.Spec.Template.Spec.InfrastructureRef.Name != "" {
-			content.WriteString(fmt.Sprintf("  Infrastructure: %s/%s\n",
-				ms.Spec.Template.Spec.InfrastructureRef.Kind,
-				ms.Spec.Template.Spec.InfrastructureRef.Name))
-		}
-		if ms.Spec.Template.Spec.Bootstrap.ConfigRef != nil {
-			content.WriteString(fmt.Sprintf("  Bootstrap: %s/%s\n",
-				ms.Spec.Template.Spec.Bootstrap.ConfigRef.Kind,
-				ms.Spec.Template.Spec.Bootstrap.ConfigRef.Name))
-		}
-
-		// Owner references
-		if len(ms.OwnerReferences) > 0 {
-			content.WriteString("\nOwners:\n")
-			for _, owner := range ms.OwnerReferences {
-				content.WriteString(fmt.Sprintf("  - %s: %s\n", owner.Kind, owner.Name))
+	return newGetHandler(serverCtx, "machine set",
+		func(ctx context.Context, c *capi.Client, ns, name string) (string, error) {
+			ms, err := c.GetMachineSet(ctx, ns, name)
+			if err != nil {
+				return "", err
 			}
-		}
-
-		// Conditions
-		if len(ms.Status.Conditions) > 0 {
-			content.WriteString("\nConditions:\n")
-			for _, condition := range ms.Status.Conditions {
-				content.WriteString(fmt.Sprintf("  - Type: %s\n", condition.Type))
-				content.WriteString(fmt.Sprintf("    Status: %s\n", condition.Status))
-				if condition.Reason != "" {
-					content.WriteString(fmt.Sprintf("    Reason: %s\n", condition.Reason))
-				}
-				if condition.Message != "" {
-					content.WriteString(fmt.Sprintf("    Message: %s\n", condition.Message))
-				}
-			}
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+			return formatMachineSetDetails(ms), nil
+		})
 }
 
-// createDrainNodeHandler creates a handler for draining nodes
+// CreateDrainNodeHandler creates a handler for draining nodes
 func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
@@ -807,7 +394,7 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		nodeName, _ := arguments["node_name"].(string)
 
 		if nodeName == "" && (namespace == "" || machineName == "") {
-			return nil, fmt.Errorf("either node_name or (namespace and machine_name) must be provided")
+			return nil, errors.New("either node_name or (namespace and machine_name) must be provided")
 		}
 
 		opts.Namespace = namespace
@@ -829,28 +416,7 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		if err != nil {
 			// Check if it's our placeholder error
 			if strings.Contains(err.Error(), "has been cordoned") {
-				var content strings.Builder
-				content.WriteString("⚠️  Node drain partially implemented\n\n")
-				content.WriteString(fmt.Sprintf("Node has been cordoned (marked as unschedulable)\n"))
-				content.WriteString("\nFull drain implementation would:\n")
-				content.WriteString("1. List all pods on the node\n")
-				content.WriteString("2. Filter out DaemonSet pods if requested\n")
-				content.WriteString("3. Create pod evictions respecting PodDisruptionBudgets\n")
-				content.WriteString("4. Wait for pods to terminate gracefully\n")
-				content.WriteString("5. Force delete pods that exceed grace period\n\n")
-				content.WriteString("For now, you can manually drain using kubectl:\n")
-				if nodeName != "" {
-					content.WriteString(fmt.Sprintf("  kubectl drain %s --ignore-daemonsets --delete-emptydir-data\n", nodeName))
-				}
-
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: content.String(),
-						},
-					},
-				}, nil
+				return mcp.NewToolResultText(formatPartialDrainResult(nodeName)), nil
 			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to drain node: %v", err)), nil
 		}
@@ -858,28 +424,21 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		var content strings.Builder
 		content.WriteString("✅ Successfully drained node\n\n")
 		content.WriteString("Drain Options Applied:\n")
-		content.WriteString(fmt.Sprintf("  • Ignore DaemonSets: %v\n", opts.IgnoreDaemonSets))
-		content.WriteString(fmt.Sprintf("  • Delete Local Data: %v\n", opts.DeleteLocalData))
-		content.WriteString(fmt.Sprintf("  • Force: %v\n", opts.Force))
+		fmt.Fprintf(&content, "  • Ignore DaemonSets: %v\n", opts.IgnoreDaemonSets)
+		fmt.Fprintf(&content, "  • Delete Local Data: %v\n", opts.DeleteLocalData)
+		fmt.Fprintf(&content, "  • Force: %v\n", opts.Force)
 		if opts.GracePeriodSeconds != nil {
-			content.WriteString(fmt.Sprintf("  • Grace Period: %d seconds\n", *opts.GracePeriodSeconds))
+			fmt.Fprintf(&content, "  • Grace Period: %d seconds\n", *opts.GracePeriodSeconds)
 		}
 		content.WriteString("\nThe node is now:\n")
 		content.WriteString("• Cordoned (no new pods will be scheduled)\n")
 		content.WriteString("• Drained (existing pods have been evicted)\n")
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(content.String()), nil
 	}
 }
 
-// createCordonNodeHandler creates a handler for cordoning/uncordoning nodes
+// CreateCordonNodeHandler creates a handler for cordoning/uncordoning nodes
 func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
@@ -893,7 +452,7 @@ func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		nodeName, _ := arguments["node_name"].(string)
 
 		if nodeName == "" && (namespace == "" || machineName == "") {
-			return nil, fmt.Errorf("either node_name or (namespace and machine_name) must be provided")
+			return nil, errors.New("either node_name or (namespace and machine_name) must be provided")
 		}
 
 		opts.Namespace = namespace
@@ -913,7 +472,7 @@ func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			action = "uncordoned"
 		}
 
-		content.WriteString(fmt.Sprintf("✅ Successfully %s node\n\n", action))
+		fmt.Fprintf(&content, "✅ Successfully %s node\n\n", action)
 
 		if opts.Uncordon {
 			content.WriteString("The node is now:\n")
@@ -927,18 +486,11 @@ func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			content.WriteString("  capi_drain_node\n")
 		}
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return mcp.NewToolResultText(content.String()), nil
 	}
 }
 
-// createNodeStatusHandler creates a handler for getting node status
+// CreateNodeStatusHandler creates a handler for getting node status
 func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
@@ -952,7 +504,7 @@ func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		nodeName, _ := arguments["node_name"].(string)
 
 		if nodeName == "" && (namespace == "" || machineName == "") {
-			return nil, fmt.Errorf("either node_name or (namespace and machine_name) must be provided")
+			return nil, errors.New("either node_name or (namespace and machine_name) must be provided")
 		}
 
 		opts.Namespace = namespace
@@ -965,91 +517,540 @@ func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to get node status: %v", err)), nil
 		}
 
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Node: %s\n\n", node.Name))
+		return mcp.NewToolResultText(formatNodeStatus(node)), nil
+	}
+}
 
-		// Basic information
-		content.WriteString("Basic Information:\n")
-		content.WriteString(fmt.Sprintf("  UID: %s\n", node.UID))
-		content.WriteString(fmt.Sprintf("  Created: %s\n", node.CreationTimestamp))
-		content.WriteString(fmt.Sprintf("  Schedulable: %v\n", !node.Spec.Unschedulable))
-		if node.Spec.ProviderID != "" {
-			content.WriteString(fmt.Sprintf("  Provider ID: %s\n", node.Spec.ProviderID))
+// formatMachineListItem writes a single machine summary entry into the builder.
+func formatMachineListItem(w *strings.Builder, machine *clusterv1.Machine) {
+	fmt.Fprintf(w, "Machine: %s/%s\n", machine.Namespace, machine.Name)
+	fmt.Fprintf(w, "  Cluster: %s\n", machine.Spec.ClusterName)
+	if machine.Status.Phase != "" {
+		fmt.Fprintf(w, "  Phase: %s\n", machine.Status.Phase)
+	}
+	if machine.Status.NodeRef != nil {
+		fmt.Fprintf(w, "  Node: %s\n", machine.Status.NodeRef.Name)
+	}
+	if machine.Spec.ProviderID != nil {
+		fmt.Fprintf(w, "  Provider ID: %s\n", *machine.Spec.ProviderID)
+	}
+	// Check if machine has Ready condition
+	ready := false
+	for _, condition := range machine.Status.Conditions {
+		if condition.Type == "Ready" && condition.Status == "True" {
+			ready = true
+			break
 		}
+	}
+	fmt.Fprintf(w, "  Ready: %v\n", ready)
+	w.WriteString("\n")
+}
 
-		// Node info
-		info := node.Status.NodeInfo
-		content.WriteString("\nNode Info:\n")
-		content.WriteString(fmt.Sprintf("  OS: %s (%s)\n", info.OperatingSystem, info.OSImage))
-		content.WriteString(fmt.Sprintf("  Kernel: %s\n", info.KernelVersion))
-		content.WriteString(fmt.Sprintf("  Container Runtime: %s\n", info.ContainerRuntimeVersion))
-		content.WriteString(fmt.Sprintf("  Kubelet: %s\n", info.KubeletVersion))
-		content.WriteString(fmt.Sprintf("  Architecture: %s\n", info.Architecture))
+// formatMachineDetails returns a detailed text description of a machine.
+func formatMachineDetails(machine *clusterv1.Machine) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "Machine: %s/%s\n\n", machine.Namespace, machine.Name)
 
-		// Capacity and allocatable resources
-		content.WriteString("\nResources:\n")
-		content.WriteString("  Capacity:\n")
-		if cpu := node.Status.Capacity[v1.ResourceCPU]; !cpu.IsZero() {
-			content.WriteString(fmt.Sprintf("    CPU: %s\n", cpu.String()))
-		}
-		if memory := node.Status.Capacity[v1.ResourceMemory]; !memory.IsZero() {
-			content.WriteString(fmt.Sprintf("    Memory: %s\n", memory.String()))
-		}
-		if pods := node.Status.Capacity[v1.ResourcePods]; !pods.IsZero() {
-			content.WriteString(fmt.Sprintf("    Pods: %s\n", pods.String()))
-		}
+	// Basic information
+	w.WriteString("Basic Information:\n")
+	fmt.Fprintf(&w, "  Cluster: %s\n", machine.Spec.ClusterName)
+	if machine.Status.Phase != "" {
+		fmt.Fprintf(&w, "  Phase: %s\n", machine.Status.Phase)
+	}
+	if machine.Spec.Version != nil {
+		fmt.Fprintf(&w, "  Kubernetes Version: %s\n", *machine.Spec.Version)
+	}
+	if machine.Spec.ProviderID != nil {
+		fmt.Fprintf(&w, "  Provider ID: %s\n", *machine.Spec.ProviderID)
+	}
 
-		content.WriteString("  Allocatable:\n")
-		if cpu := node.Status.Allocatable[v1.ResourceCPU]; !cpu.IsZero() {
-			content.WriteString(fmt.Sprintf("    CPU: %s\n", cpu.String()))
-		}
-		if memory := node.Status.Allocatable[v1.ResourceMemory]; !memory.IsZero() {
-			content.WriteString(fmt.Sprintf("    Memory: %s\n", memory.String()))
-		}
-		if pods := node.Status.Allocatable[v1.ResourcePods]; !pods.IsZero() {
-			content.WriteString(fmt.Sprintf("    Pods: %s\n", pods.String()))
-		}
+	// Node information
+	if machine.Status.NodeRef != nil {
+		w.WriteString("\nNode Information:\n")
+		fmt.Fprintf(&w, "  Node Name: %s\n", machine.Status.NodeRef.Name)
+		fmt.Fprintf(&w, "  Node UID: %s\n", machine.Status.NodeRef.UID)
+	}
 
-		// Conditions
-		content.WriteString("\nConditions:\n")
-		for _, condition := range node.Status.Conditions {
-			content.WriteString(fmt.Sprintf("  - Type: %s\n", condition.Type))
-			content.WriteString(fmt.Sprintf("    Status: %s\n", condition.Status))
+	// Bootstrap information
+	if machine.Spec.Bootstrap.ConfigRef != nil {
+		w.WriteString("\nBootstrap:\n")
+		fmt.Fprintf(&w, "  Kind: %s\n", machine.Spec.Bootstrap.ConfigRef.Kind)
+		fmt.Fprintf(&w, "  Name: %s\n", machine.Spec.Bootstrap.ConfigRef.Name)
+	}
+
+	// Infrastructure information
+	if machine.Spec.InfrastructureRef.Kind != "" {
+		w.WriteString("\nInfrastructure:\n")
+		fmt.Fprintf(&w, "  Kind: %s\n", machine.Spec.InfrastructureRef.Kind)
+		fmt.Fprintf(&w, "  Name: %s\n", machine.Spec.InfrastructureRef.Name)
+	}
+
+	// Conditions
+	if len(machine.Status.Conditions) > 0 {
+		w.WriteString("\nConditions:\n")
+		for _, condition := range machine.Status.Conditions {
+			fmt.Fprintf(&w, "  - Type: %s\n", condition.Type)
+			fmt.Fprintf(&w, "    Status: %s\n", condition.Status)
 			if condition.Reason != "" {
-				content.WriteString(fmt.Sprintf("    Reason: %s\n", condition.Reason))
+				fmt.Fprintf(&w, "    Reason: %s\n", condition.Reason)
 			}
 			if condition.Message != "" {
-				content.WriteString(fmt.Sprintf("    Message: %s\n", condition.Message))
+				fmt.Fprintf(&w, "    Message: %s\n", condition.Message)
 			}
 		}
-
-		// Addresses
-		if len(node.Status.Addresses) > 0 {
-			content.WriteString("\nAddresses:\n")
-			for _, addr := range node.Status.Addresses {
-				content.WriteString(fmt.Sprintf("  - %s: %s\n", addr.Type, addr.Address))
-			}
-		}
-
-		// Taints
-		if len(node.Spec.Taints) > 0 {
-			content.WriteString("\nTaints:\n")
-			for _, taint := range node.Spec.Taints {
-				content.WriteString(fmt.Sprintf("  - Key: %s\n", taint.Key))
-				if taint.Value != "" {
-					content.WriteString(fmt.Sprintf("    Value: %s\n", taint.Value))
-				}
-				content.WriteString(fmt.Sprintf("    Effect: %s\n", taint.Effect))
-			}
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
 	}
+
+	// Addresses
+	if len(machine.Status.Addresses) > 0 {
+		w.WriteString("\nAddresses:\n")
+		for _, addr := range machine.Status.Addresses {
+			fmt.Fprintf(&w, "  - Type: %s, Address: %s\n", addr.Type, addr.Address)
+		}
+	}
+
+	return w.String()
+}
+
+// formatMachineDeploymentListItem writes a single machine deployment summary entry into the builder.
+func formatMachineDeploymentListItem(w *strings.Builder, md *clusterv1.MachineDeployment) {
+	fmt.Fprintf(w, "MachineDeployment: %s/%s\n", md.Namespace, md.Name)
+	fmt.Fprintf(w, "  Cluster: %s\n", md.Spec.ClusterName)
+	if md.Spec.Replicas != nil {
+		fmt.Fprintf(w, "  Replicas: %d\n", *md.Spec.Replicas)
+	}
+	if md.Status.Replicas > 0 {
+		fmt.Fprintf(w, "  Status: %d ready / %d updated / %d available\n",
+			md.Status.ReadyReplicas,
+			md.Status.UpdatedReplicas,
+			md.Status.AvailableReplicas)
+	}
+	if md.Status.Phase != "" {
+		fmt.Fprintf(w, "  Phase: %s\n", md.Status.Phase)
+	}
+	if md.Spec.Template.Spec.Version != nil {
+		fmt.Fprintf(w, "  Kubernetes Version: %s\n", *md.Spec.Template.Spec.Version)
+	}
+	w.WriteString("\n")
+}
+
+// formatCreateMachineDeploymentResult returns the success text for a created machine deployment.
+func formatCreateMachineDeploymentResult(
+	namespace, name, clusterName, version string,
+	infraKind, infraName, bootstrapKind, bootstrapName string,
+	replicas int32,
+	md *clusterv1.MachineDeployment,
+) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "✅ Successfully created machine deployment %s/%s\n\n", namespace, name)
+	w.WriteString("Configuration:\n")
+	fmt.Fprintf(&w, "  • Cluster: %s\n", clusterName)
+	fmt.Fprintf(&w, "  • Replicas: %d\n", replicas)
+	fmt.Fprintf(&w, "  • Version: %s\n", version)
+	fmt.Fprintf(&w, "  • Infrastructure: %s/%s\n", infraKind, infraName)
+	fmt.Fprintf(&w, "  • Bootstrap: %s/%s\n", bootstrapKind, bootstrapName)
+	if md.Spec.MinReadySeconds != nil {
+		fmt.Fprintf(&w, "  • Min Ready Seconds: %d\n", *md.Spec.MinReadySeconds)
+	}
+	w.WriteString("\nNote: Before creating a MachineDeployment, ensure you have:\n")
+	w.WriteString("1. Created the infrastructure template (e.g., AWSMachineTemplate)\n")
+	w.WriteString("2. Created the bootstrap config template (e.g., KubeadmConfigTemplate)\n\n")
+	w.WriteString("Monitor the deployment with:\n")
+	fmt.Fprintf(&w, "  capi_list_machines --cluster %s\n", clusterName)
+	w.WriteString("\nScale the deployment with:\n")
+	fmt.Fprintf(&w, "  capi_scale_machinedeployment --namespace %s --name %s --replicas <count>\n", namespace, name)
+	return w.String()
+}
+
+// formatScaleMachineDeploymentResult returns the success text for a scaled machine deployment.
+func formatScaleMachineDeploymentResult(namespace, name string, currentReplicas, replicas int32) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "✅ Successfully scaled machine deployment %s/%s\n\n", namespace, name)
+	w.WriteString("Scaling Operation:\n")
+	fmt.Fprintf(&w, "  • Previous Replicas: %d\n", currentReplicas)
+	fmt.Fprintf(&w, "  • New Replicas: %d\n", replicas)
+
+	switch {
+	case replicas > currentReplicas:
+		fmt.Fprintf(&w, "  • Action: Scaling UP by %d nodes\n", replicas-currentReplicas)
+		w.WriteString("\nNew nodes will be:\n")
+		w.WriteString("1. Provisioned by the infrastructure provider\n")
+		w.WriteString("2. Bootstrapped with Kubernetes\n")
+		w.WriteString("3. Joined to the cluster\n")
+	case replicas < currentReplicas:
+		fmt.Fprintf(&w, "  • Action: Scaling DOWN by %d nodes\n", currentReplicas-replicas)
+		w.WriteString("\nNodes will be:\n")
+		w.WriteString("1. Cordoned to prevent new workloads\n")
+		w.WriteString("2. Drained to move existing workloads\n")
+		w.WriteString("3. Removed from the cluster\n")
+		w.WriteString("4. Infrastructure resources cleaned up\n")
+	default:
+		w.WriteString("  • Action: No change (same replica count)\n")
+	}
+
+	fmt.Fprintf(&w, "\nMonitor scaling progress with:\n  capi_list_machines --namespace %s\n", namespace)
+	return w.String()
+}
+
+// formatUpdateMachineDeploymentResult returns the success text for an updated machine deployment.
+func formatUpdateMachineDeploymentResult(
+	namespace, name string,
+	opts capi.UpdateMachineDeploymentOptions,
+	md *clusterv1.MachineDeployment,
+) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "✅ Successfully updated machine deployment %s/%s\n\n", namespace, name)
+	w.WriteString("Updated Configuration:\n")
+
+	if opts.Version != nil {
+		fmt.Fprintf(&w, "  • Version: %s\n", *opts.Version)
+	}
+	if opts.Replicas != nil {
+		fmt.Fprintf(&w, "  • Replicas: %d\n", *opts.Replicas)
+	}
+	if opts.MinReadySeconds != nil {
+		fmt.Fprintf(&w, "  • Min Ready Seconds: %d\n", *opts.MinReadySeconds)
+	}
+	if len(opts.Labels) > 0 {
+		w.WriteString("  • Labels updated\n")
+	}
+	if len(opts.Annotations) > 0 {
+		w.WriteString("  • Annotations updated\n")
+	}
+
+	w.WriteString("\nCurrent Status:\n")
+	fmt.Fprintf(&w, "  • Ready Replicas: %d\n", md.Status.ReadyReplicas)
+	fmt.Fprintf(&w, "  • Updated Replicas: %d\n", md.Status.UpdatedReplicas)
+	fmt.Fprintf(&w, "  • Available Replicas: %d\n", md.Status.AvailableReplicas)
+	return w.String()
+}
+
+// formatMachineSetListItem writes a single machine set summary entry into the builder.
+func formatMachineSetListItem(w *strings.Builder, ms *clusterv1.MachineSet) {
+	fmt.Fprintf(w, "MachineSet: %s/%s\n", ms.Namespace, ms.Name)
+	fmt.Fprintf(w, "  Cluster: %s\n", ms.Spec.ClusterName)
+	if ms.Spec.Replicas != nil {
+		fmt.Fprintf(w, "  Replicas: %d\n", *ms.Spec.Replicas)
+	}
+	fmt.Fprintf(w, "  Ready: %d/%d\n", ms.Status.ReadyReplicas, ms.Status.Replicas)
+	fmt.Fprintf(w, "  Available: %d\n", ms.Status.AvailableReplicas)
+
+	// Show owner reference (usually MachineDeployment)
+	for _, owner := range ms.OwnerReferences {
+		if owner.Kind == "MachineDeployment" {
+			fmt.Fprintf(w, "  Owner: MachineDeployment/%s\n", owner.Name)
+		}
+	}
+
+	// Show machine template
+	if ms.Spec.Template.Spec.InfrastructureRef.Name != "" {
+		fmt.Fprintf(w, "  Infrastructure: %s/%s\n",
+			ms.Spec.Template.Spec.InfrastructureRef.Kind,
+			ms.Spec.Template.Spec.InfrastructureRef.Name)
+	}
+	w.WriteString("\n")
+}
+
+// formatMachineSetDetails returns a detailed text description of a machine set.
+func formatMachineSetDetails(ms *clusterv1.MachineSet) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "MachineSet: %s/%s\n\n", ms.Namespace, ms.Name)
+
+	// Basic information
+	w.WriteString("Basic Information:\n")
+	fmt.Fprintf(&w, "  Cluster: %s\n", ms.Spec.ClusterName)
+	if ms.Spec.Replicas != nil {
+		fmt.Fprintf(&w, "  Desired Replicas: %d\n", *ms.Spec.Replicas)
+	}
+
+	// Status
+	w.WriteString("\nStatus:\n")
+	fmt.Fprintf(&w, "  Total Replicas: %d\n", ms.Status.Replicas)
+	fmt.Fprintf(&w, "  Ready Replicas: %d\n", ms.Status.ReadyReplicas)
+	fmt.Fprintf(&w, "  Available Replicas: %d\n", ms.Status.AvailableReplicas)
+	if reason := ms.Status.FailureReason; reason != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+		fmt.Fprintf(&w, "  Failure Reason: %s\n", *reason)
+	}
+	if msg := ms.Status.FailureMessage; msg != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+		fmt.Fprintf(&w, "  Failure Message: %s\n", *msg)
+	}
+
+	// Machine template
+	w.WriteString("\nMachine Template:\n")
+	if ms.Spec.Template.Spec.Version != nil {
+		fmt.Fprintf(&w, "  Kubernetes Version: %s\n", *ms.Spec.Template.Spec.Version)
+	}
+	if ms.Spec.Template.Spec.InfrastructureRef.Name != "" {
+		fmt.Fprintf(&w, "  Infrastructure: %s/%s\n",
+			ms.Spec.Template.Spec.InfrastructureRef.Kind,
+			ms.Spec.Template.Spec.InfrastructureRef.Name)
+	}
+	if ms.Spec.Template.Spec.Bootstrap.ConfigRef != nil {
+		fmt.Fprintf(&w, "  Bootstrap: %s/%s\n",
+			ms.Spec.Template.Spec.Bootstrap.ConfigRef.Kind,
+			ms.Spec.Template.Spec.Bootstrap.ConfigRef.Name)
+	}
+
+	// Owner references
+	if len(ms.OwnerReferences) > 0 {
+		w.WriteString("\nOwners:\n")
+		for _, owner := range ms.OwnerReferences {
+			fmt.Fprintf(&w, "  - %s: %s\n", owner.Kind, owner.Name)
+		}
+	}
+
+	// Conditions
+	if len(ms.Status.Conditions) > 0 {
+		w.WriteString("\nConditions:\n")
+		for _, condition := range ms.Status.Conditions {
+			fmt.Fprintf(&w, "  - Type: %s\n", condition.Type)
+			fmt.Fprintf(&w, "    Status: %s\n", condition.Status)
+			if condition.Reason != "" {
+				fmt.Fprintf(&w, "    Reason: %s\n", condition.Reason)
+			}
+			if condition.Message != "" {
+				fmt.Fprintf(&w, "    Message: %s\n", condition.Message)
+			}
+		}
+	}
+
+	return w.String()
+}
+
+// formatPartialDrainResult returns the text for a node drain that only cordoned the node.
+func formatPartialDrainResult(nodeName string) string {
+	var w strings.Builder
+	w.WriteString("⚠️  Node drain partially implemented\n\n")
+	w.WriteString("Node has been cordoned (marked as unschedulable)\n")
+	w.WriteString("\nFull drain implementation would:\n")
+	w.WriteString("1. List all pods on the node\n")
+	w.WriteString("2. Filter out DaemonSet pods if requested\n")
+	w.WriteString("3. Create pod evictions respecting PodDisruptionBudgets\n")
+	w.WriteString("4. Wait for pods to terminate gracefully\n")
+	w.WriteString("5. Force delete pods that exceed grace period\n\n")
+	w.WriteString("For now, you can manually drain using kubectl:\n")
+	if nodeName != "" {
+		fmt.Fprintf(&w, "  kubectl drain %s --ignore-daemonsets --delete-emptydir-data\n", nodeName)
+	}
+	return w.String()
+}
+
+// formatNodeStatus returns a detailed text description of a node's status.
+func formatNodeStatus(node *v1.Node) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "Node: %s\n\n", node.Name)
+
+	// Basic information
+	w.WriteString("Basic Information:\n")
+	fmt.Fprintf(&w, "  UID: %s\n", node.UID)
+	fmt.Fprintf(&w, "  Created: %s\n", node.CreationTimestamp)
+	fmt.Fprintf(&w, "  Schedulable: %v\n", !node.Spec.Unschedulable)
+	if node.Spec.ProviderID != "" {
+		fmt.Fprintf(&w, "  Provider ID: %s\n", node.Spec.ProviderID)
+	}
+
+	// Node info
+	info := node.Status.NodeInfo
+	w.WriteString("\nNode Info:\n")
+	fmt.Fprintf(&w, "  OS: %s (%s)\n", info.OperatingSystem, info.OSImage)
+	fmt.Fprintf(&w, "  Kernel: %s\n", info.KernelVersion)
+	fmt.Fprintf(&w, "  Container Runtime: %s\n", info.ContainerRuntimeVersion)
+	fmt.Fprintf(&w, "  Kubelet: %s\n", info.KubeletVersion)
+	fmt.Fprintf(&w, "  Architecture: %s\n", info.Architecture)
+
+	formatNodeResources(&w, node)
+	formatNodeConditions(&w, node)
+	formatNodeAddressesAndTaints(&w, node)
+
+	return w.String()
+}
+
+// formatNodeResources writes capacity and allocatable resource sections.
+func formatNodeResources(w *strings.Builder, node *v1.Node) {
+	w.WriteString("\nResources:\n")
+	w.WriteString("  Capacity:\n")
+	if cpu := node.Status.Capacity[v1.ResourceCPU]; !cpu.IsZero() {
+		fmt.Fprintf(w, "    CPU: %s\n", cpu.String())
+	}
+	if memory := node.Status.Capacity[v1.ResourceMemory]; !memory.IsZero() {
+		fmt.Fprintf(w, "    Memory: %s\n", memory.String())
+	}
+	if pods := node.Status.Capacity[v1.ResourcePods]; !pods.IsZero() {
+		fmt.Fprintf(w, "    Pods: %s\n", pods.String())
+	}
+
+	w.WriteString("  Allocatable:\n")
+	if cpu := node.Status.Allocatable[v1.ResourceCPU]; !cpu.IsZero() {
+		fmt.Fprintf(w, "    CPU: %s\n", cpu.String())
+	}
+	if memory := node.Status.Allocatable[v1.ResourceMemory]; !memory.IsZero() {
+		fmt.Fprintf(w, "    Memory: %s\n", memory.String())
+	}
+	if pods := node.Status.Allocatable[v1.ResourcePods]; !pods.IsZero() {
+		fmt.Fprintf(w, "    Pods: %s\n", pods.String())
+	}
+}
+
+// formatNodeConditions writes the conditions section.
+func formatNodeConditions(w *strings.Builder, node *v1.Node) {
+	w.WriteString("\nConditions:\n")
+	for _, condition := range node.Status.Conditions {
+		fmt.Fprintf(w, "  - Type: %s\n", condition.Type)
+		fmt.Fprintf(w, "    Status: %s\n", condition.Status)
+		if condition.Reason != "" {
+			fmt.Fprintf(w, "    Reason: %s\n", condition.Reason)
+		}
+		if condition.Message != "" {
+			fmt.Fprintf(w, "    Message: %s\n", condition.Message)
+		}
+	}
+}
+
+// formatNodeAddressesAndTaints writes the addresses and taints sections.
+func formatNodeAddressesAndTaints(w *strings.Builder, node *v1.Node) {
+	if len(node.Status.Addresses) > 0 {
+		w.WriteString("\nAddresses:\n")
+		for _, addr := range node.Status.Addresses {
+			fmt.Fprintf(w, "  - %s: %s\n", addr.Type, addr.Address)
+		}
+	}
+
+	if len(node.Spec.Taints) > 0 {
+		w.WriteString("\nTaints:\n")
+		for _, taint := range node.Spec.Taints {
+			fmt.Fprintf(w, "  - Key: %s\n", taint.Key)
+			if taint.Value != "" {
+				fmt.Fprintf(w, "    Value: %s\n", taint.Value)
+			}
+			fmt.Fprintf(w, "    Effect: %s\n", taint.Effect)
+		}
+	}
+}
+
+// machineDeploymentRefNames holds the kind/name strings for infra and bootstrap refs,
+// used only for building human-readable output after a successful create.
+type machineDeploymentRefNames struct {
+	infraKind, infraName         string
+	bootstrapKind, bootstrapName string
+}
+
+// parseMachineDeploymentCreateArgs parses all arguments for CreateMachineDeployment.
+// On validation failure, errResult is non-nil and should be returned directly to the MCP caller.
+func parseMachineDeploymentCreateArgs(arguments map[string]any) (
+	opts *capi.CreateMachineDeploymentOptions,
+	names machineDeploymentRefNames,
+	errResult *mcp.CallToolResult,
+) {
+	namespace, ok := arguments["namespace"].(string)
+	if !ok || namespace == "" {
+		return nil, names, mcp.NewToolResultError("namespace argument is required")
+	}
+	name, nameOK := arguments["name"].(string)
+	if !nameOK || name == "" {
+		return nil, names, mcp.NewToolResultError("name argument is required")
+	}
+	clusterName, clusterOK := arguments["cluster_name"].(string)
+	if !clusterOK || clusterName == "" {
+		return nil, names, mcp.NewToolResultError("cluster_name argument is required")
+	}
+
+	replicas := int32(1)
+	if r, ok := arguments["replicas"].(float64); ok {
+		replicas = int32(r)
+	}
+
+	names.infraKind, _ = arguments["infra_kind"].(string)
+	names.infraName, _ = arguments["infra_name"].(string)
+	infraAPIVersion, _ := arguments["infra_api_version"].(string)
+
+	if names.infraKind == "" || names.infraName == "" {
+		return nil, names, mcp.NewToolResultError("infra_kind and infra_name are required")
+	}
+
+	names.bootstrapKind, _ = arguments["bootstrap_kind"].(string)
+	names.bootstrapName, _ = arguments["bootstrap_name"].(string)
+	bootstrapAPIVersion, _ := arguments["bootstrap_api_version"].(string)
+
+	if names.bootstrapKind == "" || names.bootstrapName == "" {
+		return nil, names, mcp.NewToolResultError("bootstrap_kind and bootstrap_name are required")
+	}
+
+	version, _ := arguments["version"].(string)
+	if version == "" {
+		version = "v1.29.0" // Default version
+	}
+
+	return &capi.CreateMachineDeploymentOptions{
+		Namespace:   namespace,
+		Name:        name,
+		ClusterName: clusterName,
+		Replicas:    replicas,
+		InfrastructureRef: v1.ObjectReference{
+			Kind:       names.infraKind,
+			Name:       names.infraName,
+			APIVersion: infraAPIVersion,
+		},
+		BootstrapConfigRef: v1.ObjectReference{
+			Kind:       names.bootstrapKind,
+			Name:       names.bootstrapName,
+			APIVersion: bootstrapAPIVersion,
+		},
+		Version: version,
+	}, names, nil
+}
+
+// findMachineDeploymentReplicas searches for a machine deployment by name in a list and returns
+// its current replica count. Returns (0, false) when the deployment is not found.
+func findMachineDeploymentReplicas(items []clusterv1.MachineDeployment, name string) (int32, bool) {
+	for i := range items {
+		if items[i].Name == name {
+			if items[i].Spec.Replicas != nil {
+				return *items[i].Spec.Replicas, true
+			}
+			return 0, true
+		}
+	}
+	return 0, false
+}
+
+// parseMachineDeploymentUpdateOpts builds UpdateMachineDeploymentOptions from the handler arguments map.
+func parseMachineDeploymentUpdateOpts(
+	namespace, name string,
+	arguments map[string]any,
+) capi.UpdateMachineDeploymentOptions {
+	opts := capi.UpdateMachineDeploymentOptions{
+		Namespace: namespace,
+		Name:      name,
+	}
+
+	if version, ok := arguments["version"].(string); ok && version != "" {
+		opts.Version = &version
+	}
+	if replicasFloat, ok := arguments["replicas"].(float64); ok {
+		replicas := int32(replicasFloat)
+		opts.Replicas = &replicas
+	}
+	if minReadyFloat, ok := arguments["min_ready_seconds"].(float64); ok {
+		minReady := int32(minReadyFloat)
+		opts.MinReadySeconds = &minReady
+	}
+
+	if labels, ok := arguments["labels"].(map[string]any); ok {
+		opts.Labels = convertStringMap(labels)
+	}
+	if annotations, ok := arguments["annotations"].(map[string]any); ok {
+		opts.Annotations = convertStringMap(annotations)
+	}
+
+	return opts
+}
+
+// convertStringMap converts a map[string]any to map[string]string, dropping non-string values.
+func convertStringMap(src map[string]any) map[string]string {
+	out := make(map[string]string, len(src))
+	for k, v := range src {
+		if strVal, ok := v.(string); ok {
+			out[k] = strVal
+		}
+	}
+	return out
 }

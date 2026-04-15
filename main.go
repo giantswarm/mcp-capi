@@ -1,3 +1,4 @@
+// Package main is the entry point for the mcp-capi binary.
 package main
 
 import (

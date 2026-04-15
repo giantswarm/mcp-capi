@@ -11,7 +11,7 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should get AWS cluster details", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -25,7 +25,7 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should error for non-AWS cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -39,7 +39,7 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should error when cluster not found", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -62,7 +62,7 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should error when name is missing", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -74,11 +74,12 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should accept AWSManagedCluster kind", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			Cluster(namespace, "my-managed-cluster").WithCustomInfraRef("AWSManagedCluster", "my-managed-cluster").Create().
+			Cluster(namespace, "my-managed-cluster").
+			WithCustomInfraRef("AWSManagedCluster", "my-managed-cluster").Create().
 			ToolCall("capi_aws_get_cluster").
 			WithArg("namespace", namespace).
 			WithArg("name", "my-managed-cluster").
@@ -88,7 +89,7 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should show cluster conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -104,7 +105,7 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should error for cluster with nil infrastructure ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -118,7 +119,7 @@ func TestCapiAWSGetCluster(t *testing.T) {
 
 	t.Run("should show cluster network with pod and service CIDRs", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
