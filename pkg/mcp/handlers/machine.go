@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	v1 "k8s.io/api/core/v1"
+
+	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
 // createListMachinesHandler creates a handler for listing CAPI machines
@@ -94,8 +95,8 @@ func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 			content.WriteString(fmt.Sprintf("MachineDeployment: %s/%s\n", md.Namespace, md.Name))
 			content.WriteString(fmt.Sprintf("  Cluster: %s\n", md.Spec.ClusterName))
 			if md.Spec.Replicas != nil {
-			content.WriteString(fmt.Sprintf("  Replicas: %d\n", *md.Spec.Replicas))
-		}
+				content.WriteString(fmt.Sprintf("  Replicas: %d\n", *md.Spec.Replicas))
+			}
 			if md.Status.Replicas > 0 {
 				content.WriteString(fmt.Sprintf("  Status: %d ready / %d updated / %d available\n",
 					md.Status.ReadyReplicas,

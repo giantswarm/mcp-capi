@@ -13,7 +13,7 @@ var rootCmd = &cobra.Command{
 	Short: "MCP server for Cluster API operations",
 	Long: `mcp-capi is a Model Context Protocol (MCP) server that provides
 tools for interacting with Cluster API (CAPI) clusters. It offers various capabilities
-including cluster management, machine operations, scaling, and infrastructure 
+including cluster management, machine operations, scaling, and infrastructure
 provider management.
 
 When run without subcommands, it starts the MCP server (equivalent to 'mcp-capi serve').`,

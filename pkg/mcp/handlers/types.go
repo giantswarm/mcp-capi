@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
 // ServerContext holds shared resources for the MCP server handlers.

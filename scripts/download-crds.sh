@@ -22,8 +22,10 @@ set -euo pipefail
 # Constants
 # =============================================================================
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly PROJECT_ROOT
 readonly OUTPUT_DIR="${PROJECT_ROOT}/crds"
 readonly GITHUB_RAW_URL="https://raw.githubusercontent.com"
 
@@ -287,7 +289,7 @@ main() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --all)
-                providers=(${ALL_PROVIDERS})
+                read -r -a providers <<< "${ALL_PROVIDERS}"
                 shift
                 ;;
             --help|-h)
