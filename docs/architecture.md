@@ -66,15 +66,15 @@ Similar patterns with provider-specific resources.
 graph TD
     Cluster --> InfrastructureCluster[Infrastructure Cluster<br/>e.g., AWSCluster]
     Cluster --> ControlPlane[Control Plane<br/>e.g., KubeadmControlPlane]
-    
+
     ControlPlane --> MachineSet[Control Plane Machines]
     MachineSet --> Machine1[Machine]
     MachineSet --> Machine2[Machine]
     MachineSet --> Machine3[Machine]
-    
+
     Machine1 --> InfraMachine1[Infrastructure Machine<br/>e.g., AWSMachine]
     Machine1 --> BootstrapConfig1[Bootstrap Config<br/>e.g., KubeadmConfig]
-    
+
     MachineDeployment --> MachineSetWorker[Worker MachineSet]
     MachineSetWorker --> WorkerMachine[Worker Machine]
 ```
@@ -127,4 +127,4 @@ This document will be expanded with:
 - ClusterClass and managed topologies
 - Upgrade strategies
 - Best practices
-- Troubleshooting guides 
+- Troubleshooting guides

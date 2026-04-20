@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: false
 ---
 When committing and pushing changes after an issue is successfully closed and tests have passed:

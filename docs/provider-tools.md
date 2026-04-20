@@ -226,4 +226,4 @@ The current implementations focus on:
 
 4. **Cost Optimization**: Tools to analyze and optimize cloud resource usage.
 
-5. **Multi-Cloud Operations**: Tools for managing clusters across multiple providers. 
+5. **Multi-Cloud Operations**: Tools for managing clusters across multiple providers.
