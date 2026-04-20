@@ -32,7 +32,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("returns error for non-existent cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -45,7 +45,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets a basic cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -59,7 +59,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with provider and phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -73,7 +73,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with version from topology", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -87,7 +87,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with partial machine readiness", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -101,7 +101,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with all machines ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -115,7 +115,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with no machines ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -129,7 +129,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -147,7 +147,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with unhealthy conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -165,7 +165,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with version from control plane", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -182,7 +182,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with version precedence over control plane", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -200,7 +200,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with all properties", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -218,7 +218,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with unknown infrastructure provider", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -234,7 +234,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with non-kubeadm control plane", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -251,7 +251,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with missing control plane resource", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -269,7 +269,7 @@ func TestCapiGetCluster(t *testing.T) {
 	for _, provider := range providers {
 		t.Run(fmt.Sprintf("gets %s cluster with all properties", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 
 			harness.New(t).
 				CreateNamespace(namespace).
@@ -287,7 +287,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 		t.Run(fmt.Sprintf("gets %s cluster with version from control plane", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 
 			harness.New(t).
 				CreateNamespace(namespace).
@@ -305,7 +305,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("should show paused cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -319,7 +319,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("should show cluster with labels and annotations", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -336,7 +336,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with mixed conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -354,7 +354,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with no conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -369,7 +369,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with nil control plane ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -385,7 +385,7 @@ func TestCapiGetCluster(t *testing.T) {
 
 	t.Run("gets cluster with nil infrastructure ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

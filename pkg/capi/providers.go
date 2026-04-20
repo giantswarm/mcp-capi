@@ -3,6 +3,7 @@ package capi
 import (
 	"context"
 	"fmt"
+	"math"
 
 	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"                      //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
@@ -128,14 +129,17 @@ func (c *Client) ScaleControlPlane(ctx context.Context, namespace, name string, 
 
 // ScaleCluster scales either control plane or worker nodes of a cluster
 func (c *Client) ScaleCluster(ctx context.Context, namespace, clusterName, target string, replicas int, machineDeploymentName string) error {
+	if replicas < 0 || replicas > math.MaxInt32 {
+		return fmt.Errorf("replicas %d out of range for int32", replicas)
+	}
 	switch target {
 	case "controlplane":
-		return c.ScaleControlPlane(ctx, namespace, clusterName, int32(replicas))
+		return c.ScaleControlPlane(ctx, namespace, clusterName, int32(replicas)) //#nosec G115 -- bounded above
 	case "workers":
 		if machineDeploymentName == "" {
 			return fmt.Errorf("machineDeployment name is required when scaling workers")
 		}
-		return c.ScaleMachineDeployment(ctx, namespace, machineDeploymentName, int32(replicas))
+		return c.ScaleMachineDeployment(ctx, namespace, machineDeploymentName, int32(replicas)) //#nosec G115 -- bounded above
 	default:
 		return fmt.Errorf("invalid target: %s (must be 'controlplane' or 'workers')", target)
 	}

@@ -36,10 +36,10 @@ func CreateAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandler
 					cluster.Spec.InfrastructureRef.Kind == "AzureManagedCluster") {
 				azureClusterCount++
 
-				content.WriteString(fmt.Sprintf("Cluster: %s/%s\n", cluster.Namespace, cluster.Name))
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind))
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
+				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
+				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
+				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
 
 				// Try to get provider information
 				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
@@ -54,7 +54,7 @@ func CreateAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandler
 		if azureClusterCount == 0 {
 			content.WriteString("No Azure clusters found.\n")
 		} else {
-			content.WriteString(fmt.Sprintf("Total Azure clusters: %d\n", azureClusterCount))
+			fmt.Fprintf(&content, "Total Azure clusters: %d\n", azureClusterCount)
 		}
 
 		return &mcp.CallToolResult{
@@ -95,18 +95,18 @@ func CreateAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Azure Cluster: %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "Azure Cluster: %s/%s\n\n", namespace, name)
 
 		// Basic cluster info
 		content.WriteString("Cluster Information:\n")
-		content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-		content.WriteString(fmt.Sprintf("  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady))
-		content.WriteString(fmt.Sprintf("  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady))
+		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
+		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
 
 		// Infrastructure reference
 		content.WriteString("\nInfrastructure:\n")
-		content.WriteString(fmt.Sprintf("  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind))
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Spec.InfrastructureRef.Name))
+		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
+		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
 
 		content.WriteString("\nNote: For detailed Azure infrastructure information (resource group, vnet, etc.),\n")
 		content.WriteString("you would need to query the AzureCluster resource directly.\n")
@@ -200,10 +200,10 @@ func CreateGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 					cluster.Spec.InfrastructureRef.Kind == "GCPManagedCluster") {
 				gcpClusterCount++
 
-				content.WriteString(fmt.Sprintf("Cluster: %s/%s\n", cluster.Namespace, cluster.Name))
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind))
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
+				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
+				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
+				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
 
 				// Try to get provider information
 				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
@@ -218,7 +218,7 @@ func CreateGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		if gcpClusterCount == 0 {
 			content.WriteString("No GCP clusters found.\n")
 		} else {
-			content.WriteString(fmt.Sprintf("Total GCP clusters: %d\n", gcpClusterCount))
+			fmt.Fprintf(&content, "Total GCP clusters: %d\n", gcpClusterCount)
 		}
 
 		return &mcp.CallToolResult{
@@ -259,18 +259,18 @@ func CreateGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("GCP Cluster: %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "GCP Cluster: %s/%s\n\n", namespace, name)
 
 		// Basic cluster info
 		content.WriteString("Cluster Information:\n")
-		content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-		content.WriteString(fmt.Sprintf("  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady))
-		content.WriteString(fmt.Sprintf("  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady))
+		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
+		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
 
 		// Infrastructure reference
 		content.WriteString("\nInfrastructure:\n")
-		content.WriteString(fmt.Sprintf("  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind))
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Spec.InfrastructureRef.Name))
+		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
+		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
 
 		content.WriteString("\nNote: For detailed GCP infrastructure information (VPC, firewall rules, etc.),\n")
 		content.WriteString("you would need to query the GCPCluster resource directly.\n")

@@ -82,19 +82,19 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster '%s' creation initiated successfully!\n\n", name))
+		fmt.Fprintf(&content, "✅ Cluster '%s' creation initiated successfully!\n\n", name)
 		content.WriteString("Cluster Details:\n")
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Name))
-		content.WriteString(fmt.Sprintf("  Namespace: %s\n", cluster.Namespace))
-		content.WriteString(fmt.Sprintf("  Provider: %s\n", provider))
-		content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", kubernetesVersion))
-		content.WriteString(fmt.Sprintf("  Control Plane Nodes: %d\n", controlPlaneCount))
-		content.WriteString(fmt.Sprintf("  Worker Nodes: %d\n", workerCount))
+		fmt.Fprintf(&content, "  Name: %s\n", cluster.Name)
+		fmt.Fprintf(&content, "  Namespace: %s\n", cluster.Namespace)
+		fmt.Fprintf(&content, "  Provider: %s\n", provider)
+		fmt.Fprintf(&content, "  Kubernetes Version: %s\n", kubernetesVersion)
+		fmt.Fprintf(&content, "  Control Plane Nodes: %d\n", controlPlaneCount)
+		fmt.Fprintf(&content, "  Worker Nodes: %d\n", workerCount)
 		if region != "" {
-			content.WriteString(fmt.Sprintf("  Region: %s\n", region))
+			fmt.Fprintf(&content, "  Region: %s\n", region)
 		}
 		if instanceType != "" {
-			content.WriteString(fmt.Sprintf("  Instance Type: %s\n", instanceType))
+			fmt.Fprintf(&content, "  Instance Type: %s\n", instanceType)
 		}
 		content.WriteString("\n⚠️  Note: This is a basic implementation that creates only the Cluster resource.\n")
 		content.WriteString("In a production setup, you would need to:\n")
@@ -176,7 +176,7 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d clusters:\n\n", len(clusters.Items)))
+		fmt.Fprintf(&content, "Found %d clusters:\n\n", len(clusters.Items))
 
 		for i := range clusters.Items {
 			cluster := &clusters.Items[i]
@@ -242,7 +242,7 @@ func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 				return nil, fmt.Errorf("failed to get cluster status: %w", err)
 			}
 			var content strings.Builder
-			content.WriteString(fmt.Sprintf("Note: No cluster named %q found. Matched cluster by label value:\n\n", name))
+			fmt.Fprintf(&content, "Note: No cluster named %q found. Matched cluster by label value:\n\n", name)
 			content.WriteString(capi.FormatClusterInfo(status))
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
@@ -256,7 +256,7 @@ func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 
 		// Multiple matches - list them for the user to disambiguate
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("No cluster named %q found, but %d clusters matched the term in their labels:\n\n", name, len(matched.Items)))
+		fmt.Fprintf(&content, "No cluster named %q found, but %d clusters matched the term in their labels:\n\n", name, len(matched.Items))
 		for _, cluster := range matched.Items {
 			status, err := serverCtx.CAPIClient.GetClusterStatus(ctx, cluster.Namespace, cluster.Name)
 			if err == nil {
@@ -331,22 +331,22 @@ func CreateClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 
 		// Overall status
 		if health.Healthy {
-			content.WriteString(fmt.Sprintf("✅ Cluster %s/%s is HEALTHY\n\n", namespace, name))
+			fmt.Fprintf(&content, "✅ Cluster %s/%s is HEALTHY\n\n", namespace, name)
 		} else {
-			content.WriteString(fmt.Sprintf("❌ Cluster %s/%s is UNHEALTHY\n\n", namespace, name))
+			fmt.Fprintf(&content, "❌ Cluster %s/%s is UNHEALTHY\n\n", namespace, name)
 		}
 
 		// Component status
 		content.WriteString("Component Status:\n")
-		content.WriteString(fmt.Sprintf("  • Control Plane: %s\n", formatHealthStatus(health.ControlPlaneReady)))
-		content.WriteString(fmt.Sprintf("  • Infrastructure: %s\n", formatHealthStatus(health.InfraReady)))
-		content.WriteString(fmt.Sprintf("  • Worker Nodes: %s\n", formatHealthStatus(health.WorkersReady)))
+		fmt.Fprintf(&content, "  • Control Plane: %s\n", formatHealthStatus(health.ControlPlaneReady))
+		fmt.Fprintf(&content, "  • Infrastructure: %s\n", formatHealthStatus(health.InfraReady))
+		fmt.Fprintf(&content, "  • Worker Nodes: %s\n", formatHealthStatus(health.WorkersReady))
 
 		// Issues
 		if len(health.Issues) > 0 {
 			content.WriteString("\n🔴 Issues:\n")
 			for _, issue := range health.Issues {
-				content.WriteString(fmt.Sprintf("  • %s\n", issue))
+				fmt.Fprintf(&content, "  • %s\n", issue)
 			}
 		}
 
@@ -354,7 +354,7 @@ func CreateClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		if len(health.Warnings) > 0 {
 			content.WriteString("\n⚠️  Warnings:\n")
 			for _, warning := range health.Warnings {
-				content.WriteString(fmt.Sprintf("  • %s\n", warning))
+				fmt.Fprintf(&content, "  • %s\n", warning)
 			}
 		}
 
@@ -451,7 +451,7 @@ func CreateGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Kubeconfig for cluster %s/%s:\n\n", namespace, name))
+		fmt.Fprintf(&content, "Kubeconfig for cluster %s/%s:\n\n", namespace, name)
 		content.WriteString("```yaml\n")
 		content.WriteString(kubeconfig)
 		content.WriteString("\n```\n\n")
@@ -489,7 +489,7 @@ func CreatePauseClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster %s/%s has been paused\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Cluster %s/%s has been paused\n\n", namespace, name)
 		content.WriteString("The cluster reconciliation has been stopped. This means:\n")
 		content.WriteString("- CAPI controllers will not make any changes to the cluster\n")
 		content.WriteString("- The cluster will not be updated or scaled automatically\n")
@@ -526,7 +526,7 @@ func CreateResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster %s/%s has been resumed\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Cluster %s/%s has been resumed\n\n", namespace, name)
 		content.WriteString("The cluster reconciliation has been restarted. This means:\n")
 		content.WriteString("- CAPI controllers will now reconcile the cluster normally\n")
 		content.WriteString("- Any pending updates or changes will be applied\n")
@@ -599,7 +599,7 @@ func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("failed to delete cluster: %w", err)
 		}
 
-		content.WriteString(fmt.Sprintf("\n✅ Cluster %s/%s deletion initiated successfully.\n\n", namespace, name))
+		fmt.Fprintf(&content, "\n✅ Cluster %s/%s deletion initiated successfully.\n\n", namespace, name)
 		content.WriteString("Note: The actual deletion process may take several minutes as:\n")
 		content.WriteString("- All cluster resources are being cleaned up\n")
 		content.WriteString("- Infrastructure resources are being deprovisioned\n")
@@ -647,11 +647,11 @@ func CreateUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🚀 Initiating cluster upgrade for %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🚀 Initiating cluster upgrade for %s/%s\n\n", namespace, name)
 		content.WriteString("Current State:\n")
-		content.WriteString(fmt.Sprintf("  • Current Version: %s\n", status.Version))
-		content.WriteString(fmt.Sprintf("  • Target Version: %s\n", targetVersion))
-		content.WriteString(fmt.Sprintf("  • Upgrade Workers: %v\n\n", upgradeWorkers))
+		fmt.Fprintf(&content, "  • Current Version: %s\n", status.Version)
+		fmt.Fprintf(&content, "  • Target Version: %s\n", targetVersion)
+		fmt.Fprintf(&content, "  • Upgrade Workers: %v\n\n", upgradeWorkers)
 
 		// Perform the upgrade
 		opts := capi.UpgradeClusterOptions{
@@ -741,16 +741,16 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Cluster %s/%s updated successfully!\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Cluster %s/%s updated successfully!\n\n", namespace, name)
 
 		// Show what was updated
 		if len(labelMap) > 0 {
 			content.WriteString("Labels updated:\n")
 			for k, v := range labelMap {
 				if v == "" {
-					content.WriteString(fmt.Sprintf("  ✗ Removed: %s\n", k))
+					fmt.Fprintf(&content, "  ✗ Removed: %s\n", k)
 				} else {
-					content.WriteString(fmt.Sprintf("  ✓ Set: %s=%s\n", k, v))
+					fmt.Fprintf(&content, "  ✓ Set: %s=%s\n", k, v)
 				}
 			}
 			content.WriteString("\n")
@@ -760,9 +760,9 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			content.WriteString("Annotations updated:\n")
 			for k, v := range annotationMap {
 				if v == "" {
-					content.WriteString(fmt.Sprintf("  ✗ Removed: %s\n", k))
+					fmt.Fprintf(&content, "  ✗ Removed: %s\n", k)
 				} else {
-					content.WriteString(fmt.Sprintf("  ✓ Set: %s=%s\n", k, v))
+					fmt.Fprintf(&content, "  ✓ Set: %s=%s\n", k, v)
 				}
 			}
 			content.WriteString("\n")
@@ -773,7 +773,7 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		content.WriteString("Labels:\n")
 		if len(cluster.Labels) > 0 {
 			for k, v := range cluster.Labels {
-				content.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
+				fmt.Fprintf(&content, "  %s: %s\n", k, v)
 			}
 		} else {
 			content.WriteString("  (none)\n")
@@ -782,7 +782,7 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		content.WriteString("\nAnnotations:\n")
 		if len(cluster.Annotations) > 0 {
 			for k, v := range cluster.Annotations {
-				content.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
+				fmt.Fprintf(&content, "  %s: %s\n", k, v)
 			}
 		} else {
 			content.WriteString("  (none)\n")
@@ -832,7 +832,7 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🚀 Cluster Move Preparation for %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🚀 Cluster Move Preparation for %s/%s\n\n", namespace, name)
 
 		if dryRun {
 			content.WriteString("⚠️  DRY RUN MODE - No actual changes will be made\n\n")
@@ -846,18 +846,18 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 
 		content.WriteString("```bash\n")
 		content.WriteString("# Pause the cluster first\n")
-		content.WriteString(fmt.Sprintf("kubectl patch cluster %s -n %s --type merge -p '{\"spec\":{\"paused\":true}}'\n\n", name, namespace))
+		fmt.Fprintf(&content, "kubectl patch cluster %s -n %s --type merge -p '{\"spec\":{\"paused\":true}}'\n\n", name, namespace)
 
 		content.WriteString("# Move the cluster\n")
 		if targetKubeconfig != "" {
-			content.WriteString(fmt.Sprintf("clusterctl move --to-kubeconfig=%s", targetKubeconfig))
+			fmt.Fprintf(&content, "clusterctl move --to-kubeconfig=%s", targetKubeconfig)
 		} else {
 			content.WriteString("clusterctl move --to-kubeconfig=<target-kubeconfig>")
 		}
 		if targetNamespace != "" && targetNamespace != namespace {
-			content.WriteString(fmt.Sprintf(" --namespace %s --to-namespace %s", namespace, targetNamespace))
+			fmt.Fprintf(&content, " --namespace %s --to-namespace %s", namespace, targetNamespace)
 		} else {
-			content.WriteString(fmt.Sprintf(" --namespace %s", namespace))
+			fmt.Fprintf(&content, " --namespace %s", namespace)
 		}
 		content.WriteString("\n")
 		content.WriteString("```\n\n")
@@ -917,11 +917,11 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("📦 Cluster Backup for %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "📦 Cluster Backup for %s/%s\n\n", namespace, name)
 
 		content.WriteString("Backup Configuration:\n")
-		content.WriteString(fmt.Sprintf("  • Format: %s\n", outputFormat))
-		content.WriteString(fmt.Sprintf("  • Include Secrets: %v\n\n", includeSecrets))
+		fmt.Fprintf(&content, "  • Format: %s\n", outputFormat)
+		fmt.Fprintf(&content, "  • Include Secrets: %v\n\n", includeSecrets)
 
 		content.WriteString("📋 Backup Instructions:\n")
 		content.WriteString("1. Save the backup content below to a file\n")
@@ -949,8 +949,8 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		content.WriteString("\n```\n\n")
 
 		content.WriteString("💾 To save this backup:\n")
-		content.WriteString(fmt.Sprintf("1. Copy the content between the ``` markers\n"))
-		content.WriteString(fmt.Sprintf("2. Save to a file: cluster-%s-%s-backup.%s\n", namespace, name, outputFormat))
+		content.WriteString("1. Copy the content between the ``` markers\n")
+		fmt.Fprintf(&content, "2. Save to a file: cluster-%s-%s-backup.%s\n", namespace, name, outputFormat)
 		content.WriteString("3. Encrypt if it contains secrets\n")
 
 		return &mcp.CallToolResult{

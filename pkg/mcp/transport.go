@@ -38,14 +38,10 @@ func RunStdioServer(mcpSrv *mcpserver.MCPServer, stdin io.Reader, stdout io.Writ
 	}()
 
 	// Wait for server completion
-	select {
-	case err := <-serverDone:
-		if err != nil {
-			return fmt.Errorf("server stopped with error: %w", err)
-		} else {
-			fmt.Println("Server stopped normally")
-		}
+	if err := <-serverDone; err != nil {
+		return fmt.Errorf("server stopped with error: %w", err)
 	}
+	fmt.Println("Server stopped normally")
 
 	fmt.Println("Server gracefully stopped")
 	return nil

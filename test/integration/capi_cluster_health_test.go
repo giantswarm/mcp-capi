@@ -13,7 +13,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns error for non-existent cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -26,7 +26,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns healthy status for basic cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -40,7 +40,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns unhealthy status when control plane is not ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -58,7 +58,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns unhealthy status with partial machine readiness", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -72,7 +72,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns healthy status with all machines ready and provisioned phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -88,7 +88,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns warning for non-provisioned phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -112,7 +112,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns error when name argument is missing", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -124,7 +124,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows infra-specific recommendations when CP ready but infra not ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -141,7 +141,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows CP-specific recommendations when CP not ready but infra ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -158,7 +158,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows only worker recommendations when CP and infra ready but no machines", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -175,7 +175,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows condition with Error severity in Issues section", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -191,7 +191,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows condition with Warning severity in Warnings section", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -207,7 +207,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("reports workers not ready when zero machines exist", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -225,7 +225,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns warning for Failed phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -239,7 +239,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("returns warning for Deleting phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -253,7 +253,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("does not generate phase warning for empty phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -268,7 +268,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows both issues and warnings for combined error and warning conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -285,7 +285,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("shows all recommendation sections when CP infra and workers are all not ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -303,7 +303,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("should show multiple error severity conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -320,7 +320,7 @@ func TestCapiClusterHealth(t *testing.T) {
 
 	t.Run("should show provisioning phase warning", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
