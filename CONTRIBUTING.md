@@ -138,4 +138,4 @@ git push upstream v0.1.0
 
 Contributors will be recognized in our releases and documentation.
 
-Thank you for contributing! 
+Thank you for contributing!

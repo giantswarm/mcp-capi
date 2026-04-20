@@ -268,4 +268,4 @@ capi_cordon_node --node_name worker-node-1 --uncordon
 
 4. **Node Draining**: The current implementation only cordons nodes. Full pod eviction is not yet implemented - use kubectl drain for complete functionality.
 
-5. **Management vs Workload Cluster**: Most operations work on the management cluster. Node operations that require workload cluster access are limited. 
+5. **Management vs Workload Cluster**: Most operations work on the management cluster. Node operations that require workload cluster access are limited.

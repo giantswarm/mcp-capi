@@ -8,9 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/mark3labs/mcp-go/server"
+
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/giantswarm/mcp-capi/pkg/mcp/handlers"
-	"github.com/mark3labs/mcp-go/server"
 )
 
 // Server represents an MCP CAPI server instance

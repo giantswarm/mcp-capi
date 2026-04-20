@@ -47,8 +47,18 @@ jobs:
             -o "$(go env GOPATH)/bin/kube-apiserver"
           chmod +x "$(go env GOPATH)/bin/kube-apiserver"
 
-      - name: Run Checks (Lint & Test)
-        run: make check
+      - name: Run yamllint
+        run: >-
+          yamllint
+          .github/workflows/auto-release.yaml
+          .github/workflows/ci.yaml
+          .goreleaser.yaml
+
+      - name: Run lint
+        run: make lint
+
+      - name: Run tests
+        run: make test
 
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v7
@@ -61,7 +71,9 @@ jobs:
       - name: Run Release Dry-Run
         # Only run on PRs, not on direct pushes to main
         if: github.event_name == 'pull_request'
-        run: make release-dry-run
+        run: >-
+          goreleaser release --snapshot --clean
+          --skip=announce,publish,validate
         env:
           # GoReleaser needs a GITHUB_TOKEN even for dry runs
           # to check API rate limits, etc.
