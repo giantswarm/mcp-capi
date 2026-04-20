@@ -24,10 +24,12 @@ func (m *mockT) Log(args ...any)  { m.logs = append(m.logs, fmt.Sprint(args...))
 func (m *mockT) Logf(format string, args ...any) {
 	m.logs = append(m.logs, fmt.Sprintf(format, args...))
 }
+
 func (m *mockT) Fatal(args ...any) {
 	m.fatals = append(m.fatals, fmt.Sprint(args...))
 	runtime.Goexit()
 }
+
 func (m *mockT) Fatalf(format string, args ...any) {
 	m.fatals = append(m.fatals, fmt.Sprintf(format, args...))
 	runtime.Goexit()
@@ -36,6 +38,7 @@ func (m *mockT) Error(args ...any) { m.errors = append(m.errors, fmt.Sprint(args
 func (m *mockT) Errorf(format string, args ...any) {
 	m.errors = append(m.errors, fmt.Sprintf(format, args...))
 }
+
 func (m *mockT) TempDir() string {
 	m.Fatal("TempDir is not supported on mockT")
 	return ""

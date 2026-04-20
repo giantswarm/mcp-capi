@@ -8,6 +8,9 @@ import (
 	"github.com/giantswarm/mcp-capi/test/harness"
 )
 
+// testNamespace is the default namespace used across integration tests.
+const testNamespace = "test-clusters"
+
 func TestMain(m *testing.M) {
 	if err := harness.InitManager(); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize test harness: %v\n", err)

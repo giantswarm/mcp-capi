@@ -1,14 +1,15 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	mcppkg "github.com/giantswarm/mcp-capi/pkg/mcp"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -38,7 +39,7 @@ Supports multiple transport types:
   - stdio: Standard input/output (default)
   - sse: Server-Sent Events over HTTP
   - streamable-http: Streamable HTTP transport`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// Validate input parameters before starting server
 			if err := validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint); err != nil {
 				return fmt.Errorf("invalid configuration: %w", err)
@@ -49,11 +50,13 @@ Supports multiple transport types:
 
 	// Transport flags
 	cmd.Flags().StringVar(&transport, "transport", "stdio", "Transport type: stdio, sse, or streamable-http")
-	cmd.Flags().StringVar(&httpAddr, "http-addr", ":8080", "HTTP server address (for sse and streamable-http transports)")
+	cmd.Flags().
+		StringVar(&httpAddr, "http-addr", ":8080", "HTTP server address (for sse and streamable-http transports)")
 	cmd.Flags().StringVar(&sseEndpoint, "sse-endpoint", "/sse", "SSE endpoint path (for sse transport)")
 	cmd.Flags().StringVar(&messageEndpoint, "message-endpoint", "/message", "Message endpoint path (for sse transport)")
 	cmd.Flags().StringVar(&httpEndpoint, "http-endpoint", "/mcp", "HTTP endpoint path (for streamable-http transport)")
-	cmd.Flags().StringVar(&kubeconfigPath, "kubeconfig", "", "Path to kubeconfig file (defaults to KUBECONFIG env var or ~/.kube/config)")
+	cmd.Flags().
+		StringVar(&kubeconfigPath, "kubeconfig", "", "Path to kubeconfig file (defaults to KUBECONFIG env var or ~/.kube/config)")
 
 	return cmd
 }
@@ -62,15 +65,13 @@ Supports multiple transport types:
 func validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint string) error {
 	// Validate transport type
 	validTransports := []string{"stdio", "sse", "streamable-http"}
-	isValidTransport := false
-	for _, valid := range validTransports {
-		if transport == valid {
-			isValidTransport = true
-			break
-		}
-	}
+	isValidTransport := slices.Contains(validTransports, transport)
 	if !isValidTransport {
-		return fmt.Errorf("unsupported transport type: %s (supported: %s)", transport, strings.Join(validTransports, ", "))
+		return fmt.Errorf(
+			"unsupported transport type: %s (supported: %s)",
+			transport,
+			strings.Join(validTransports, ", "),
+		)
 	}
 
 	// Validate HTTP address for non-stdio transports
@@ -99,7 +100,7 @@ func validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpE
 // validateHTTPAddr validates HTTP address format
 func validateHTTPAddr(addr string) error {
 	if addr == "" {
-		return fmt.Errorf("address cannot be empty")
+		return errors.New("address cannot be empty")
 	}
 
 	// Parse the address
@@ -130,7 +131,7 @@ func validateHTTPAddr(addr string) error {
 // validateEndpointPath validates HTTP endpoint paths
 func validateEndpointPath(path string) error {
 	if path == "" {
-		return fmt.Errorf("endpoint path cannot be empty")
+		return errors.New("endpoint path cannot be empty")
 	}
 	if !strings.HasPrefix(path, "/") {
 		return fmt.Errorf("endpoint path must start with '/', got: %s", path)

@@ -236,7 +236,11 @@ func (cpb *ControlPlaneBuilder) Done() *ClusterBuilder {
 func (cb *ClusterBuilder) Create() *Harness {
 	cb.harness.t.Helper()
 	if cb.controlPlane != nil && cb.customCPRef != nil {
-		cb.harness.t.Fatalf("ClusterBuilder for %s/%s: cannot set both WithKubeadmControlPlane and WithControlPlaneRef", cb.namespace, cb.name)
+		cb.harness.t.Fatalf(
+			"ClusterBuilder for %s/%s: cannot set both WithKubeadmControlPlane and WithControlPlaneRef",
+			cb.namespace,
+			cb.name,
+		)
 	}
 	op := cb.clusterBuilderOp // value copy
 	cb.harness.operations = append(cb.harness.operations, &op)

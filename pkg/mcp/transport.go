@@ -12,11 +12,13 @@ import (
 	mcpserver "github.com/mark3labs/mcp-go/server"
 )
 
-// RunStdioServer runs the server with STDIO transport
-func RunStdioServer(mcpSrv *mcpserver.MCPServer, stdin io.Reader, stdout io.Writer) error {
+// RunStdioServer runs the server with STDIO transport.
+// The provided parent context is used as the base; an additional signal handler
+// is layered on top so that SIGTERM/SIGINT also cancel the context.
+func RunStdioServer(parent context.Context, mcpSrv *mcpserver.MCPServer, stdin io.Reader, stdout io.Writer) error {
 	s := mcpserver.NewStdioServer(mcpSrv)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 
 	// Set up signal handling
@@ -38,21 +40,17 @@ func RunStdioServer(mcpSrv *mcpserver.MCPServer, stdin io.Reader, stdout io.Writ
 	}()
 
 	// Wait for server completion
-	select {
-	case err := <-serverDone:
-		if err != nil {
-			return fmt.Errorf("server stopped with error: %w", err)
-		} else {
-			fmt.Println("Server stopped normally")
-		}
+	if err := <-serverDone; err != nil {
+		return fmt.Errorf("server stopped with error: %w", err)
 	}
+	fmt.Println("Server stopped normally")
 
 	fmt.Println("Server gracefully stopped")
 	return nil
 }
 
 // RunSSEServer runs the server with SSE transport
-func RunSSEServer(mcpSrv *mcpserver.MCPServer, addr, sseEndpoint, messageEndpoint string, ctx context.Context) error {
+func RunSSEServer(ctx context.Context, mcpSrv *mcpserver.MCPServer, addr, sseEndpoint, messageEndpoint string) error {
 	// Create SSE server with custom endpoints
 	sseServer := mcpserver.NewSSEServer(mcpSrv,
 		mcpserver.WithSSEEndpoint(sseEndpoint),
@@ -76,7 +74,7 @@ func RunSSEServer(mcpSrv *mcpserver.MCPServer, addr, sseEndpoint, messageEndpoin
 	select {
 	case <-ctx.Done():
 		fmt.Println("Shutdown signal received, stopping SSE server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 		if err := sseServer.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("error shutting down SSE server: %w", err)
@@ -94,7 +92,7 @@ func RunSSEServer(mcpSrv *mcpserver.MCPServer, addr, sseEndpoint, messageEndpoin
 }
 
 // RunStreamableHTTPServer runs the server with Streamable HTTP transport
-func RunStreamableHTTPServer(mcpSrv *mcpserver.MCPServer, addr, endpoint string, ctx context.Context) error {
+func RunStreamableHTTPServer(ctx context.Context, mcpSrv *mcpserver.MCPServer, addr, endpoint string) error {
 	// Create Streamable HTTP server with custom endpoint
 	httpServer := mcpserver.NewStreamableHTTPServer(mcpSrv,
 		mcpserver.WithEndpointPath(endpoint),
@@ -116,7 +114,7 @@ func RunStreamableHTTPServer(mcpSrv *mcpserver.MCPServer, addr, endpoint string,
 	select {
 	case <-ctx.Done():
 		fmt.Println("Shutdown signal received, stopping HTTP server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("error shutting down HTTP server: %w", err)

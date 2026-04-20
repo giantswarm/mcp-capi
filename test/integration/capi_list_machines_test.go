@@ -11,7 +11,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("lists machines in namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -24,7 +24,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("filters machines by cluster name", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -39,7 +39,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("returns empty list when no machines exist", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -51,7 +51,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("lists machines with all ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -64,7 +64,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("lists machines with none ready", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -77,7 +77,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("returns error when namespace argument is missing", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -88,7 +88,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("lists machines from multiple clusters in same namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -102,7 +102,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("returns empty list when filtering by non-existent cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -116,7 +116,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("lists single machine", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -129,7 +129,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("should show machine with provider ID", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -145,7 +145,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("should show machine with empty phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -159,7 +159,7 @@ func TestCapiListMachines(t *testing.T) {
 
 	t.Run("should show machine with node ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

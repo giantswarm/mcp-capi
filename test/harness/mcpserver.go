@@ -20,7 +20,13 @@ const (
 )
 
 // initializeMCPServer creates and starts the MCP server with cleanup registration.
-func initializeMCPServer(t TestingT, kubeconfigPath string, input io.Reader, output io.WriteCloser) {
+func initializeMCPServer(
+	ctx context.Context,
+	t TestingT,
+	kubeconfigPath string,
+	input io.Reader,
+	output io.WriteCloser,
+) {
 	t.Helper()
 
 	// Create MCP server with stdio transport
@@ -46,11 +52,18 @@ func initializeMCPServer(t TestingT, kubeconfigPath string, input io.Reader, out
 	t.Log("starting MCP server")
 	done := make(chan struct{})
 	errCh := make(chan error, 1)
-	go func() {
+	go func() { //nolint:contextcheck // server manages its own lifecycle context via Run()
 		defer close(done)
-		if err := srv.Run(); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+		if err := srv.Run(); err != nil && !errors.Is(err, context.Canceled) &&
+			!errors.Is(err, context.DeadlineExceeded) {
 			errCh <- err
 		}
+	}()
+
+	// Shut down server when the test context is canceled (e.g. test timeout).
+	go func() {
+		<-ctx.Done()
+		srv.Shutdown()
 	}()
 
 	t.Cleanup(func() {

@@ -33,7 +33,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			ToolCall("capi_node_status").
-			WithArg("namespace", "test-clusters").
+			WithArg("namespace", testNamespace).
 			AssertError("missing_machine_name.golden").
 			Execute()
 	})
@@ -59,8 +59,10 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			Node("not-ready-node").
-			WithCondition("Ready").False().Reason("KubeletNotReady").Message("container runtime network not ready").Done().
-			WithCondition("MemoryPressure").False().Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
+			WithCondition("Ready").
+			False().Reason("KubeletNotReady").Message("container runtime network not ready").Done().
+			WithCondition("MemoryPressure").
+			False().Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
 			WithAddress("InternalIP", "10.0.0.5").
 			WithAddress("Hostname", "not-ready-node").
 			WithTaint("node.kubernetes.io/not-ready", "", "NoSchedule").
@@ -77,9 +79,12 @@ func TestCapiNodeStatus(t *testing.T) {
 		harness.New(t).
 			Node("multi-cond-node").
 			WithCondition("Ready").True().Reason("KubeletReady").Message("kubelet is posting ready status").Done().
-			WithCondition("MemoryPressure").False().Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
-			WithCondition("DiskPressure").False().Reason("KubeletHasNoDiskPressure").Message("kubelet has no disk pressure").Done().
-			WithCondition("PIDPressure").False().Reason("KubeletHasSufficientPID").Message("kubelet has sufficient PID available").Done().
+			WithCondition("MemoryPressure").
+			False().Reason("KubeletHasSufficientMemory").Message("kubelet has sufficient memory available").Done().
+			WithCondition("DiskPressure").
+			False().Reason("KubeletHasNoDiskPressure").Message("kubelet has no disk pressure").Done().
+			WithCondition("PIDPressure").
+			False().Reason("KubeletHasSufficientPID").Message("kubelet has sufficient PID available").Done().
 			WithAddress("InternalIP", "10.0.0.2").
 			WithAddress("Hostname", "multi-cond-node").
 			WithTaint("node.kubernetes.io/not-ready", "", "NoSchedule").
@@ -128,7 +133,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 	t.Run("retrieves node status via machine_name lookup", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -183,7 +188,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 	t.Run("returns error when machine has no associated node", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -197,7 +202,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 	t.Run("returns error when machine_name not found", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

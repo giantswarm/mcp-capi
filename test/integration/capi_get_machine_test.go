@@ -11,7 +11,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets an existing machine", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -25,7 +25,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets a machine without node ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -39,7 +39,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("returns error for non-existent machine", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -52,7 +52,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("returns error when namespace argument is missing", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -64,7 +64,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("returns error when name argument is missing", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -76,7 +76,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets machine from cluster with multiple machines", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -90,7 +90,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets machine with all optional fields", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -116,7 +116,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets machine with nil bootstrap config ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -134,7 +134,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets machine with empty infrastructure ref kind", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -152,7 +152,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets machine with nil version", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -170,7 +170,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets machine with no conditions", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -190,7 +190,7 @@ func TestCapiGetMachine(t *testing.T) {
 
 	t.Run("gets machine with condition without reason and message", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

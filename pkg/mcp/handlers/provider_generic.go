@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,74 +10,64 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// createListInfrastructureProvidersHandler creates a handler for listing available infrastructure providers
-func CreateListInfrastructureProvidersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// In a real implementation, this would discover installed providers
-		// For now, we'll return a static list of commonly available providers
-
-		var content strings.Builder
-		content.WriteString("Available Infrastructure Providers:\n\n")
-
-		providers := []struct {
-			Name        string
-			APIVersion  string
-			Description string
-		}{
-			{
-				Name:        "AWS",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta2",
-				Description: "Amazon Web Services infrastructure provider",
-			},
-			{
-				Name:        "Azure",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
-				Description: "Microsoft Azure infrastructure provider",
-			},
-			{
-				Name:        "GCP",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
-				Description: "Google Cloud Platform infrastructure provider",
-			},
-			{
-				Name:        "vSphere",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
-				Description: "VMware vSphere infrastructure provider",
-			},
-		}
-
-		for _, provider := range providers {
-			content.WriteString(fmt.Sprintf("Provider: %s\n", provider.Name))
-			content.WriteString(fmt.Sprintf("  API Version: %s\n", provider.APIVersion))
-			content.WriteString(fmt.Sprintf("  Description: %s\n", provider.Description))
-			content.WriteString("\n")
-		}
-
-		content.WriteString("Note: This list shows commonly available providers.\n")
-		content.WriteString("To see actually installed providers in your cluster, check the deployed controllers.\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+// CreateListInfrastructureProvidersHandler creates a handler for listing available infrastructure providers
+func CreateListInfrastructureProvidersHandler(_ *ServerContext) server.ToolHandlerFunc {
+	return buildPlaceholderHandler(buildProvidersListText())
 }
 
-// createGetProviderConfigHandler creates a handler for getting provider configuration
-func CreateGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// buildProvidersListText builds the static text for the list-providers response.
+func buildProvidersListText() string {
+	providers := []struct {
+		Name        string
+		APIVersion  string
+		Description string
+	}{
+		{
+			Name:        "AWS",
+			APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta2",
+			Description: "Amazon Web Services infrastructure provider",
+		},
+		{
+			Name:        "Azure",
+			APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
+			Description: "Microsoft Azure infrastructure provider",
+		},
+		{
+			Name:        "GCP",
+			APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
+			Description: "Google Cloud Platform infrastructure provider",
+		},
+		{
+			Name:        "vSphere",
+			APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
+			Description: "VMware vSphere infrastructure provider",
+		},
+	}
+
+	var content strings.Builder
+	content.WriteString("Available Infrastructure Providers:\n\n")
+	for _, provider := range providers {
+		fmt.Fprintf(&content, "Provider: %s\n", provider.Name)
+		fmt.Fprintf(&content, "  API Version: %s\n", provider.APIVersion)
+		fmt.Fprintf(&content, "  Description: %s\n", provider.Description)
+		content.WriteString("\n")
+	}
+	content.WriteString("Note: This list shows commonly available providers.\n")
+	content.WriteString("To see actually installed providers in your cluster, check the deployed controllers.\n")
+	return content.String()
+}
+
+// CreateGetProviderConfigHandler creates a handler for getting provider configuration
+func CreateGetProviderConfigHandler(_ *ServerContext) server.ToolHandlerFunc {
+	return func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
 		provider, ok := arguments["provider"].(string)
 		if !ok || provider == "" {
-			return nil, fmt.Errorf("provider argument is required (aws, azure, gcp, vsphere)")
+			return nil, errors.New("provider argument is required (aws, azure, gcp, vsphere)")
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Configuration for %s Provider:\n\n", strings.ToUpper(provider)))
+		fmt.Fprintf(&content, "Configuration for %s Provider:\n\n", strings.ToUpper(provider))
 
 		switch strings.ToLower(provider) {
 		case "aws":
@@ -142,7 +133,9 @@ func CreateGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandler
 			content.WriteString("    - VSphereMachineTemplate: Template for creating machines\n")
 
 		default:
-			return mcp.NewToolResultError(fmt.Sprintf("Unknown provider: %s. Supported providers: aws, azure, gcp, vsphere", provider)), nil
+			return mcp.NewToolResultError(
+				fmt.Sprintf("Unknown provider: %s. Supported providers: aws, azure, gcp, vsphere", provider),
+			), nil
 		}
 
 		return &mcp.CallToolResult{

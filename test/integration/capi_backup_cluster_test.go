@@ -24,14 +24,14 @@ func TestCapiBackupCluster(t *testing.T) {
 
 		harness.New(t).
 			ToolCall("capi_backup_cluster").
-			WithArg("namespace", "test-clusters").
+			WithArg("namespace", testNamespace).
 			AssertError("missing_name.golden").
 			Execute()
 	})
 
 	t.Run("returns error for non-existent cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -44,7 +44,7 @@ func TestCapiBackupCluster(t *testing.T) {
 
 	t.Run("backs up cluster with default settings", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -58,7 +58,7 @@ func TestCapiBackupCluster(t *testing.T) {
 
 	t.Run("backs up cluster with JSON output format", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -73,7 +73,7 @@ func TestCapiBackupCluster(t *testing.T) {
 
 	t.Run("backs up cluster with secrets included", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -88,7 +88,7 @@ func TestCapiBackupCluster(t *testing.T) {
 
 	t.Run("backs up cluster with JSON format and secrets", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -104,7 +104,7 @@ func TestCapiBackupCluster(t *testing.T) {
 
 	t.Run("should exclude secrets when include_secrets is false", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -122,7 +122,7 @@ func TestCapiBackupCluster(t *testing.T) {
 
 	t.Run("should error on invalid output format", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -137,7 +137,7 @@ func TestCapiBackupCluster(t *testing.T) {
 
 	t.Run("should backup cluster with rich state", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -146,7 +146,8 @@ func TestCapiBackupCluster(t *testing.T) {
 			WithPhase("Provisioned").
 			WithMachines(3, 2).
 			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
-			WithCondition("InfrastructureReady").True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
+			WithCondition("InfrastructureReady").
+			True().Reason("InfrastructureProvisioned").Message("Infrastructure is ready").Done().
 			Create().
 			ToolCall("capi_backup_cluster").
 			WithArg("namespace", namespace).

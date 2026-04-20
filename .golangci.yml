@@ -1,0 +1,244 @@
+# golangci-lint v2 configuration for mcp-capi
+# See https://golangci-lint.run/usage/configuration/ for full options
+
+version: "2"
+
+run:
+  build-tags:
+    - integration
+  tests: true
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 120
+  exclusions:
+    generated: lax
+
+linters:
+  default: none
+  enable:
+    # Core (12 linters)
+    - errcheck       # Check for unchecked errors
+    - staticcheck    # Staticcheck is a go vet on steroids
+    - ineffassign    # Detect ineffectual assignments
+    - unconvert      # Remove unnecessary type conversions
+    - misspell       # Find commonly misspelled English words
+    - gocritic       # Opinionated Go source code checks
+    - revive         # Fast, configurable, extensible linter
+    - gosec          # Inspect code for security problems
+    - gocyclo        # Check cyclomatic complexity
+    - gocognit       # Check cognitive complexity
+    - goconst        # Find repeated strings that could be constants
+    - dupl           # Find duplicated code
+
+    # Tier 1: Critical (4 linters)
+    - govet          # Go's official static analyzer
+    - errorlint      # Modern error wrapping validator (Go 1.13+)
+    - wrapcheck      # Checks that external errors are wrapped
+    - thelper        # Ensures test helpers call t.Helper()
+
+    # Tier 2: High Value (4 linters)
+    - unparam        # Unused function parameter detection
+    - exhaustive     # Switch statement completeness checks
+    - forbidigo      # Deprecated package blocker
+    - nilerr         # Nil return despite error check
+
+    # Tier 3: Beneficial (4 linters)
+    - contextcheck   # Non-inherited context detection
+    - bodyclose      # HTTP response body closure checks
+    - gomoddirectives # go.mod hygiene (replace/retract directives)
+    - prealloc       # Slice preallocation optimization
+
+    # Tier 4: Core Safety (7 linters)
+    - copyloopvar    # Loop variable capture prevention (Go 1.22+)
+    - nilnil         # Prevents (nil, nil) returns
+    - usestdlibvars  # Stdlib constants over magic numbers
+    - bidichk        # Security: dangerous unicode detection
+    - asciicheck     # Non-ASCII identifier prevention
+    - durationcheck  # Duration multiplication validation
+    - makezero       # Slice initialization bug prevention
+
+    # Tier 5: Performance & Build (2 linters)
+    - perfsprint             # fmt.Sprintf optimization suggestions
+    - gocheckcompilerdirectives # Validates //go: directives
+
+    # Tier 6: Modern Go (4 linters)
+    - modernize              # Modern Go idioms (Go 1.21+) with auto-fix
+    - intrange               # Integer range in for loops (Go 1.22+)
+    - exptostd               # Replace golang.org/x/exp with stdlib
+    - usetesting             # Testing package best practices
+
+    # Tier 7: Code Quality (4 linters)
+    - fatcontext             # Context leak detection in loops
+    - nolintlint             # //nolint directive hygiene
+    - sloglint               # log/slog consistency
+    - loggercheck            # Logger key-value pair validation
+
+    # Tier 8: High Value Additions (4 linters)
+    - containedctx           # Prevents context.Context in struct fields
+    - forcetypeassert        # Requires type assertion error checking
+    - errname                # Enforces Err prefix on sentinel errors
+    - nosprintfhostport      # Catches host:port construction bugs
+
+    # Tier 9: Medium Value (3 linters)
+    - testableexamples       # Ensures examples are testable
+    - nilnesserr             # Detects nil error despite check
+    - recvcheck              # Ensures receiver type consistency
+
+    # Tier 10: Stylistic (4 linters, auto-fix available)
+    - mirror                 # Bytes/strings anti-patterns
+    - tagalign               # Struct tag alignment
+    - importas               # Import alias enforcement
+    - inamedparam            # Interface parameter naming
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - (*github.com/spf13/cobra.Command).Help
+        - (*github.com/spf13/cobra.Command).Usage
+
+    staticcheck:
+      checks:
+        - all
+
+    gosec:
+      # Security checks with exceptions for test framework needs
+      config:
+        # Allow 0755 directory permissions (not 0750)
+        G301: "0755"
+        # Allow 0644 file permissions in tests (not 0600)
+        G306: "0644"
+
+    revive:
+      rules:
+        - name: package-comments
+          severity: warning
+        - name: unused-parameter
+          arguments:
+            - allowUnusedParamPrefix: _
+          severity: warning
+        - name: context-as-argument
+          arguments:
+            - allowTypesBefore: '*testing.T'
+          severity: warning
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - sayRepetitiveInsteadOfStutters
+          severity: warning
+        - name: error-return
+          severity: warning
+        - name: error-strings
+          severity: warning
+        - name: error-naming
+          severity: warning
+        - name: increment-decrement
+          severity: warning
+        - name: var-naming
+          severity: warning
+
+    gocyclo:
+      # Cyclomatic complexity threshold (stricter than default 30)
+      min-complexity: 15
+
+    gocognit:
+      # Cognitive complexity threshold (stricter than default 30)
+      min-complexity: 20
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+
+    dupl:
+      threshold: 150
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      disabled-checks:
+        - whyNoLint        # We prefer explicit nolint comments with reasons
+        - hugeParam        # Config structs passed by value intentionally
+        - paramTypeCombine # Style preference; explicit types are clearer
+
+    misspell:
+      locale: US
+      ignore-rules:
+        - capi  # Cluster API abbreviation
+        - kube  # Kubernetes abbreviation
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment  # Struct padding optimization — noise, not bugs
+        - shadow          # Too noisy; idiomatic Go re-declares err in nested scopes
+
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - errors.Join(
+      ignore-package-globs:
+        - github.com/giantswarm/mcp-capi/*  # Internal packages
+
+    thelper:
+      test:
+        first: true
+        name: true
+        begin: true
+      benchmark:
+        first: true
+        name: true
+        begin: true
+
+    unparam:
+      check-exported: false
+
+    exhaustive:
+      check:
+        - switch
+        - map
+      default-signifies-exhaustive: true
+
+    forbidigo:
+      forbid:
+        - pattern: ^math/rand\.(Read|Seed|Int|Float64|Int31|Int63|Uint32|Uint64|Intn)
+          pkg: ^math/rand$
+          msg: Use math/rand/v2 instead of math/rand
+      exclude-godoc-examples: true
+
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+
+    sloglint:
+      no-mixed-args: true
+      no-raw-keys: false
+      key-naming-case: snake
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

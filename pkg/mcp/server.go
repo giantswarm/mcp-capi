@@ -1,3 +1,4 @@
+// Package mcp implements the Model Context Protocol (MCP) server for CAPI.
 package mcp
 
 import (
@@ -18,21 +19,16 @@ type Server struct {
 	options       ServerOptions
 	mcpServer     *server.MCPServer
 	serverContext *handlers.ServerContext
-	ctx           context.Context
 	cancel        context.CancelFunc
 }
 
 // NewServer creates a new MCP CAPI server with the given options
 func NewServer(opts ServerOptions) (*Server, error) {
-	// Create context that cancels on interrupt
-	ctx, cancel := context.WithCancel(context.Background())
-
 	// Initialize CAPI client
 	log.Println("Initializing CAPI client...")
 	capiClient, err := capi.NewClient(opts.KubeconfigPath)
 	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to create CAPI client: %v", err)
+		return nil, fmt.Errorf("failed to create CAPI client: %w", err)
 	}
 
 	// Initialize providers
@@ -57,13 +53,10 @@ func NewServer(opts ServerOptions) (*Server, error) {
 		options:       opts,
 		mcpServer:     mcpServer,
 		serverContext: serverCtx,
-		ctx:           ctx,
-		cancel:        cancel,
 	}
 
 	// Register all tools
 	if err := s.RegisterTools(handlers.BuildAllTools); err != nil {
-		cancel()
 		return nil, fmt.Errorf("failed to register tools: %w", err)
 	}
 
@@ -77,8 +70,8 @@ func (s *Server) RegisterTools(registerFunc func(*handlers.ServerContext) ([]han
 		return err
 	}
 
-	for _, toolReg := range tools {
-		s.mcpServer.AddTool(toolReg.Tool, toolReg.Handler)
+	for i := range tools {
+		s.mcpServer.AddTool(tools[i].Tool, tools[i].Handler)
 	}
 
 	return nil
@@ -86,7 +79,10 @@ func (s *Server) RegisterTools(registerFunc func(*handlers.ServerContext) ([]han
 
 // Run starts the server with the configured transport
 func (s *Server) Run() error {
-	defer s.cancel()
+	// Create a cancellable context for the server lifetime
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
+	defer cancel()
 
 	// Handle shutdown gracefully
 	sigChan := make(chan os.Signal, 1)
@@ -94,7 +90,7 @@ func (s *Server) Run() error {
 	go func() {
 		<-sigChan
 		log.Println("Shutdown signal received, closing server...")
-		s.cancel()
+		cancel()
 	}()
 
 	fmt.Printf("Starting MCP CAPI server with %s transport...\n", s.options.Transport)
@@ -102,22 +98,22 @@ func (s *Server) Run() error {
 	// Start the appropriate server based on transport type
 	switch s.options.Transport {
 	case TransportStdio:
-		return RunStdioServer(s.mcpServer, s.options.StdioInput, s.options.StdioOutput)
+		return RunStdioServer(ctx, s.mcpServer, s.options.StdioInput, s.options.StdioOutput)
 	case TransportSSE:
-		return RunSSEServer(s.mcpServer, s.options.HTTPAddr, s.options.SSEEndpoint, s.options.MessageEndpoint, s.ctx)
+		return RunSSEServer(ctx, s.mcpServer, s.options.HTTPAddr, s.options.SSEEndpoint, s.options.MessageEndpoint)
 	case TransportStreamableHTTP:
-		return RunStreamableHTTPServer(s.mcpServer, s.options.HTTPAddr, s.options.HTTPEndpoint, s.ctx)
+		return RunStreamableHTTPServer(ctx, s.mcpServer, s.options.HTTPAddr, s.options.HTTPEndpoint)
 	default:
-		return fmt.Errorf("unsupported transport type: %s (supported: stdio, sse, streamable-http)", s.options.Transport)
+		return fmt.Errorf(
+			"unsupported transport type: %s (supported: stdio, sse, streamable-http)",
+			s.options.Transport,
+		)
 	}
-}
-
-// Context returns the server's context
-func (s *Server) Context() context.Context {
-	return s.ctx
 }
 
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown() {
-	s.cancel()
+	if s.cancel != nil {
+		s.cancel()
+	}
 }

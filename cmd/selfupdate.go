@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/creativeprojects/go-selfupdate"
@@ -27,12 +28,12 @@ updates the current binary if a newer version is found.`,
 
 // runSelfUpdate performs the self-update logic.
 // It checks the current version against the latest GitHub release and updates if necessary.
-func runSelfUpdate(cmd *cobra.Command, args []string) error {
+func runSelfUpdate(_ *cobra.Command, _ []string) error {
 	currentVersion := rootCmd.Version
 	// Self-update is typically disabled for development versions (e.g., "dev")
 	// as they are not standard releases and might not follow semantic versioning.
 	if currentVersion == "" || currentVersion == "dev" {
-		return fmt.Errorf("cannot self-update a development version")
+		return errors.New("cannot self-update a development version")
 	}
 
 	fmt.Printf("Current version: %s\n", currentVersion)

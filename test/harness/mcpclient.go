@@ -3,6 +3,7 @@ package harness
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"path/filepath"
 	"sync"
@@ -37,7 +38,11 @@ type syncBuffer struct {
 func (b *syncBuffer) Write(p []byte) (n int, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.buf.Write(p)
+	n, err = b.buf.Write(p)
+	if err != nil {
+		return n, fmt.Errorf("syncBuffer write: %w", err)
+	}
+	return n, nil
 }
 
 // Read satisfies io.Reader, required by io.NopCloser to wrap syncBuffer as an
@@ -45,7 +50,11 @@ func (b *syncBuffer) Write(p []byte) (n int, err error) {
 func (b *syncBuffer) Read(p []byte) (n int, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.buf.Read(p)
+	n, err = b.buf.Read(p)
+	if err != nil {
+		return n, fmt.Errorf("syncBuffer read: %w", err)
+	}
+	return n, nil
 }
 
 func (b *syncBuffer) String() string {
@@ -76,15 +85,15 @@ func initializeMCPClient(ctx context.Context, t TestingT, input io.Reader, outpu
 	t.Helper()
 
 	t.Log("creating and initializing stdio MCP client")
-	client := newMCPClient(ctx, t, input, output)
+	mcpCli := newMCPClient(ctx, t, input, output)
 	t.Cleanup(func() {
-		client.close()
-		if stderr := client.stderr(); stderr != "" {
+		mcpCli.close()
+		if stderr := mcpCli.stderr(); stderr != "" {
 			t.Logf("MCP client stderr:\n%s", stderr)
 		}
 	})
 
-	return client
+	return mcpCli
 }
 
 // newMCPClient creates and initializes a new test MCP client using stdio transport.

@@ -11,7 +11,7 @@ func TestCapiGCPListClusters(t *testing.T) {
 
 	t.Run("should list GCP clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -24,7 +24,7 @@ func TestCapiGCPListClusters(t *testing.T) {
 
 	t.Run("should show no GCP clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -36,11 +36,12 @@ func TestCapiGCPListClusters(t *testing.T) {
 
 	t.Run("should list GCPManagedCluster clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			Cluster(namespace, "my-managed-cluster").WithCustomInfraRef("GCPManagedCluster", "my-managed-cluster").Create().
+			Cluster(namespace, "my-managed-cluster").
+			WithCustomInfraRef("GCPManagedCluster", "my-managed-cluster").Create().
 			ToolCall("capi_gcp_list_clusters").
 			WithArg("namespace", namespace).
 			AssertContent("gcp_managed_cluster.golden").

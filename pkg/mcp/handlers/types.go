@@ -1,3 +1,4 @@
+// Package handlers implements MCP tool handler functions for CAPI operations.
 package handlers
 
 import (

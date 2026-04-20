@@ -11,7 +11,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists machine sets in namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -28,7 +28,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("filters machine sets by cluster name", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -46,7 +46,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("handles empty namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -58,7 +58,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("returns error without namespace argument", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -69,7 +69,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists machine set with owner reference", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -85,7 +85,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists machine set with infrastructure reference", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -101,7 +101,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists single machine set", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -116,7 +116,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists machine sets across clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -133,7 +133,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists machine set with nil replicas", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -148,7 +148,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists machine set with non-machinedeployment owner", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -164,7 +164,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("lists orphaned machine set without owner references", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -179,7 +179,7 @@ func TestCapiListMachineSets(t *testing.T) {
 
 	t.Run("should return empty for non-existent cluster filter", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

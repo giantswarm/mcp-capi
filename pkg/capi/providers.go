@@ -2,16 +2,19 @@ package capi
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"             //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"                      //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Provider represents an infrastructure provider
 type Provider string
 
+// Provider constants enumerate the supported CAPI infrastructure providers.
 const (
 	ProviderAWS     Provider = "aws"
 	ProviderAzure   Provider = "azure"
@@ -20,6 +23,12 @@ const (
 	ProviderVCD     Provider = "vcd"
 	ProviderUnknown Provider = "unknown"
 )
+
+// kubeadmControlPlaneKind is the Kind name for KubeadmControlPlane resources.
+const kubeadmControlPlaneKind = "KubeadmControlPlane"
+
+// infraAPIVersionV1Beta1 is the API version for v1beta1 infrastructure provider resources.
+const infraAPIVersionV1Beta1 = "infrastructure.cluster.x-k8s.io/v1beta1"
 
 // InitializeProviders adds all provider schemes to the client
 func (c *Client) InitializeProviders() error {
@@ -71,7 +80,10 @@ func (c *Client) GetProviderForCluster(ctx context.Context, namespace, clusterNa
 }
 
 // GetKubeadmControlPlane retrieves the KubeadmControlPlane for a cluster
-func (c *Client) GetKubeadmControlPlane(ctx context.Context, namespace, name string) (*controlplanev1.KubeadmControlPlane, error) {
+func (c *Client) GetKubeadmControlPlane(
+	ctx context.Context,
+	namespace, name string,
+) (*controlplanev1.KubeadmControlPlane, error) {
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	key := client.ObjectKey{
 		Namespace: namespace,
@@ -86,7 +98,10 @@ func (c *Client) GetKubeadmControlPlane(ctx context.Context, namespace, name str
 }
 
 // ListKubeadmControlPlanes lists all KubeadmControlPlanes
-func (c *Client) ListKubeadmControlPlanes(ctx context.Context, namespace string) (*controlplanev1.KubeadmControlPlaneList, error) {
+func (c *Client) ListKubeadmControlPlanes(
+	ctx context.Context,
+	namespace string,
+) (*controlplanev1.KubeadmControlPlaneList, error) {
 	kcpList := &controlplanev1.KubeadmControlPlaneList{}
 
 	opts := []client.ListOption{}
@@ -127,15 +142,25 @@ func (c *Client) ScaleControlPlane(ctx context.Context, namespace, name string, 
 }
 
 // ScaleCluster scales either control plane or worker nodes of a cluster
-func (c *Client) ScaleCluster(ctx context.Context, namespace, clusterName, target string, replicas int, machineDeploymentName string) error {
+func (c *Client) ScaleCluster(
+	ctx context.Context,
+	namespace, clusterName, target string,
+	replicas int,
+	machineDeploymentName string,
+) error {
+	if replicas < 0 || replicas > math.MaxInt32 {
+		return fmt.Errorf("replicas %d out of valid int32 range [0, %d]", replicas, math.MaxInt32)
+	}
+	r := int32(replicas) // bounds checked above
+
 	switch target {
 	case "controlplane":
-		return c.ScaleControlPlane(ctx, namespace, clusterName, int32(replicas))
+		return c.ScaleControlPlane(ctx, namespace, clusterName, r)
 	case "workers":
 		if machineDeploymentName == "" {
-			return fmt.Errorf("machineDeployment name is required when scaling workers")
+			return errors.New("machineDeployment name is required when scaling workers")
 		}
-		return c.ScaleMachineDeployment(ctx, namespace, machineDeploymentName, int32(replicas))
+		return c.ScaleMachineDeployment(ctx, namespace, machineDeploymentName, r)
 	default:
 		return fmt.Errorf("invalid target: %s (must be 'controlplane' or 'workers')", target)
 	}

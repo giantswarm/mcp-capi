@@ -13,9 +13,9 @@ func newVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the version number of mcp-capi",
 		Long:  `All software has versions. This is mcp-capi's.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			// rootCmd.Version is expected to be set, typically in root.go during build time.
-			fmt.Fprintf(cmd.OutOrStdout(), "mcp-capi version %s\n", rootCmd.Version)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "mcp-capi version %s\n", rootCmd.Version)
 		},
 	}
 }

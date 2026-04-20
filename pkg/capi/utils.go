@@ -39,8 +39,8 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 	status := &ClusterStatus{
 		Name:              cluster.Name,
 		Namespace:         cluster.Namespace,
-		Phase:             string(cluster.Status.Phase),
-		Ready:             isConditionTrue(cluster.Status.Conditions, clusterv1.ReadyCondition),
+		Phase:             cluster.Status.Phase,
+		Ready:             isConditionTrue(cluster.Status.Conditions),
 		ControlPlaneReady: cluster.Status.ControlPlaneReady,
 		InfraReady:        cluster.Status.InfrastructureReady,
 		Conditions:        cluster.Status.Conditions,
@@ -62,8 +62,8 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 	machines, err := c.ListMachines(ctx, namespace, name)
 	if err == nil {
 		status.TotalMachines = len(machines.Items)
-		for _, machine := range machines.Items {
-			if machine.Status.NodeRef != nil {
+		for i := range machines.Items {
+			if machines.Items[i].Status.NodeRef != nil {
 				status.ReadyMachines++
 			}
 		}
@@ -71,7 +71,7 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 
 	// Get control plane version if available
 	if cluster.Spec.ControlPlaneRef != nil && status.Version == "" {
-		if cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
+		if cluster.Spec.ControlPlaneRef.Kind == kubeadmControlPlaneKind {
 			kcp, err := c.GetKubeadmControlPlane(ctx, namespace, cluster.Spec.ControlPlaneRef.Name)
 			if err == nil && kcp.Spec.Version != "" {
 				status.Version = kcp.Spec.Version
@@ -85,12 +85,16 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 // GetClusterStatusFromList computes status for an already-fetched cluster using
 // pre-fetched machines. This avoids the per-cluster Get and ListMachines calls
 // that GetClusterStatus performs, making it suitable for bulk listing.
-func (c *Client) GetClusterStatusFromList(ctx context.Context, cluster *clusterv1.Cluster, machines []clusterv1.Machine) (*ClusterStatus, error) {
+func (c *Client) GetClusterStatusFromList(
+	ctx context.Context,
+	cluster *clusterv1.Cluster,
+	machines []clusterv1.Machine,
+) (*ClusterStatus, error) {
 	status := &ClusterStatus{
 		Name:              cluster.Name,
 		Namespace:         cluster.Namespace,
-		Phase:             string(cluster.Status.Phase),
-		Ready:             isConditionTrue(cluster.Status.Conditions, clusterv1.ReadyCondition),
+		Phase:             cluster.Status.Phase,
+		Ready:             isConditionTrue(cluster.Status.Conditions),
 		ControlPlaneReady: cluster.Status.ControlPlaneReady,
 		InfraReady:        cluster.Status.InfrastructureReady,
 		Conditions:        cluster.Status.Conditions,
@@ -109,15 +113,15 @@ func (c *Client) GetClusterStatusFromList(ctx context.Context, cluster *clusterv
 
 	// Count machines from pre-fetched slice
 	status.TotalMachines = len(machines)
-	for _, machine := range machines {
-		if machine.Status.NodeRef != nil {
+	for i := range machines {
+		if machines[i].Status.NodeRef != nil {
 			status.ReadyMachines++
 		}
 	}
 
 	// Get control plane version if available
 	if cluster.Spec.ControlPlaneRef != nil && status.Version == "" {
-		if cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
+		if cluster.Spec.ControlPlaneRef.Kind == kubeadmControlPlaneKind {
 			kcp, err := c.GetKubeadmControlPlane(ctx, cluster.Namespace, cluster.Spec.ControlPlaneRef.Name)
 			if err == nil && kcp.Spec.Version != "" {
 				status.Version = kcp.Spec.Version
@@ -135,7 +139,7 @@ func (c *Client) IsClusterReady(ctx context.Context, namespace, name string) (bo
 		return false, err
 	}
 
-	return isConditionTrue(cluster.Status.Conditions, clusterv1.ReadyCondition), nil
+	return isConditionTrue(cluster.Status.Conditions), nil
 }
 
 // WaitForClusterReady waits for a cluster to become ready
@@ -156,11 +160,11 @@ func (c *Client) WaitForClusterReady(ctx context.Context, namespace, name string
 // GetMachinePhase returns a human-readable phase for a machine
 func GetMachinePhase(machine *clusterv1.Machine) string {
 	if machine.Status.Phase != "" {
-		return string(machine.Status.Phase)
+		return machine.Status.Phase
 	}
 
 	// Check conditions
-	if isConditionTrue(machine.Status.Conditions, clusterv1.ReadyCondition) {
+	if isConditionTrue(machine.Status.Conditions) {
 		return "Running"
 	}
 
@@ -173,8 +177,11 @@ func GetControlPlaneStatus(kcp *controlplanev1.KubeadmControlPlane) string {
 		return "Ready"
 	}
 
-	if kcp.Status.UnavailableReplicas > 0 { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-		return fmt.Sprintf("Degraded (%d unavailable)", kcp.Status.UnavailableReplicas) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+	if kcp.Status.UnavailableReplicas > 0 { //nolint:staticcheck // UnavailableReplicas deprecated in v1beta2; no alternative in v1beta1
+		return fmt.Sprintf(
+			"Degraded (%d unavailable)",
+			kcp.Status.UnavailableReplicas, //nolint:staticcheck // UnavailableReplicas deprecated in v1beta2; no alternative in v1beta1
+		)
 	}
 
 	if kcp.Status.Replicas == 0 {
@@ -188,21 +195,21 @@ func GetControlPlaneStatus(kcp *controlplanev1.KubeadmControlPlane) string {
 func FormatClusterInfo(status *ClusterStatus) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Cluster: %s/%s\n", status.Namespace, status.Name))
-	sb.WriteString(fmt.Sprintf("Phase: %s\n", status.Phase))
-	sb.WriteString(fmt.Sprintf("Ready: %v\n", status.Ready))
+	fmt.Fprintf(&sb, "Cluster: %s/%s\n", status.Namespace, status.Name)
+	fmt.Fprintf(&sb, "Phase: %s\n", status.Phase)
+	fmt.Fprintf(&sb, "Ready: %v\n", status.Ready)
 	if status.Paused {
 		sb.WriteString("Paused: true\n")
 	}
-	sb.WriteString(fmt.Sprintf("Provider: %s\n", status.Provider))
-	sb.WriteString(fmt.Sprintf("Version: %s\n", status.Version))
-	sb.WriteString(fmt.Sprintf("Machines: %d/%d ready\n", status.ReadyMachines, status.TotalMachines))
+	fmt.Fprintf(&sb, "Provider: %s\n", status.Provider)
+	fmt.Fprintf(&sb, "Version: %s\n", status.Version)
+	fmt.Fprintf(&sb, "Machines: %d/%d ready\n", status.ReadyMachines, status.TotalMachines)
 
 	if userLabels := filterUserLabels(status.Labels); len(userLabels) > 0 {
 		sb.WriteString("\nLabels:\n")
 		keys := sortedKeys(userLabels)
 		for _, k := range keys {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", k, userLabels[k]))
+			fmt.Fprintf(&sb, "  %s: %s\n", k, userLabels[k])
 		}
 	}
 
@@ -210,16 +217,16 @@ func FormatClusterInfo(status *ClusterStatus) string {
 		sb.WriteString("\nAnnotations:\n")
 		keys := sortedKeys(status.Annotations)
 		for _, k := range keys {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", k, status.Annotations[k]))
+			fmt.Fprintf(&sb, "  %s: %s\n", k, status.Annotations[k])
 		}
 	}
 
 	if len(status.Conditions) > 0 {
 		sb.WriteString("\nConditions:\n")
 		for _, cond := range status.Conditions {
-			sb.WriteString(fmt.Sprintf("  %s: %s", cond.Type, cond.Status))
+			fmt.Fprintf(&sb, "  %s: %s", cond.Type, cond.Status)
 			if cond.Reason != "" {
-				sb.WriteString(fmt.Sprintf(" (%s)", cond.Reason))
+				fmt.Fprintf(&sb, " (%s)", cond.Reason)
 			}
 			sb.WriteString("\n")
 		}
@@ -228,12 +235,12 @@ func FormatClusterInfo(status *ClusterStatus) string {
 	return sb.String()
 }
 
-// isConditionTrue checks if a condition with the given type has status True.
+// isConditionTrue checks if the Ready condition has status True.
 // This is a v1beta1-compatible helper that replaces the conditions.IsTrue utility
 // which now requires v1beta2 types.
-func isConditionTrue(conditions clusterv1.Conditions, conditionType clusterv1.ConditionType) bool {
+func isConditionTrue(conditions clusterv1.Conditions) bool {
 	for _, condition := range conditions {
-		if condition.Type == conditionType {
+		if condition.Type == clusterv1.ReadyCondition {
 			return condition.Status == corev1.ConditionTrue
 		}
 	}

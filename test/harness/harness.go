@@ -117,7 +117,7 @@ func initializeMCP(ctx context.Context, t TestingT, kubeconfigPath string) *mcpC
 	})
 
 	// Initialize server and client
-	initializeMCPServer(t, kubeconfigPath, serverInput, serverOutput)
+	initializeMCPServer(ctx, t, kubeconfigPath, serverInput, serverOutput)
 	mcpClient := initializeMCPClient(ctx, t, clientInput, clientOutput)
 
 	t.Log("MCP ready")

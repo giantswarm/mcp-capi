@@ -1,5 +1,7 @@
 package harness
 
+import "maps"
+
 // ToolCall provides a fluent API for MCP tool call testing.
 // It accumulates tool name and arguments, then queues operations
 // when finalized via AssertContent or bridge methods.
@@ -27,9 +29,7 @@ func (tc *ToolCall) WithArg(key string, value any) *ToolCall {
 // WithArgs merges the provided arguments with existing arguments (chainable).
 // Arguments set via WithArg are preserved; conflicting keys are overwritten.
 func (tc *ToolCall) WithArgs(args map[string]any) *ToolCall {
-	for k, v := range args {
-		tc.args[k] = v
-	}
+	maps.Copy(tc.args, args)
 	return tc
 }
 
@@ -37,16 +37,11 @@ func (tc *ToolCall) WithArgs(args map[string]any) *ToolCall {
 // This enables continued chaining after the assertion.
 // The goldenPath is relative to testdata/<toolName>/.
 func (tc *ToolCall) AssertContent(goldenPath string) *Harness {
-	// Queue the tool call operation
-	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
-		toolName: tc.toolName,
-		args:     tc.args,
-	})
-	// Queue the assertion operation
-	tc.harness.operations = append(tc.harness.operations, &assertContentOp{
-		toolName:   tc.toolName,
-		goldenPath: goldenPath,
-	})
+	// Queue the tool call and assertion operations together
+	tc.harness.operations = append(tc.harness.operations,
+		&toolCallOp{toolName: tc.toolName, args: tc.args},
+		&assertContentOp{toolName: tc.toolName, goldenPath: goldenPath},
+	)
 	return tc.harness
 }
 
@@ -55,15 +50,10 @@ func (tc *ToolCall) AssertContent(goldenPath string) *Harness {
 // allowing non-deterministic fields (e.g. UID, timestamps) to be replaced with placeholders.
 // The goldenPath is relative to testdata/<toolName>/.
 func (tc *ToolCall) AssertContentNormalized(goldenPath string, normalizers ...Normalizer) *Harness {
-	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
-		toolName: tc.toolName,
-		args:     tc.args,
-	})
-	tc.harness.operations = append(tc.harness.operations, &assertContentNormalizedOp{
-		toolName:    tc.toolName,
-		goldenPath:  goldenPath,
-		normalizers: normalizers,
-	})
+	tc.harness.operations = append(tc.harness.operations,
+		&toolCallOp{toolName: tc.toolName, args: tc.args},
+		&assertContentNormalizedOp{toolName: tc.toolName, goldenPath: goldenPath, normalizers: normalizers},
+	)
 	return tc.harness
 }
 
@@ -71,15 +61,10 @@ func (tc *ToolCall) AssertContentNormalized(goldenPath string, normalizers ...No
 // Use this for tool calls that are expected to fail (protocol errors or tool errors).
 // The goldenPath is relative to testdata/<toolName>/.
 func (tc *ToolCall) AssertError(goldenPath string) *Harness {
-	// Queue the tool call operation
-	tc.harness.operations = append(tc.harness.operations, &toolCallOp{
-		toolName: tc.toolName,
-		args:     tc.args,
-	})
-	// Queue the error assertion operation
-	tc.harness.operations = append(tc.harness.operations, &assertErrorOp{
-		toolName:   tc.toolName,
-		goldenPath: goldenPath,
-	})
+	// Queue the tool call and error assertion operations together
+	tc.harness.operations = append(tc.harness.operations,
+		&toolCallOp{toolName: tc.toolName, args: tc.args},
+		&assertErrorOp{toolName: tc.toolName, goldenPath: goldenPath},
+	)
 	return tc.harness
 }

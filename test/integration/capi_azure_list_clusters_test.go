@@ -11,7 +11,7 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should list Azure clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -24,7 +24,7 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should show no Azure clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -36,11 +36,12 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should list AzureManagedCluster clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			Cluster(namespace, "my-managed-cluster").WithCustomInfraRef("AzureManagedCluster", "my-managed-cluster").Create().
+			Cluster(namespace, "my-managed-cluster").
+			WithCustomInfraRef("AzureManagedCluster", "my-managed-cluster").Create().
 			ToolCall("capi_azure_list_clusters").
 			WithArg("namespace", namespace).
 			AssertContent("azure_managed_cluster.golden").
@@ -49,7 +50,7 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should filter out non-Azure clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

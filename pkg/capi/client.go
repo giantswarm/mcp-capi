@@ -2,9 +2,11 @@ package capi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,8 +18,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"             //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	controlplanev1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"                      //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -73,7 +75,11 @@ func NewClient(kubeconfig string) (*Client, error) {
 func loadConfig(kubeconfig string) (*rest.Config, error) {
 	// If kubeconfig is provided, use it
 	if kubeconfig != "" {
-		return clientcmd.BuildConfigFromFlags("", kubeconfig)
+		cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build config from kubeconfig %q: %w", kubeconfig, err)
+		}
+		return cfg, nil
 	}
 
 	// Try in-cluster config first
@@ -84,18 +90,26 @@ func loadConfig(kubeconfig string) (*rest.Config, error) {
 
 	// Try KUBECONFIG env var
 	if kubeconfigEnv := os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
-		return clientcmd.BuildConfigFromFlags("", kubeconfigEnv)
+		cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigEnv)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build config from KUBECONFIG env var: %w", err)
+		}
+		return cfg, nil
 	}
 
 	// Try default location
 	if home := homedir.HomeDir(); home != "" {
 		defaultPath := filepath.Join(home, ".kube", "config")
 		if _, err := os.Stat(defaultPath); err == nil {
-			return clientcmd.BuildConfigFromFlags("", defaultPath)
+			cfg, err := clientcmd.BuildConfigFromFlags("", defaultPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build config from default kubeconfig path: %w", err)
+			}
+			return cfg, nil
 		}
 	}
 
-	return nil, fmt.Errorf("no kubeconfig found")
+	return nil, errors.New("no kubeconfig found")
 }
 
 // GetK8sClient returns the standard Kubernetes client
@@ -115,7 +129,11 @@ func (c *Client) SetClients(k8sClient kubernetes.Interface, ctrlClient client.Cl
 }
 
 // ListClusters lists all CAPI clusters in the given namespace
-func (c *Client) ListClusters(ctx context.Context, namespace string, labelSelector map[string]string) (*clusterv1.ClusterList, error) {
+func (c *Client) ListClusters(
+	ctx context.Context,
+	namespace string,
+	labelSelector map[string]string,
+) (*clusterv1.ClusterList, error) {
 	clusterList := &clusterv1.ClusterList{}
 
 	opts := []client.ListOption{}
@@ -136,17 +154,21 @@ func (c *Client) ListClusters(ctx context.Context, namespace string, labelSelect
 // FindClustersByLabelValue searches for clusters where any label value matches the given search term.
 // This is useful when users refer to clusters by a human-friendly identifier stored in labels
 // (e.g. a "friendly-name" or "cluster-id" label) rather than the Kubernetes resource name.
-func (c *Client) FindClustersByLabelValue(ctx context.Context, namespace string, searchTerm string) (*clusterv1.ClusterList, error) {
+func (c *Client) FindClustersByLabelValue(
+	ctx context.Context,
+	namespace string,
+	searchTerm string,
+) (*clusterv1.ClusterList, error) {
 	allClusters, err := c.ListClusters(ctx, namespace, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	matched := &clusterv1.ClusterList{}
-	for _, cluster := range allClusters.Items {
-		for _, v := range cluster.Labels {
+	for i := range allClusters.Items {
+		for _, v := range allClusters.Items[i].Labels {
 			if strings.EqualFold(v, searchTerm) {
-				matched.Items = append(matched.Items, cluster)
+				matched.Items = append(matched.Items, allClusters.Items[i])
 				break
 			}
 		}
@@ -231,7 +253,8 @@ func (c *Client) DeleteMachine(ctx context.Context, opts DeleteMachineOptions) e
 	if !opts.Force {
 		// Check if machine is healthy
 		for _, condition := range machine.Status.Conditions {
-			if condition.Type == clusterv1.MachineHealthCheckSucceededCondition && condition.Status == corev1.ConditionTrue {
+			if condition.Type == clusterv1.MachineHealthCheckSucceededCondition &&
+				condition.Status == corev1.ConditionTrue {
 				return fmt.Errorf("machine %s is healthy, use force=true to delete anyway", machine.Name)
 			}
 		}
@@ -273,7 +296,7 @@ func (c *Client) RemediateMachine(ctx context.Context, opts RemediateMachineOpti
 	if machine.Annotations == nil {
 		machine.Annotations = make(map[string]string)
 	}
-	machine.Annotations["cluster.x-k8s.io/remediate-machine"] = fmt.Sprintf("%d", time.Now().Unix())
+	machine.Annotations["cluster.x-k8s.io/remediate-machine"] = strconv.FormatInt(time.Now().Unix(), 10)
 
 	// Update the machine
 	if err := c.ctrlClient.Update(ctx, machine); err != nil {
@@ -284,7 +307,10 @@ func (c *Client) RemediateMachine(ctx context.Context, opts RemediateMachineOpti
 }
 
 // ListMachineDeployments lists all machine deployments
-func (c *Client) ListMachineDeployments(ctx context.Context, namespace, clusterName string) (*clusterv1.MachineDeploymentList, error) {
+func (c *Client) ListMachineDeployments(
+	ctx context.Context,
+	namespace, clusterName string,
+) (*clusterv1.MachineDeploymentList, error) {
 	mdList := &clusterv1.MachineDeploymentList{}
 
 	opts := []client.ListOption{
@@ -305,7 +331,10 @@ func (c *Client) ListMachineDeployments(ctx context.Context, namespace, clusterN
 }
 
 // GetMachineDeployment retrieves a specific machine deployment
-func (c *Client) GetMachineDeployment(ctx context.Context, namespace, name string) (*clusterv1.MachineDeployment, error) {
+func (c *Client) GetMachineDeployment(
+	ctx context.Context,
+	namespace, name string,
+) (*clusterv1.MachineDeployment, error) {
 	md := &clusterv1.MachineDeployment{}
 	key := client.ObjectKey{
 		Namespace: namespace,
@@ -322,7 +351,7 @@ func (c *Client) GetMachineDeployment(ctx context.Context, namespace, name strin
 // GetKubeconfig retrieves the kubeconfig for a workload cluster
 func (c *Client) GetKubeconfig(ctx context.Context, namespace, clusterName string) (string, error) {
 	// The kubeconfig is typically stored in a secret named {cluster-name}-kubeconfig
-	secretName := fmt.Sprintf("%s-kubeconfig", clusterName)
+	secretName := clusterName + "-kubeconfig"
 
 	secret, err := c.k8sClient.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
@@ -453,7 +482,7 @@ func (c *Client) CreateCluster(ctx context.Context, opts CreateClusterOptions) (
 			},
 			ControlPlaneRef: &corev1.ObjectReference{
 				APIVersion: "controlplane.cluster.x-k8s.io/v1beta1",
-				Kind:       "KubeadmControlPlane",
+				Kind:       kubeadmControlPlaneKind,
 				Name:       opts.Name + "-control-plane",
 			},
 			InfrastructureRef: &corev1.ObjectReference{
@@ -492,43 +521,63 @@ func (c *Client) UpgradeCluster(ctx context.Context, opts UpgradeClusterOptions)
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
 
-	// Update the control plane version
 	if cluster.Spec.ControlPlaneRef != nil {
-		switch cluster.Spec.ControlPlaneRef.Kind {
-		case "KubeadmControlPlane":
-			kcp := &controlplanev1.KubeadmControlPlane{}
-			cpKey := client.ObjectKey{
-				Namespace: cluster.Spec.ControlPlaneRef.Namespace,
-				Name:      cluster.Spec.ControlPlaneRef.Name,
-			}
-			if err := c.ctrlClient.Get(ctx, cpKey, kcp); err != nil {
-				return fmt.Errorf("failed to get control plane: %w", err)
-			}
-
-			// Update version
-			kcp.Spec.Version = opts.TargetVersion
-			if err := c.ctrlClient.Update(ctx, kcp); err != nil {
-				return fmt.Errorf("failed to update control plane version: %w", err)
-			}
-		default:
-			return fmt.Errorf("unsupported control plane type: %s", cluster.Spec.ControlPlaneRef.Kind)
+		if err := c.upgradeControlPlane(ctx, cluster, opts.TargetVersion); err != nil {
+			return err
 		}
 	}
 
-	// Update worker nodes if requested
 	if opts.UpgradeWorkers {
-		mdList, err := c.ListMachineDeployments(ctx, opts.Namespace, opts.Name)
-		if err != nil {
-			return fmt.Errorf("failed to list machine deployments: %w", err)
+		if err := c.upgradeWorkerNodes(ctx, opts.Namespace, opts.Name, opts.TargetVersion); err != nil {
+			return err
 		}
+	}
 
-		for i := range mdList.Items {
-			md := &mdList.Items[i]
-			if md.Spec.Template.Spec.Version != nil {
-				*md.Spec.Template.Spec.Version = opts.TargetVersion
-				if err := c.ctrlClient.Update(ctx, md); err != nil {
-					return fmt.Errorf("failed to update machine deployment %s: %w", md.Name, err)
-				}
+	return nil
+}
+
+// upgradeControlPlane updates the KubeadmControlPlane version for the given cluster.
+func (c *Client) upgradeControlPlane(
+	ctx context.Context,
+	cluster *clusterv1.Cluster,
+	targetVersion string,
+) error {
+	switch cluster.Spec.ControlPlaneRef.Kind {
+	case kubeadmControlPlaneKind:
+		kcp := &controlplanev1.KubeadmControlPlane{}
+		cpKey := client.ObjectKey{
+			Namespace: cluster.Spec.ControlPlaneRef.Namespace,
+			Name:      cluster.Spec.ControlPlaneRef.Name,
+		}
+		if err := c.ctrlClient.Get(ctx, cpKey, kcp); err != nil {
+			return fmt.Errorf("failed to get control plane: %w", err)
+		}
+		kcp.Spec.Version = targetVersion
+		if err := c.ctrlClient.Update(ctx, kcp); err != nil {
+			return fmt.Errorf("failed to update control plane version: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported control plane type: %s", cluster.Spec.ControlPlaneRef.Kind)
+	}
+}
+
+// upgradeWorkerNodes updates the version on all MachineDeployments in a cluster.
+func (c *Client) upgradeWorkerNodes(
+	ctx context.Context,
+	namespace, clusterName, targetVersion string,
+) error {
+	mdList, err := c.ListMachineDeployments(ctx, namespace, clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to list machine deployments: %w", err)
+	}
+
+	for i := range mdList.Items {
+		md := &mdList.Items[i]
+		if md.Spec.Template.Spec.Version != nil {
+			*md.Spec.Template.Spec.Version = targetVersion
+			if err := c.ctrlClient.Update(ctx, md); err != nil {
+				return fmt.Errorf("failed to update machine deployment %s: %w", md.Name, err)
 			}
 		}
 	}
@@ -556,35 +605,8 @@ func (c *Client) UpdateCluster(ctx context.Context, opts UpdateClusterOptions) (
 		return nil, fmt.Errorf("failed to get cluster: %w", err)
 	}
 
-	// Update labels
-	if opts.Labels != nil {
-		if cluster.Labels == nil {
-			cluster.Labels = make(map[string]string)
-		}
-		for k, v := range opts.Labels {
-			if v == "" {
-				// Empty value means remove the label
-				delete(cluster.Labels, k)
-			} else {
-				cluster.Labels[k] = v
-			}
-		}
-	}
-
-	// Update annotations
-	if opts.Annotations != nil {
-		if cluster.Annotations == nil {
-			cluster.Annotations = make(map[string]string)
-		}
-		for k, v := range opts.Annotations {
-			if v == "" {
-				// Empty value means remove the annotation
-				delete(cluster.Annotations, k)
-			} else {
-				cluster.Annotations[k] = v
-			}
-		}
-	}
+	cluster.Labels = applyMapUpdates(cluster.Labels, opts.Labels)
+	cluster.Annotations = applyMapUpdates(cluster.Annotations, opts.Annotations)
 
 	if err := c.ctrlClient.Update(ctx, cluster); err != nil {
 		return nil, fmt.Errorf("failed to update cluster: %w", err)
@@ -625,8 +647,8 @@ func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (stri
 	// Create a YAML manifest for the move
 	var manifest strings.Builder
 	manifest.WriteString("# Cluster Move Manifest\n")
-	manifest.WriteString(fmt.Sprintf("# Source: %s/%s\n", opts.Namespace, opts.Name))
-	manifest.WriteString(fmt.Sprintf("# Target: %s/%s\n", targetNs, opts.Name))
+	fmt.Fprintf(&manifest, "# Source: %s/%s\n", opts.Namespace, opts.Name)
+	fmt.Fprintf(&manifest, "# Target: %s/%s\n", targetNs, opts.Name)
 	manifest.WriteString("# Apply this manifest to the target management cluster\n")
 	manifest.WriteString("---\n")
 
@@ -668,8 +690,8 @@ func (c *Client) BackupCluster(ctx context.Context, opts BackupClusterOptions) (
 	// Create backup manifest
 	var backup strings.Builder
 	backup.WriteString("# Cluster Backup\n")
-	backup.WriteString(fmt.Sprintf("# Cluster: %s/%s\n", opts.Namespace, opts.Name))
-	backup.WriteString(fmt.Sprintf("# Date: %s\n", fmt.Sprintf("%v", cluster.CreationTimestamp)))
+	fmt.Fprintf(&backup, "# Cluster: %s/%s\n", opts.Namespace, opts.Name)
+	fmt.Fprintf(&backup, "# Date: %s\n", cluster.CreationTimestamp.String())
 	backup.WriteString("# Resources included:\n")
 	backup.WriteString("# - Cluster\n")
 	backup.WriteString("# - Control Plane\n")
@@ -701,13 +723,13 @@ func getInfraAPIVersion(provider string) string {
 	case "aws":
 		return "infrastructure.cluster.x-k8s.io/v1beta2"
 	case "azure":
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
+		return infraAPIVersionV1Beta1
 	case "gcp":
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
+		return infraAPIVersionV1Beta1
 	case "vsphere":
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
+		return infraAPIVersionV1Beta1
 	default:
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
+		return infraAPIVersionV1Beta1
 	}
 }
 
@@ -751,56 +773,77 @@ func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (
 		Warnings:          []string{},
 	}
 
-	// Check control plane
+	checkInfraAndControlPlane(status, health)
+	c.checkWorkerHealth(ctx, namespace, name, health)
+	checkConditions(status.Conditions, health)
+	checkPhase(status.Phase, health)
+
+	return health, nil
+}
+
+// checkInfraAndControlPlane updates health with control-plane and infrastructure readiness issues.
+func checkInfraAndControlPlane(status *ClusterStatus, health *ClusterHealthStatus) {
 	if !status.ControlPlaneReady {
 		health.Healthy = false
 		health.Issues = append(health.Issues, "Control plane is not ready")
 	}
 
-	// Check infrastructure
 	if !status.InfraReady {
 		health.Healthy = false
 		health.Issues = append(health.Issues, "Infrastructure is not ready")
 	}
+}
 
-	// Check workers
+// checkWorkerHealth lists machines and updates health with worker readiness status.
+// Machine listing failure is treated as non-fatal; the health is left unchanged.
+func (c *Client) checkWorkerHealth(ctx context.Context, namespace, name string, health *ClusterHealthStatus) {
 	machines, err := c.ListMachines(ctx, namespace, name)
-	if err == nil {
-		readyMachines := 0
-		totalMachines := len(machines.Items)
+	if err != nil {
+		return
+	}
 
-		for _, machine := range machines.Items {
-			for _, condition := range machine.Status.Conditions {
-				if condition.Type == "Ready" && condition.Status == "True" {
-					readyMachines++
-					break
-				}
+	readyMachines := 0
+	totalMachines := len(machines.Items)
+
+	for i := range machines.Items {
+		for _, condition := range machines.Items[i].Status.Conditions {
+			if condition.Type == clusterv1.ReadyCondition && condition.Status == corev1.ConditionTrue {
+				readyMachines++
+				break
 			}
-		}
-
-		health.WorkersReady = readyMachines == totalMachines && totalMachines > 0
-		if !health.WorkersReady {
-			health.Healthy = false
-			health.Issues = append(health.Issues, fmt.Sprintf("Only %d/%d machines are ready", readyMachines, totalMachines))
 		}
 	}
 
-	// Check conditions for issues
-	for _, condition := range status.Conditions {
-		if condition.Status != "True" && condition.Severity == "Error" {
+	health.WorkersReady = readyMachines == totalMachines && totalMachines > 0
+	if !health.WorkersReady {
+		health.Healthy = false
+		health.Issues = append(
+			health.Issues,
+			fmt.Sprintf("Only %d/%d machines are ready", readyMachines, totalMachines),
+		)
+	}
+}
+
+// checkConditions inspects the cluster conditions and records errors and warnings in health.
+func checkConditions(conditions clusterv1.Conditions, health *ClusterHealthStatus) {
+	for _, condition := range conditions {
+		if condition.Status != corev1.ConditionTrue && condition.Severity == clusterv1.ConditionSeverityError {
 			health.Healthy = false
 			health.Issues = append(health.Issues, fmt.Sprintf("%s: %s", condition.Type, condition.Message))
-		} else if condition.Status != "True" && condition.Severity == "Warning" {
+		} else if condition.Status != corev1.ConditionTrue && condition.Severity == clusterv1.ConditionSeverityWarning {
 			health.Warnings = append(health.Warnings, fmt.Sprintf("%s: %s", condition.Type, condition.Message))
 		}
 	}
+}
 
-	// Check phase
-	if status.Phase != "Provisioned" && status.Phase != "" {
-		health.Warnings = append(health.Warnings, fmt.Sprintf("Cluster phase is '%s', expected 'Provisioned'", status.Phase))
+// checkPhase records a warning in health if the cluster is not in the Provisioned phase.
+func checkPhase(phase string, health *ClusterHealthStatus) {
+	if phase != "Provisioned" && phase != "" {
+		health.Warnings = append(
+			health.Warnings,
+			fmt.Sprintf("Cluster phase is '%s', expected 'Provisioned'", phase),
+		)
 	}
-
-	return health, nil
 }
 
 // CreateMachineDeploymentOptions contains options for creating a machine deployment
@@ -818,7 +861,10 @@ type CreateMachineDeploymentOptions struct {
 }
 
 // CreateMachineDeployment creates a new CAPI MachineDeployment
-func (c *Client) CreateMachineDeployment(ctx context.Context, opts CreateMachineDeploymentOptions) (*clusterv1.MachineDeployment, error) {
+func (c *Client) CreateMachineDeployment(
+	ctx context.Context,
+	opts CreateMachineDeploymentOptions,
+) (*clusterv1.MachineDeployment, error) {
 	// Create the machine deployment
 	md := &clusterv1.MachineDeployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -883,65 +929,59 @@ type UpdateMachineDeploymentOptions struct {
 }
 
 // UpdateMachineDeployment updates a MachineDeployment's configuration
-func (c *Client) UpdateMachineDeployment(ctx context.Context, opts UpdateMachineDeploymentOptions) (*clusterv1.MachineDeployment, error) {
+func (c *Client) UpdateMachineDeployment(
+	ctx context.Context,
+	opts UpdateMachineDeploymentOptions,
+) (*clusterv1.MachineDeployment, error) {
 	md, err := c.GetMachineDeployment(ctx, opts.Namespace, opts.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get machine deployment: %w", err)
 	}
 
-	// Update version if specified
-	if opts.Version != nil {
-		md.Spec.Template.Spec.Version = opts.Version
-	}
-
-	// Update replicas if specified
-	if opts.Replicas != nil {
-		md.Spec.Replicas = opts.Replicas
-	}
-
-	// Update minReadySeconds if specified
-	if opts.MinReadySeconds != nil {
-		md.Spec.MinReadySeconds = opts.MinReadySeconds
-	}
-
-	// Update nodeDrainTimeout if specified
-	if opts.NodeDrainTimeout != nil {
-		md.Spec.Template.Spec.NodeDrainTimeout = opts.NodeDrainTimeout
-	}
-
-	// Update labels
-	if opts.Labels != nil {
-		if md.Labels == nil {
-			md.Labels = make(map[string]string)
-		}
-		for k, v := range opts.Labels {
-			if v == "" {
-				delete(md.Labels, k)
-			} else {
-				md.Labels[k] = v
-			}
-		}
-	}
-
-	// Update annotations
-	if opts.Annotations != nil {
-		if md.Annotations == nil {
-			md.Annotations = make(map[string]string)
-		}
-		for k, v := range opts.Annotations {
-			if v == "" {
-				delete(md.Annotations, k)
-			} else {
-				md.Annotations[k] = v
-			}
-		}
-	}
+	applyMachineDeploymentSpec(md, opts)
+	md.Labels = applyMapUpdates(md.Labels, opts.Labels)
+	md.Annotations = applyMapUpdates(md.Annotations, opts.Annotations)
 
 	if err := c.ctrlClient.Update(ctx, md); err != nil {
 		return nil, fmt.Errorf("failed to update machine deployment: %w", err)
 	}
 
 	return md, nil
+}
+
+// applyMachineDeploymentSpec applies non-nil spec fields from opts to md.
+func applyMachineDeploymentSpec(md *clusterv1.MachineDeployment, opts UpdateMachineDeploymentOptions) {
+	if opts.Version != nil {
+		md.Spec.Template.Spec.Version = opts.Version
+	}
+	if opts.Replicas != nil {
+		md.Spec.Replicas = opts.Replicas
+	}
+	if opts.MinReadySeconds != nil {
+		md.Spec.MinReadySeconds = opts.MinReadySeconds
+	}
+	if opts.NodeDrainTimeout != nil {
+		md.Spec.Template.Spec.NodeDrainTimeout = opts.NodeDrainTimeout
+	}
+}
+
+// applyMapUpdates merges updates into dst. An empty value in updates removes the key.
+// Returns dst unchanged if updates is nil.
+func applyMapUpdates(dst, updates map[string]string) map[string]string {
+	if updates == nil {
+		return dst
+	}
+	if dst == nil {
+		dst = make(map[string]string)
+	}
+	for k, v := range updates {
+		if v == "" {
+			delete(dst, k)
+		} else {
+			dst[k] = v
+		}
+	}
+	return dst
 }
 
 // RolloutMachineDeploymentOptions contains options for triggering a rollout
@@ -964,7 +1004,7 @@ func (c *Client) RolloutMachineDeployment(ctx context.Context, opts RolloutMachi
 	}
 
 	// Add rollout annotation with timestamp
-	md.Spec.Template.Annotations["cluster.x-k8s.io/rollout-triggered"] = fmt.Sprintf("%v", metav1.Now().Unix())
+	md.Spec.Template.Annotations["cluster.x-k8s.io/rollout-triggered"] = strconv.FormatInt(metav1.Now().Unix(), 10)
 	if opts.Reason != "" {
 		md.Spec.Template.Annotations["cluster.x-k8s.io/rollout-reason"] = opts.Reason
 	}
@@ -977,7 +1017,10 @@ func (c *Client) RolloutMachineDeployment(ctx context.Context, opts RolloutMachi
 }
 
 // ListMachineSets lists all MachineSets in a namespace
-func (c *Client) ListMachineSets(ctx context.Context, namespace, clusterName string) (*clusterv1.MachineSetList, error) {
+func (c *Client) ListMachineSets(
+	ctx context.Context,
+	namespace, clusterName string,
+) (*clusterv1.MachineSetList, error) {
 	msList := &clusterv1.MachineSetList{}
 
 	opts := []client.ListOption{
@@ -1043,7 +1086,7 @@ func (c *Client) DrainNode(ctx context.Context, opts NodeOperationOptions) error
 	}
 
 	if nodeName == "" {
-		return fmt.Errorf("either nodeName or machineName must be provided")
+		return errors.New("either nodeName or machineName must be provided")
 	}
 
 	// First cordon the node
@@ -1085,7 +1128,7 @@ func (c *Client) CordonNode(ctx context.Context, opts NodeOperationOptions) erro
 	}
 
 	if nodeName == "" {
-		return fmt.Errorf("either nodeName or machineName must be provided")
+		return errors.New("either nodeName or machineName must be provided")
 	}
 
 	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -1119,7 +1162,7 @@ func (c *Client) GetNodeStatus(ctx context.Context, opts NodeOperationOptions) (
 	}
 
 	if nodeName == "" {
-		return nil, fmt.Errorf("either nodeName or machineName must be provided")
+		return nil, errors.New("either nodeName or machineName must be provided")
 	}
 
 	// Get node from workload cluster
