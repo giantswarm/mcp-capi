@@ -14,7 +14,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists multiple clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -27,7 +27,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists clusters with metadata", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -40,7 +40,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("filters clusters by namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 		otherNamespace := "other-clusters"
 
 		harness.New(t).
@@ -59,7 +59,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("handles empty namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -71,7 +71,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists single cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -84,7 +84,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists clusters without namespace argument", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -96,7 +96,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("should show paused cluster in list", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -110,7 +110,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists mixed providers in same namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -125,7 +125,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists cluster with unknown infrastructure provider", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -140,7 +140,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists cluster with non-kubeadm control plane", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -156,7 +156,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists cluster with missing control plane resource", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -172,7 +172,7 @@ func TestCapiListClusters(t *testing.T) {
 
 	t.Run("lists clusters across all namespaces", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 		namespace1 := "multi-ns-1"
 		namespace2 := "multi-ns-2"
 
@@ -192,7 +192,7 @@ func TestCapiListClusters(t *testing.T) {
 	for _, provider := range providers {
 		t.Run(fmt.Sprintf("lists %s clusters from same namespace", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster-1").WithProvider(provider).Create().
@@ -220,7 +220,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with different phases", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-pending").WithProvider(provider).WithPhase("Pending").Create().
@@ -236,7 +236,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with different versions", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-v128").WithProvider(provider).WithVersion("v1.28.0").Create().
@@ -249,7 +249,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with partial machine readiness", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-partial").WithProvider(provider).WithMachines(2, 1).Create().
@@ -261,7 +261,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with all machines ready", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-all-ready").WithProvider(provider).WithMachines(3, 3).Create().
@@ -273,7 +273,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with no machines ready", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-none-ready").WithProvider(provider).WithMachines(5, 0).Create().
@@ -285,7 +285,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with version from control plane", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster-1").
@@ -304,7 +304,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s cluster with version precedence over control plane", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster").
@@ -320,7 +320,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with different conditions", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				// Cluster 1: All conditions True (healthy cluster)
@@ -349,7 +349,7 @@ func TestCapiListClusters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("lists %s clusters with all properties", provider), func(t *testing.T) {
 			t.Parallel()
-			namespace := "test-clusters"
+			namespace := testNamespace
 			harness.New(t).
 				CreateNamespace(namespace).
 				Cluster(namespace, provider+"-cluster-1").WithProvider(provider).WithPhase("Provisioned").WithVersion("v1.28.0").WithMachines(3, 3).

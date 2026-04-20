@@ -325,6 +325,8 @@ func (o *clusterCreateOptions) needsStatusUpdate() bool {
 	return o.hasStatus || o.phase != "" || len(o.conditions) > 0 || o.controlPlaneReady != nil || o.infraReady != nil
 }
 
+const infraAPIV1Beta1 = "infrastructure.cluster.x-k8s.io/v1beta1"
+
 // providerInfraRef returns the APIVersion and Kind for a provider's infrastructure reference.
 // Returns empty strings for unknown providers (no InfrastructureRef is set).
 func providerInfraRef(provider string) (apiVersion, kind string) {
@@ -332,13 +334,13 @@ func providerInfraRef(provider string) (apiVersion, kind string) {
 	case "aws":
 		return "infrastructure.cluster.x-k8s.io/v1beta2", "AWSCluster"
 	case "azure":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "AzureCluster"
+		return infraAPIV1Beta1, "AzureCluster"
 	case "gcp":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "GCPCluster"
+		return infraAPIV1Beta1, "GCPCluster"
 	case "vsphere":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "VSphereCluster"
+		return infraAPIV1Beta1, "VSphereCluster"
 	case "vcd":
-		return "infrastructure.cluster.x-k8s.io/v1beta1", "VCDCluster"
+		return infraAPIV1Beta1, "VCDCluster"
 	default:
 		return "", ""
 	}

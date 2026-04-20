@@ -11,7 +11,7 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should list Azure clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -24,7 +24,7 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should show no Azure clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -36,7 +36,7 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should list AzureManagedCluster clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -49,7 +49,7 @@ func TestCapiAzureListClusters(t *testing.T) {
 
 	t.Run("should filter out non-Azure clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

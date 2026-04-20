@@ -44,7 +44,7 @@ func compareWithGoldenNormalized(text, goldenPath string, normalizers []Normaliz
 		return updateGoldenFile(normalized, goldenPath)
 	}
 
-	expected, err := os.ReadFile(goldenPath)
+	expected, err := os.ReadFile(goldenPath) //#nosec G304 -- test helper reads test fixtures
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("golden file %s does not exist (run tests with UPDATE_GOLDEN=true to create it)", goldenPath)

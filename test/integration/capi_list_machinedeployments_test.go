@@ -11,7 +11,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployments in namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -28,7 +28,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("filters machine deployments by cluster name", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -44,7 +44,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("handles empty namespace", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -56,7 +56,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("returns error without namespace argument", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -67,7 +67,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists single machine deployment", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -82,7 +82,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployments with phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -99,7 +99,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployments with version", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -116,7 +116,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployments across clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -133,7 +133,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployment with zero status replicas", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -148,7 +148,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployment without version", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -163,7 +163,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployment with mismatched replica counts", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -178,7 +178,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("lists machine deployment with nil replicas", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -193,7 +193,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("should return empty for non-existent cluster filter", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -209,7 +209,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("should handle zero replicas status", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -224,7 +224,7 @@ func TestCapiListMachineDeployments(t *testing.T) {
 
 	t.Run("should show deployment without phase", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

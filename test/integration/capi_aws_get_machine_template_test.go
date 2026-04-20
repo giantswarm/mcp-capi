@@ -11,7 +11,7 @@ func TestCapiAWSGetMachineTemplate(t *testing.T) {
 
 	t.Run("should list machine templates", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -28,7 +28,7 @@ func TestCapiAWSGetMachineTemplate(t *testing.T) {
 
 	t.Run("should show no templates when none exist", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -40,7 +40,7 @@ func TestCapiAWSGetMachineTemplate(t *testing.T) {
 
 	t.Run("should get specific template by name", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -62,7 +62,7 @@ func TestCapiAWSGetMachineTemplate(t *testing.T) {
 
 	t.Run("should only list AWSMachineTemplate templates", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

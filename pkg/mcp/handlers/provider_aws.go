@@ -36,10 +36,10 @@ func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 					cluster.Spec.InfrastructureRef.Kind == "AWSManagedCluster") {
 				awsClusterCount++
 
-				content.WriteString(fmt.Sprintf("Cluster: %s/%s\n", cluster.Namespace, cluster.Name))
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind))
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
+				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
+				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
+				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
 
 				// Try to get provider information
 				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
@@ -54,7 +54,7 @@ func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		if awsClusterCount == 0 {
 			content.WriteString("No AWS clusters found.\n")
 		} else {
-			content.WriteString(fmt.Sprintf("Total AWS clusters: %d\n", awsClusterCount))
+			fmt.Fprintf(&content, "Total AWS clusters: %d\n", awsClusterCount)
 		}
 
 		return &mcp.CallToolResult{
@@ -95,28 +95,28 @@ func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("AWS Cluster: %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "AWS Cluster: %s/%s\n\n", namespace, name)
 
 		// Basic cluster info
 		content.WriteString("Cluster Information:\n")
-		content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-		content.WriteString(fmt.Sprintf("  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady))
-		content.WriteString(fmt.Sprintf("  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady))
+		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
+		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
 
 		// Infrastructure reference
 		content.WriteString("\nInfrastructure:\n")
-		content.WriteString(fmt.Sprintf("  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind))
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Spec.InfrastructureRef.Name))
-		content.WriteString(fmt.Sprintf("  API Version: %s\n", cluster.Spec.InfrastructureRef.APIVersion))
+		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
+		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
+		fmt.Fprintf(&content, "  API Version: %s\n", cluster.Spec.InfrastructureRef.APIVersion)
 
 		// Network configuration
 		if cluster.Spec.ClusterNetwork != nil {
 			content.WriteString("\nNetwork Configuration:\n")
 			if cluster.Spec.ClusterNetwork.Pods != nil && len(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 {
-				content.WriteString(fmt.Sprintf("  Pod CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks, ", ")))
+				fmt.Fprintf(&content, "  Pod CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks, ", "))
 			}
 			if cluster.Spec.ClusterNetwork.Services != nil && len(cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
-				content.WriteString(fmt.Sprintf("  Service CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Services.CIDRBlocks, ", ")))
+				fmt.Fprintf(&content, "  Service CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Services.CIDRBlocks, ", "))
 			}
 		}
 
@@ -124,9 +124,9 @@ func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		if len(cluster.Status.Conditions) > 0 {
 			content.WriteString("\nConditions:\n")
 			for _, condition := range cluster.Status.Conditions {
-				content.WriteString(fmt.Sprintf("  - %s: %s", condition.Type, condition.Status))
+				fmt.Fprintf(&content, "  - %s: %s", condition.Type, condition.Status)
 				if condition.Reason != "" {
-					content.WriteString(fmt.Sprintf(" (%s)", condition.Reason))
+					fmt.Fprintf(&content, " (%s)", condition.Reason)
 				}
 				content.WriteString("\n")
 			}
@@ -160,7 +160,7 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 
 		if name != "" {
 			// Get specific machine template
-			content.WriteString(fmt.Sprintf("AWS Machine Template: %s/%s\n\n", namespace, name))
+			fmt.Fprintf(&content, "AWS Machine Template: %s/%s\n\n", namespace, name)
 			content.WriteString("Note: Direct access to AWSMachineTemplate requires the AWS provider CRDs.\n")
 			content.WriteString("In a full implementation, this would show:\n")
 			content.WriteString("  - Instance type\n")
@@ -171,7 +171,7 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 			content.WriteString("  - User data configuration\n")
 		} else {
 			// List all machine templates
-			content.WriteString(fmt.Sprintf("AWS Machine Templates in namespace %s:\n\n", namespace))
+			fmt.Fprintf(&content, "AWS Machine Templates in namespace %s:\n\n", namespace)
 
 			// In a real implementation, we would list AWSMachineTemplate resources
 			// For now, we'll check for machine deployments and their templates
@@ -184,8 +184,8 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 			for _, md := range mds.Items {
 				if md.Spec.Template.Spec.InfrastructureRef.Kind == "AWSMachineTemplate" {
 					awsTemplateCount++
-					content.WriteString(fmt.Sprintf("Template: %s (used by MachineDeployment: %s)\n",
-						md.Spec.Template.Spec.InfrastructureRef.Name, md.Name))
+					fmt.Fprintf(&content, "Template: %s (used by MachineDeployment: %s)\n",
+						md.Spec.Template.Spec.InfrastructureRef.Name, md.Name)
 				}
 			}
 
