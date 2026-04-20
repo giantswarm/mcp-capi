@@ -625,8 +625,8 @@ func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (stri
 	// Create a YAML manifest for the move
 	var manifest strings.Builder
 	manifest.WriteString("# Cluster Move Manifest\n")
-	manifest.WriteString(fmt.Sprintf("# Source: %s/%s\n", opts.Namespace, opts.Name))
-	manifest.WriteString(fmt.Sprintf("# Target: %s/%s\n", targetNs, opts.Name))
+	fmt.Fprintf(&manifest, "# Source: %s/%s\n", opts.Namespace, opts.Name)
+	fmt.Fprintf(&manifest, "# Target: %s/%s\n", targetNs, opts.Name)
 	manifest.WriteString("# Apply this manifest to the target management cluster\n")
 	manifest.WriteString("---\n")
 
@@ -668,8 +668,8 @@ func (c *Client) BackupCluster(ctx context.Context, opts BackupClusterOptions) (
 	// Create backup manifest
 	var backup strings.Builder
 	backup.WriteString("# Cluster Backup\n")
-	backup.WriteString(fmt.Sprintf("# Cluster: %s/%s\n", opts.Namespace, opts.Name))
-	backup.WriteString(fmt.Sprintf("# Date: %s\n", fmt.Sprintf("%v", cluster.CreationTimestamp)))
+	fmt.Fprintf(&backup, "# Cluster: %s/%s\n", opts.Namespace, opts.Name)
+	fmt.Fprintf(&backup, "# Date: %v\n", cluster.CreationTimestamp)
 	backup.WriteString("# Resources included:\n")
 	backup.WriteString("# - Cluster\n")
 	backup.WriteString("# - Control Plane\n")
@@ -696,19 +696,13 @@ func (c *Client) BackupCluster(ctx context.Context, opts BackupClusterOptions) (
 }
 
 // Helper functions to map provider to API versions and kinds
+const infraAPIV1Beta1 = "infrastructure.cluster.x-k8s.io/v1beta1"
+
 func getInfraAPIVersion(provider string) string {
-	switch provider {
-	case "aws":
+	if provider == "aws" {
 		return "infrastructure.cluster.x-k8s.io/v1beta2"
-	case "azure":
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
-	case "gcp":
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
-	case "vsphere":
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
-	default:
-		return "infrastructure.cluster.x-k8s.io/v1beta1"
 	}
+	return infraAPIV1Beta1
 }
 
 func getInfraKind(provider string) string {
@@ -771,7 +765,7 @@ func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (
 
 		for _, machine := range machines.Items {
 			for _, condition := range machine.Status.Conditions {
-				if condition.Type == "Ready" && condition.Status == "True" {
+				if condition.Type == clusterv1.ReadyCondition && condition.Status == corev1.ConditionTrue {
 					readyMachines++
 					break
 				}
@@ -787,10 +781,10 @@ func (c *Client) GetClusterHealth(ctx context.Context, namespace, name string) (
 
 	// Check conditions for issues
 	for _, condition := range status.Conditions {
-		if condition.Status != "True" && condition.Severity == "Error" {
+		if condition.Status != corev1.ConditionTrue && condition.Severity == clusterv1.ConditionSeverityError {
 			health.Healthy = false
 			health.Issues = append(health.Issues, fmt.Sprintf("%s: %s", condition.Type, condition.Message))
-		} else if condition.Status != "True" && condition.Severity == "Warning" {
+		} else if condition.Status != corev1.ConditionTrue && condition.Severity == clusterv1.ConditionSeverityWarning {
 			health.Warnings = append(health.Warnings, fmt.Sprintf("%s: %s", condition.Type, condition.Message))
 		}
 	}

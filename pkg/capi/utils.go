@@ -11,6 +11,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"                      //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 )
 
+const kindKubeadmControlPlane = "KubeadmControlPlane"
+
 // ClusterStatus represents the status of a CAPI cluster
 type ClusterStatus struct {
 	Name              string
@@ -71,7 +73,7 @@ func (c *Client) GetClusterStatus(ctx context.Context, namespace, name string) (
 
 	// Get control plane version if available
 	if cluster.Spec.ControlPlaneRef != nil && status.Version == "" {
-		if cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
+		if cluster.Spec.ControlPlaneRef.Kind == kindKubeadmControlPlane {
 			kcp, err := c.GetKubeadmControlPlane(ctx, namespace, cluster.Spec.ControlPlaneRef.Name)
 			if err == nil && kcp.Spec.Version != "" {
 				status.Version = kcp.Spec.Version
@@ -117,7 +119,7 @@ func (c *Client) GetClusterStatusFromList(ctx context.Context, cluster *clusterv
 
 	// Get control plane version if available
 	if cluster.Spec.ControlPlaneRef != nil && status.Version == "" {
-		if cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
+		if cluster.Spec.ControlPlaneRef.Kind == kindKubeadmControlPlane {
 			kcp, err := c.GetKubeadmControlPlane(ctx, cluster.Namespace, cluster.Spec.ControlPlaneRef.Name)
 			if err == nil && kcp.Spec.Version != "" {
 				status.Version = kcp.Spec.Version
@@ -188,21 +190,21 @@ func GetControlPlaneStatus(kcp *controlplanev1.KubeadmControlPlane) string {
 func FormatClusterInfo(status *ClusterStatus) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Cluster: %s/%s\n", status.Namespace, status.Name))
-	sb.WriteString(fmt.Sprintf("Phase: %s\n", status.Phase))
-	sb.WriteString(fmt.Sprintf("Ready: %v\n", status.Ready))
+	fmt.Fprintf(&sb, "Cluster: %s/%s\n", status.Namespace, status.Name)
+	fmt.Fprintf(&sb, "Phase: %s\n", status.Phase)
+	fmt.Fprintf(&sb, "Ready: %v\n", status.Ready)
 	if status.Paused {
 		sb.WriteString("Paused: true\n")
 	}
-	sb.WriteString(fmt.Sprintf("Provider: %s\n", status.Provider))
-	sb.WriteString(fmt.Sprintf("Version: %s\n", status.Version))
-	sb.WriteString(fmt.Sprintf("Machines: %d/%d ready\n", status.ReadyMachines, status.TotalMachines))
+	fmt.Fprintf(&sb, "Provider: %s\n", status.Provider)
+	fmt.Fprintf(&sb, "Version: %s\n", status.Version)
+	fmt.Fprintf(&sb, "Machines: %d/%d ready\n", status.ReadyMachines, status.TotalMachines)
 
 	if userLabels := filterUserLabels(status.Labels); len(userLabels) > 0 {
 		sb.WriteString("\nLabels:\n")
 		keys := sortedKeys(userLabels)
 		for _, k := range keys {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", k, userLabels[k]))
+			fmt.Fprintf(&sb, "  %s: %s\n", k, userLabels[k])
 		}
 	}
 
@@ -210,16 +212,16 @@ func FormatClusterInfo(status *ClusterStatus) string {
 		sb.WriteString("\nAnnotations:\n")
 		keys := sortedKeys(status.Annotations)
 		for _, k := range keys {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", k, status.Annotations[k]))
+			fmt.Fprintf(&sb, "  %s: %s\n", k, status.Annotations[k])
 		}
 	}
 
 	if len(status.Conditions) > 0 {
 		sb.WriteString("\nConditions:\n")
 		for _, cond := range status.Conditions {
-			sb.WriteString(fmt.Sprintf("  %s: %s", cond.Type, cond.Status))
+			fmt.Fprintf(&sb, "  %s: %s", cond.Type, cond.Status)
 			if cond.Reason != "" {
-				sb.WriteString(fmt.Sprintf(" (%s)", cond.Reason))
+				fmt.Fprintf(&sb, " (%s)", cond.Reason)
 			}
 			sb.WriteString("\n")
 		}

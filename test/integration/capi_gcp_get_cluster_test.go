@@ -11,7 +11,7 @@ func TestCapiGCPGetCluster(t *testing.T) {
 
 	t.Run("should get GCP cluster details", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -25,7 +25,7 @@ func TestCapiGCPGetCluster(t *testing.T) {
 
 	t.Run("should error for non-GCP cluster", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -39,7 +39,7 @@ func TestCapiGCPGetCluster(t *testing.T) {
 
 	t.Run("should error when cluster not found", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -62,7 +62,7 @@ func TestCapiGCPGetCluster(t *testing.T) {
 
 	t.Run("should error when name is missing", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -74,7 +74,7 @@ func TestCapiGCPGetCluster(t *testing.T) {
 
 	t.Run("should accept GCPManagedCluster kind", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -88,7 +88,7 @@ func TestCapiGCPGetCluster(t *testing.T) {
 
 	t.Run("should error for cluster with nil infrastructure ref", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

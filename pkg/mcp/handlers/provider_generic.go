@@ -46,9 +46,9 @@ func CreateListInfrastructureProvidersHandler(serverCtx *ServerContext) server.T
 		}
 
 		for _, provider := range providers {
-			content.WriteString(fmt.Sprintf("Provider: %s\n", provider.Name))
-			content.WriteString(fmt.Sprintf("  API Version: %s\n", provider.APIVersion))
-			content.WriteString(fmt.Sprintf("  Description: %s\n", provider.Description))
+			fmt.Fprintf(&content, "Provider: %s\n", provider.Name)
+			fmt.Fprintf(&content, "  API Version: %s\n", provider.APIVersion)
+			fmt.Fprintf(&content, "  Description: %s\n", provider.Description)
 			content.WriteString("\n")
 		}
 
@@ -76,7 +76,7 @@ func CreateGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandler
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Configuration for %s Provider:\n\n", strings.ToUpper(provider)))
+		fmt.Fprintf(&content, "Configuration for %s Provider:\n\n", strings.ToUpper(provider))
 
 		switch strings.ToLower(provider) {
 		case "aws":

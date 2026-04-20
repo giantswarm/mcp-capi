@@ -7,7 +7,6 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
@@ -36,10 +35,10 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 				cluster.Spec.InfrastructureRef.Kind == "VSphereCluster" {
 				vsphereClusterCount++
 
-				content.WriteString(fmt.Sprintf("Cluster: %s/%s\n", cluster.Namespace, cluster.Name))
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind))
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-				content.WriteString(fmt.Sprintf("  Ready: %v\n", cluster.Status.InfrastructureReady))
+				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
+				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
+				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
 
 				// Try to get provider information
 				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
@@ -54,7 +53,7 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 		if vsphereClusterCount == 0 {
 			content.WriteString("No vSphere clusters found.\n")
 		} else {
-			content.WriteString(fmt.Sprintf("Total vSphere clusters: %d\n", vsphereClusterCount))
+			fmt.Fprintf(&content, "Total vSphere clusters: %d\n", vsphereClusterCount)
 		}
 
 		return &mcp.CallToolResult{
@@ -94,18 +93,18 @@ func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("vSphere Cluster: %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "vSphere Cluster: %s/%s\n\n", namespace, name)
 
 		// Basic cluster info
 		content.WriteString("Cluster Information:\n")
-		content.WriteString(fmt.Sprintf("  Phase: %s\n", cluster.Status.Phase))
-		content.WriteString(fmt.Sprintf("  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady))
-		content.WriteString(fmt.Sprintf("  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady))
+		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
+		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
+		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
 
 		// Infrastructure reference
 		content.WriteString("\nInfrastructure:\n")
-		content.WriteString(fmt.Sprintf("  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind))
-		content.WriteString(fmt.Sprintf("  Name: %s\n", cluster.Spec.InfrastructureRef.Name))
+		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
+		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
 
 		content.WriteString("\nNote: For detailed vSphere infrastructure information (datacenter, datastore, etc.),\n")
 		content.WriteString("you would need to query the VSphereCluster resource directly.\n")
@@ -149,19 +148,3 @@ func CreateVSphereManageVMsHandler(serverCtx *ServerContext) server.ToolHandlerF
 	}
 }
 
-// Helper function to filter clusters by provider
-func filterClustersByProvider(clusters *clusterv1.ClusterList, providerKinds []string) []*clusterv1.Cluster {
-	var filtered []*clusterv1.Cluster
-	for i := range clusters.Items {
-		cluster := &clusters.Items[i]
-		if cluster.Spec.InfrastructureRef != nil {
-			for _, kind := range providerKinds {
-				if cluster.Spec.InfrastructureRef.Kind == kind {
-					filtered = append(filtered, cluster)
-					break
-				}
-			}
-		}
-	}
-	return filtered
-}

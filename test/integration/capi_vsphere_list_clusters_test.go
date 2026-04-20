@@ -11,7 +11,7 @@ func TestCapiVSphereListClusters(t *testing.T) {
 
 	t.Run("should list vSphere clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -24,7 +24,7 @@ func TestCapiVSphereListClusters(t *testing.T) {
 
 	t.Run("should show no vSphere clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -36,7 +36,7 @@ func TestCapiVSphereListClusters(t *testing.T) {
 
 	t.Run("should filter out non-vSphere clusters", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).

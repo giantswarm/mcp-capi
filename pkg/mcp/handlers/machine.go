@@ -28,23 +28,23 @@ func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d machines", len(machines.Items)))
+		fmt.Fprintf(&content, "Found %d machines", len(machines.Items))
 		if clusterName != "" {
-			content.WriteString(fmt.Sprintf(" in cluster %s", clusterName))
+			fmt.Fprintf(&content, " in cluster %s", clusterName)
 		}
 		content.WriteString(":\n\n")
 
 		for _, machine := range machines.Items {
-			content.WriteString(fmt.Sprintf("Machine: %s/%s\n", machine.Namespace, machine.Name))
-			content.WriteString(fmt.Sprintf("  Cluster: %s\n", machine.Spec.ClusterName))
+			fmt.Fprintf(&content, "Machine: %s/%s\n", machine.Namespace, machine.Name)
+			fmt.Fprintf(&content, "  Cluster: %s\n", machine.Spec.ClusterName)
 			if machine.Status.Phase != "" {
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", machine.Status.Phase))
+				fmt.Fprintf(&content, "  Phase: %s\n", machine.Status.Phase)
 			}
 			if machine.Status.NodeRef != nil {
-				content.WriteString(fmt.Sprintf("  Node: %s\n", machine.Status.NodeRef.Name))
+				fmt.Fprintf(&content, "  Node: %s\n", machine.Status.NodeRef.Name)
 			}
 			if machine.Spec.ProviderID != nil {
-				content.WriteString(fmt.Sprintf("  Provider ID: %s\n", *machine.Spec.ProviderID))
+				fmt.Fprintf(&content, "  Provider ID: %s\n", *machine.Spec.ProviderID)
 			}
 			// Check if machine has Ready condition
 			ready := false
@@ -54,7 +54,7 @@ func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 					break
 				}
 			}
-			content.WriteString(fmt.Sprintf("  Ready: %v\n", ready))
+			fmt.Fprintf(&content, "  Ready: %v\n", ready)
 			content.WriteString("\n")
 		}
 
@@ -85,29 +85,29 @@ func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d machine deployments", len(mds.Items)))
+		fmt.Fprintf(&content, "Found %d machine deployments", len(mds.Items))
 		if clusterName != "" {
-			content.WriteString(fmt.Sprintf(" in cluster %s", clusterName))
+			fmt.Fprintf(&content, " in cluster %s", clusterName)
 		}
 		content.WriteString(":\n\n")
 
 		for _, md := range mds.Items {
-			content.WriteString(fmt.Sprintf("MachineDeployment: %s/%s\n", md.Namespace, md.Name))
-			content.WriteString(fmt.Sprintf("  Cluster: %s\n", md.Spec.ClusterName))
+			fmt.Fprintf(&content, "MachineDeployment: %s/%s\n", md.Namespace, md.Name)
+			fmt.Fprintf(&content, "  Cluster: %s\n", md.Spec.ClusterName)
 			if md.Spec.Replicas != nil {
-				content.WriteString(fmt.Sprintf("  Replicas: %d\n", *md.Spec.Replicas))
+				fmt.Fprintf(&content, "  Replicas: %d\n", *md.Spec.Replicas)
 			}
 			if md.Status.Replicas > 0 {
-				content.WriteString(fmt.Sprintf("  Status: %d ready / %d updated / %d available\n",
+				fmt.Fprintf(&content, "  Status: %d ready / %d updated / %d available\n",
 					md.Status.ReadyReplicas,
 					md.Status.UpdatedReplicas,
-					md.Status.AvailableReplicas))
+					md.Status.AvailableReplicas)
 			}
 			if md.Status.Phase != "" {
-				content.WriteString(fmt.Sprintf("  Phase: %s\n", md.Status.Phase))
+				fmt.Fprintf(&content, "  Phase: %s\n", md.Status.Phase)
 			}
 			if md.Spec.Template.Spec.Version != nil {
-				content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", *md.Spec.Template.Spec.Version))
+				fmt.Fprintf(&content, "  Kubernetes Version: %s\n", *md.Spec.Template.Spec.Version)
 			}
 			content.WriteString("\n")
 		}
@@ -142,53 +142,53 @@ func CreateGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Machine: %s/%s\n\n", machine.Namespace, machine.Name))
+		fmt.Fprintf(&content, "Machine: %s/%s\n\n", machine.Namespace, machine.Name)
 
 		// Basic information
 		content.WriteString("Basic Information:\n")
-		content.WriteString(fmt.Sprintf("  Cluster: %s\n", machine.Spec.ClusterName))
+		fmt.Fprintf(&content, "  Cluster: %s\n", machine.Spec.ClusterName)
 		if machine.Status.Phase != "" {
-			content.WriteString(fmt.Sprintf("  Phase: %s\n", machine.Status.Phase))
+			fmt.Fprintf(&content, "  Phase: %s\n", machine.Status.Phase)
 		}
 		if machine.Spec.Version != nil {
-			content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", *machine.Spec.Version))
+			fmt.Fprintf(&content, "  Kubernetes Version: %s\n", *machine.Spec.Version)
 		}
 		if machine.Spec.ProviderID != nil {
-			content.WriteString(fmt.Sprintf("  Provider ID: %s\n", *machine.Spec.ProviderID))
+			fmt.Fprintf(&content, "  Provider ID: %s\n", *machine.Spec.ProviderID)
 		}
 
 		// Node information
 		if machine.Status.NodeRef != nil {
-			content.WriteString(fmt.Sprintf("\nNode Information:\n"))
-			content.WriteString(fmt.Sprintf("  Node Name: %s\n", machine.Status.NodeRef.Name))
-			content.WriteString(fmt.Sprintf("  Node UID: %s\n", machine.Status.NodeRef.UID))
+			content.WriteString("\nNode Information:\n")
+			fmt.Fprintf(&content, "  Node Name: %s\n", machine.Status.NodeRef.Name)
+			fmt.Fprintf(&content, "  Node UID: %s\n", machine.Status.NodeRef.UID)
 		}
 
 		// Bootstrap information
 		if machine.Spec.Bootstrap.ConfigRef != nil {
-			content.WriteString(fmt.Sprintf("\nBootstrap:\n"))
-			content.WriteString(fmt.Sprintf("  Kind: %s\n", machine.Spec.Bootstrap.ConfigRef.Kind))
-			content.WriteString(fmt.Sprintf("  Name: %s\n", machine.Spec.Bootstrap.ConfigRef.Name))
+			content.WriteString("\nBootstrap:\n")
+			fmt.Fprintf(&content, "  Kind: %s\n", machine.Spec.Bootstrap.ConfigRef.Kind)
+			fmt.Fprintf(&content, "  Name: %s\n", machine.Spec.Bootstrap.ConfigRef.Name)
 		}
 
 		// Infrastructure information
 		if machine.Spec.InfrastructureRef.Kind != "" {
-			content.WriteString(fmt.Sprintf("\nInfrastructure:\n"))
-			content.WriteString(fmt.Sprintf("  Kind: %s\n", machine.Spec.InfrastructureRef.Kind))
-			content.WriteString(fmt.Sprintf("  Name: %s\n", machine.Spec.InfrastructureRef.Name))
+			content.WriteString("\nInfrastructure:\n")
+			fmt.Fprintf(&content, "  Kind: %s\n", machine.Spec.InfrastructureRef.Kind)
+			fmt.Fprintf(&content, "  Name: %s\n", machine.Spec.InfrastructureRef.Name)
 		}
 
 		// Conditions
 		if len(machine.Status.Conditions) > 0 {
 			content.WriteString("\nConditions:\n")
 			for _, condition := range machine.Status.Conditions {
-				content.WriteString(fmt.Sprintf("  - Type: %s\n", condition.Type))
-				content.WriteString(fmt.Sprintf("    Status: %s\n", condition.Status))
+				fmt.Fprintf(&content, "  - Type: %s\n", condition.Type)
+				fmt.Fprintf(&content, "    Status: %s\n", condition.Status)
 				if condition.Reason != "" {
-					content.WriteString(fmt.Sprintf("    Reason: %s\n", condition.Reason))
+					fmt.Fprintf(&content, "    Reason: %s\n", condition.Reason)
 				}
 				if condition.Message != "" {
-					content.WriteString(fmt.Sprintf("    Message: %s\n", condition.Message))
+					fmt.Fprintf(&content, "    Message: %s\n", condition.Message)
 				}
 			}
 		}
@@ -197,7 +197,7 @@ func CreateGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		if len(machine.Status.Addresses) > 0 {
 			content.WriteString("\nAddresses:\n")
 			for _, addr := range machine.Status.Addresses {
-				content.WriteString(fmt.Sprintf("  - Type: %s, Address: %s\n", addr.Type, addr.Address))
+				fmt.Fprintf(&content, "  - Type: %s, Address: %s\n", addr.Type, addr.Address)
 			}
 		}
 
@@ -238,13 +238,13 @@ func CreateDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully initiated deletion of machine %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Successfully initiated deletion of machine %s/%s\n\n", namespace, name)
 		content.WriteString("Note: Machine deletion is asynchronous. The machine will be:\n")
 		content.WriteString("1. Drained (if it has a node)\n")
 		content.WriteString("2. Removed from the cluster\n")
 		content.WriteString("3. Infrastructure resources cleaned up\n\n")
 		content.WriteString("Monitor deletion progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_get_machine --namespace %s --name %s\n", namespace, name))
+		fmt.Fprintf(&content, "  capi_get_machine --namespace %s --name %s\n", namespace, name)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -286,11 +286,11 @@ func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🔧 Triggered remediation for machine %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🔧 Triggered remediation for machine %s/%s\n\n", namespace, name)
 		content.WriteString("Current Machine Status:\n")
-		content.WriteString(fmt.Sprintf("  • Phase: %s\n", machine.Status.Phase))
+		fmt.Fprintf(&content, "  • Phase: %s\n", machine.Status.Phase)
 		if machine.Status.NodeRef != nil {
-			content.WriteString(fmt.Sprintf("  • Node: %s\n", machine.Status.NodeRef.Name))
+			fmt.Fprintf(&content, "  • Node: %s\n", machine.Status.NodeRef.Name)
 		}
 		content.WriteString("\nRemediation Process:\n")
 		content.WriteString("1. Machine will be marked for remediation\n")
@@ -300,7 +300,7 @@ func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 		content.WriteString("   - Node may be rebooted\n")
 		content.WriteString("   - Custom remediation may be applied\n\n")
 		content.WriteString("Monitor remediation progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_get_machine --namespace %s --name %s\n", namespace, name))
+		fmt.Fprintf(&content, "  capi_get_machine --namespace %s --name %s\n", namespace, name)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -382,23 +382,23 @@ func CreateCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully created machine deployment %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Successfully created machine deployment %s/%s\n\n", namespace, name)
 		content.WriteString("Configuration:\n")
-		content.WriteString(fmt.Sprintf("  • Cluster: %s\n", clusterName))
-		content.WriteString(fmt.Sprintf("  • Replicas: %d\n", replicas))
-		content.WriteString(fmt.Sprintf("  • Version: %s\n", version))
-		content.WriteString(fmt.Sprintf("  • Infrastructure: %s/%s\n", infraKind, infraName))
-		content.WriteString(fmt.Sprintf("  • Bootstrap: %s/%s\n", bootstrapKind, bootstrapName))
+		fmt.Fprintf(&content, "  • Cluster: %s\n", clusterName)
+		fmt.Fprintf(&content, "  • Replicas: %d\n", replicas)
+		fmt.Fprintf(&content, "  • Version: %s\n", version)
+		fmt.Fprintf(&content, "  • Infrastructure: %s/%s\n", infraKind, infraName)
+		fmt.Fprintf(&content, "  • Bootstrap: %s/%s\n", bootstrapKind, bootstrapName)
 		if md.Spec.MinReadySeconds != nil {
-			content.WriteString(fmt.Sprintf("  • Min Ready Seconds: %d\n", *md.Spec.MinReadySeconds))
+			fmt.Fprintf(&content, "  • Min Ready Seconds: %d\n", *md.Spec.MinReadySeconds)
 		}
 		content.WriteString("\nNote: Before creating a MachineDeployment, ensure you have:\n")
 		content.WriteString("1. Created the infrastructure template (e.g., AWSMachineTemplate)\n")
 		content.WriteString("2. Created the bootstrap config template (e.g., KubeadmConfigTemplate)\n\n")
 		content.WriteString("Monitor the deployment with:\n")
-		content.WriteString(fmt.Sprintf("  capi_list_machines --cluster %s\n", clusterName))
+		fmt.Fprintf(&content, "  capi_list_machines --cluster %s\n", clusterName)
 		content.WriteString("\nScale the deployment with:\n")
-		content.WriteString(fmt.Sprintf("  capi_scale_machinedeployment --namespace %s --name %s --replicas <count>\n", namespace, name))
+		fmt.Fprintf(&content, "  capi_scale_machinedeployment --namespace %s --name %s --replicas <count>\n", namespace, name)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -459,19 +459,19 @@ func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully scaled machine deployment %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Successfully scaled machine deployment %s/%s\n\n", namespace, name)
 		content.WriteString("Scaling Operation:\n")
-		content.WriteString(fmt.Sprintf("  • Previous Replicas: %d\n", currentReplicas))
-		content.WriteString(fmt.Sprintf("  • New Replicas: %d\n", replicas))
+		fmt.Fprintf(&content, "  • Previous Replicas: %d\n", currentReplicas)
+		fmt.Fprintf(&content, "  • New Replicas: %d\n", replicas)
 
 		if replicas > currentReplicas {
-			content.WriteString(fmt.Sprintf("  • Action: Scaling UP by %d nodes\n", replicas-currentReplicas))
+			fmt.Fprintf(&content, "  • Action: Scaling UP by %d nodes\n", replicas-currentReplicas)
 			content.WriteString("\nNew nodes will be:\n")
 			content.WriteString("1. Provisioned by the infrastructure provider\n")
 			content.WriteString("2. Bootstrapped with Kubernetes\n")
 			content.WriteString("3. Joined to the cluster\n")
 		} else if replicas < currentReplicas {
-			content.WriteString(fmt.Sprintf("  • Action: Scaling DOWN by %d nodes\n", currentReplicas-replicas))
+			fmt.Fprintf(&content, "  • Action: Scaling DOWN by %d nodes\n", currentReplicas-replicas)
 			content.WriteString("\nNodes will be:\n")
 			content.WriteString("1. Cordoned to prevent new workloads\n")
 			content.WriteString("2. Drained to move existing workloads\n")
@@ -482,7 +482,7 @@ func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 		}
 
 		content.WriteString("\nMonitor scaling progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_list_machines --namespace %s\n", namespace))
+		fmt.Fprintf(&content, "  capi_list_machines --namespace %s\n", namespace)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -558,17 +558,17 @@ func CreateUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("✅ Successfully updated machine deployment %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "✅ Successfully updated machine deployment %s/%s\n\n", namespace, name)
 		content.WriteString("Updated Configuration:\n")
 
 		if opts.Version != nil {
-			content.WriteString(fmt.Sprintf("  • Version: %s\n", *opts.Version))
+			fmt.Fprintf(&content, "  • Version: %s\n", *opts.Version)
 		}
 		if opts.Replicas != nil {
-			content.WriteString(fmt.Sprintf("  • Replicas: %d\n", *opts.Replicas))
+			fmt.Fprintf(&content, "  • Replicas: %d\n", *opts.Replicas)
 		}
 		if opts.MinReadySeconds != nil {
-			content.WriteString(fmt.Sprintf("  • Min Ready Seconds: %d\n", *opts.MinReadySeconds))
+			fmt.Fprintf(&content, "  • Min Ready Seconds: %d\n", *opts.MinReadySeconds)
 		}
 		if len(opts.Labels) > 0 {
 			content.WriteString("  • Labels updated\n")
@@ -578,9 +578,9 @@ func CreateUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		}
 
 		content.WriteString("\nCurrent Status:\n")
-		content.WriteString(fmt.Sprintf("  • Ready Replicas: %d\n", md.Status.ReadyReplicas))
-		content.WriteString(fmt.Sprintf("  • Updated Replicas: %d\n", md.Status.UpdatedReplicas))
-		content.WriteString(fmt.Sprintf("  • Available Replicas: %d\n", md.Status.AvailableReplicas))
+		fmt.Fprintf(&content, "  • Ready Replicas: %d\n", md.Status.ReadyReplicas)
+		fmt.Fprintf(&content, "  • Updated Replicas: %d\n", md.Status.UpdatedReplicas)
+		fmt.Fprintf(&content, "  • Available Replicas: %d\n", md.Status.AvailableReplicas)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -619,10 +619,10 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("🔄 Successfully triggered rollout for machine deployment %s/%s\n\n", namespace, name))
+		fmt.Fprintf(&content, "🔄 Successfully triggered rollout for machine deployment %s/%s\n\n", namespace, name)
 
 		if reason != "" {
-			content.WriteString(fmt.Sprintf("Reason: %s\n\n", reason))
+			fmt.Fprintf(&content, "Reason: %s\n\n", reason)
 		}
 
 		content.WriteString("Rollout Process:\n")
@@ -632,8 +632,8 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 		content.WriteString("4. Health checks ensure machines are ready before proceeding\n\n")
 
 		content.WriteString("Monitor rollout progress with:\n")
-		content.WriteString(fmt.Sprintf("  capi_list_machines --namespace %s --cluster <cluster-name>\n", namespace))
-		content.WriteString(fmt.Sprintf("  capi_list_machinedeployments --namespace %s\n", namespace))
+		fmt.Fprintf(&content, "  capi_list_machines --namespace %s --cluster <cluster-name>\n", namespace)
+		fmt.Fprintf(&content, "  capi_list_machinedeployments --namespace %s\n", namespace)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -662,33 +662,33 @@ func CreateListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Found %d machine sets", len(machineSets.Items)))
+		fmt.Fprintf(&content, "Found %d machine sets", len(machineSets.Items))
 		if clusterName != "" {
-			content.WriteString(fmt.Sprintf(" in cluster %s", clusterName))
+			fmt.Fprintf(&content, " in cluster %s", clusterName)
 		}
 		content.WriteString(":\n\n")
 
 		for _, ms := range machineSets.Items {
-			content.WriteString(fmt.Sprintf("MachineSet: %s/%s\n", ms.Namespace, ms.Name))
-			content.WriteString(fmt.Sprintf("  Cluster: %s\n", ms.Spec.ClusterName))
+			fmt.Fprintf(&content, "MachineSet: %s/%s\n", ms.Namespace, ms.Name)
+			fmt.Fprintf(&content, "  Cluster: %s\n", ms.Spec.ClusterName)
 			if ms.Spec.Replicas != nil {
-				content.WriteString(fmt.Sprintf("  Replicas: %d\n", *ms.Spec.Replicas))
+				fmt.Fprintf(&content, "  Replicas: %d\n", *ms.Spec.Replicas)
 			}
-			content.WriteString(fmt.Sprintf("  Ready: %d/%d\n", ms.Status.ReadyReplicas, ms.Status.Replicas))
-			content.WriteString(fmt.Sprintf("  Available: %d\n", ms.Status.AvailableReplicas))
+			fmt.Fprintf(&content, "  Ready: %d/%d\n", ms.Status.ReadyReplicas, ms.Status.Replicas)
+			fmt.Fprintf(&content, "  Available: %d\n", ms.Status.AvailableReplicas)
 
 			// Show owner reference (usually MachineDeployment)
 			for _, owner := range ms.OwnerReferences {
 				if owner.Kind == "MachineDeployment" {
-					content.WriteString(fmt.Sprintf("  Owner: MachineDeployment/%s\n", owner.Name))
+					fmt.Fprintf(&content, "  Owner: MachineDeployment/%s\n", owner.Name)
 				}
 			}
 
 			// Show machine template
 			if ms.Spec.Template.Spec.InfrastructureRef.Name != "" {
-				content.WriteString(fmt.Sprintf("  Infrastructure: %s/%s\n",
+				fmt.Fprintf(&content, "  Infrastructure: %s/%s\n",
 					ms.Spec.Template.Spec.InfrastructureRef.Kind,
-					ms.Spec.Template.Spec.InfrastructureRef.Name))
+					ms.Spec.Template.Spec.InfrastructureRef.Name)
 			}
 			content.WriteString("\n")
 		}
@@ -723,48 +723,48 @@ func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("MachineSet: %s/%s\n\n", ms.Namespace, ms.Name))
+		fmt.Fprintf(&content, "MachineSet: %s/%s\n\n", ms.Namespace, ms.Name)
 
 		// Basic information
 		content.WriteString("Basic Information:\n")
-		content.WriteString(fmt.Sprintf("  Cluster: %s\n", ms.Spec.ClusterName))
+		fmt.Fprintf(&content, "  Cluster: %s\n", ms.Spec.ClusterName)
 		if ms.Spec.Replicas != nil {
-			content.WriteString(fmt.Sprintf("  Desired Replicas: %d\n", *ms.Spec.Replicas))
+			fmt.Fprintf(&content, "  Desired Replicas: %d\n", *ms.Spec.Replicas)
 		}
 
 		// Status
 		content.WriteString("\nStatus:\n")
-		content.WriteString(fmt.Sprintf("  Total Replicas: %d\n", ms.Status.Replicas))
-		content.WriteString(fmt.Sprintf("  Ready Replicas: %d\n", ms.Status.ReadyReplicas))
-		content.WriteString(fmt.Sprintf("  Available Replicas: %d\n", ms.Status.AvailableReplicas))
+		fmt.Fprintf(&content, "  Total Replicas: %d\n", ms.Status.Replicas)
+		fmt.Fprintf(&content, "  Ready Replicas: %d\n", ms.Status.ReadyReplicas)
+		fmt.Fprintf(&content, "  Available Replicas: %d\n", ms.Status.AvailableReplicas)
 		if ms.Status.FailureReason != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-			content.WriteString(fmt.Sprintf("  Failure Reason: %s\n", *ms.Status.FailureReason)) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+			fmt.Fprintf(&content, "  Failure Reason: %s\n", *ms.Status.FailureReason) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 		}
 		if ms.Status.FailureMessage != nil { //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
-			content.WriteString(fmt.Sprintf("  Failure Message: %s\n", *ms.Status.FailureMessage)) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
+			fmt.Fprintf(&content, "  Failure Message: %s\n", *ms.Status.FailureMessage) //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 		}
 
 		// Machine template
 		content.WriteString("\nMachine Template:\n")
 		if ms.Spec.Template.Spec.Version != nil {
-			content.WriteString(fmt.Sprintf("  Kubernetes Version: %s\n", *ms.Spec.Template.Spec.Version))
+			fmt.Fprintf(&content, "  Kubernetes Version: %s\n", *ms.Spec.Template.Spec.Version)
 		}
 		if ms.Spec.Template.Spec.InfrastructureRef.Name != "" {
-			content.WriteString(fmt.Sprintf("  Infrastructure: %s/%s\n",
+			fmt.Fprintf(&content, "  Infrastructure: %s/%s\n",
 				ms.Spec.Template.Spec.InfrastructureRef.Kind,
-				ms.Spec.Template.Spec.InfrastructureRef.Name))
+				ms.Spec.Template.Spec.InfrastructureRef.Name)
 		}
 		if ms.Spec.Template.Spec.Bootstrap.ConfigRef != nil {
-			content.WriteString(fmt.Sprintf("  Bootstrap: %s/%s\n",
+			fmt.Fprintf(&content, "  Bootstrap: %s/%s\n",
 				ms.Spec.Template.Spec.Bootstrap.ConfigRef.Kind,
-				ms.Spec.Template.Spec.Bootstrap.ConfigRef.Name))
+				ms.Spec.Template.Spec.Bootstrap.ConfigRef.Name)
 		}
 
 		// Owner references
 		if len(ms.OwnerReferences) > 0 {
 			content.WriteString("\nOwners:\n")
 			for _, owner := range ms.OwnerReferences {
-				content.WriteString(fmt.Sprintf("  - %s: %s\n", owner.Kind, owner.Name))
+				fmt.Fprintf(&content, "  - %s: %s\n", owner.Kind, owner.Name)
 			}
 		}
 
@@ -772,13 +772,13 @@ func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		if len(ms.Status.Conditions) > 0 {
 			content.WriteString("\nConditions:\n")
 			for _, condition := range ms.Status.Conditions {
-				content.WriteString(fmt.Sprintf("  - Type: %s\n", condition.Type))
-				content.WriteString(fmt.Sprintf("    Status: %s\n", condition.Status))
+				fmt.Fprintf(&content, "  - Type: %s\n", condition.Type)
+				fmt.Fprintf(&content, "    Status: %s\n", condition.Status)
 				if condition.Reason != "" {
-					content.WriteString(fmt.Sprintf("    Reason: %s\n", condition.Reason))
+					fmt.Fprintf(&content, "    Reason: %s\n", condition.Reason)
 				}
 				if condition.Message != "" {
-					content.WriteString(fmt.Sprintf("    Message: %s\n", condition.Message))
+					fmt.Fprintf(&content, "    Message: %s\n", condition.Message)
 				}
 			}
 		}
@@ -832,7 +832,7 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			if strings.Contains(err.Error(), "has been cordoned") {
 				var content strings.Builder
 				content.WriteString("⚠️  Node drain partially implemented\n\n")
-				content.WriteString(fmt.Sprintf("Node has been cordoned (marked as unschedulable)\n"))
+				content.WriteString("Node has been cordoned (marked as unschedulable)\n")
 				content.WriteString("\nFull drain implementation would:\n")
 				content.WriteString("1. List all pods on the node\n")
 				content.WriteString("2. Filter out DaemonSet pods if requested\n")
@@ -841,7 +841,7 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 				content.WriteString("5. Force delete pods that exceed grace period\n\n")
 				content.WriteString("For now, you can manually drain using kubectl:\n")
 				if nodeName != "" {
-					content.WriteString(fmt.Sprintf("  kubectl drain %s --ignore-daemonsets --delete-emptydir-data\n", nodeName))
+					fmt.Fprintf(&content, "  kubectl drain %s --ignore-daemonsets --delete-emptydir-data\n", nodeName)
 				}
 
 				return &mcp.CallToolResult{
@@ -859,11 +859,11 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		var content strings.Builder
 		content.WriteString("✅ Successfully drained node\n\n")
 		content.WriteString("Drain Options Applied:\n")
-		content.WriteString(fmt.Sprintf("  • Ignore DaemonSets: %v\n", opts.IgnoreDaemonSets))
-		content.WriteString(fmt.Sprintf("  • Delete Local Data: %v\n", opts.DeleteLocalData))
-		content.WriteString(fmt.Sprintf("  • Force: %v\n", opts.Force))
+		fmt.Fprintf(&content, "  • Ignore DaemonSets: %v\n", opts.IgnoreDaemonSets)
+		fmt.Fprintf(&content, "  • Delete Local Data: %v\n", opts.DeleteLocalData)
+		fmt.Fprintf(&content, "  • Force: %v\n", opts.Force)
 		if opts.GracePeriodSeconds != nil {
-			content.WriteString(fmt.Sprintf("  • Grace Period: %d seconds\n", *opts.GracePeriodSeconds))
+			fmt.Fprintf(&content, "  • Grace Period: %d seconds\n", *opts.GracePeriodSeconds)
 		}
 		content.WriteString("\nThe node is now:\n")
 		content.WriteString("• Cordoned (no new pods will be scheduled)\n")
@@ -914,7 +914,7 @@ func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			action = "uncordoned"
 		}
 
-		content.WriteString(fmt.Sprintf("✅ Successfully %s node\n\n", action))
+		fmt.Fprintf(&content, "✅ Successfully %s node\n\n", action)
 
 		if opts.Uncordon {
 			content.WriteString("The node is now:\n")
@@ -967,60 +967,60 @@ func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Node: %s\n\n", node.Name))
+		fmt.Fprintf(&content, "Node: %s\n\n", node.Name)
 
 		// Basic information
 		content.WriteString("Basic Information:\n")
-		content.WriteString(fmt.Sprintf("  UID: %s\n", node.UID))
-		content.WriteString(fmt.Sprintf("  Created: %s\n", node.CreationTimestamp))
-		content.WriteString(fmt.Sprintf("  Schedulable: %v\n", !node.Spec.Unschedulable))
+		fmt.Fprintf(&content, "  UID: %s\n", node.UID)
+		fmt.Fprintf(&content, "  Created: %s\n", node.CreationTimestamp)
+		fmt.Fprintf(&content, "  Schedulable: %v\n", !node.Spec.Unschedulable)
 		if node.Spec.ProviderID != "" {
-			content.WriteString(fmt.Sprintf("  Provider ID: %s\n", node.Spec.ProviderID))
+			fmt.Fprintf(&content, "  Provider ID: %s\n", node.Spec.ProviderID)
 		}
 
 		// Node info
 		info := node.Status.NodeInfo
 		content.WriteString("\nNode Info:\n")
-		content.WriteString(fmt.Sprintf("  OS: %s (%s)\n", info.OperatingSystem, info.OSImage))
-		content.WriteString(fmt.Sprintf("  Kernel: %s\n", info.KernelVersion))
-		content.WriteString(fmt.Sprintf("  Container Runtime: %s\n", info.ContainerRuntimeVersion))
-		content.WriteString(fmt.Sprintf("  Kubelet: %s\n", info.KubeletVersion))
-		content.WriteString(fmt.Sprintf("  Architecture: %s\n", info.Architecture))
+		fmt.Fprintf(&content, "  OS: %s (%s)\n", info.OperatingSystem, info.OSImage)
+		fmt.Fprintf(&content, "  Kernel: %s\n", info.KernelVersion)
+		fmt.Fprintf(&content, "  Container Runtime: %s\n", info.ContainerRuntimeVersion)
+		fmt.Fprintf(&content, "  Kubelet: %s\n", info.KubeletVersion)
+		fmt.Fprintf(&content, "  Architecture: %s\n", info.Architecture)
 
 		// Capacity and allocatable resources
 		content.WriteString("\nResources:\n")
 		content.WriteString("  Capacity:\n")
 		if cpu := node.Status.Capacity[v1.ResourceCPU]; !cpu.IsZero() {
-			content.WriteString(fmt.Sprintf("    CPU: %s\n", cpu.String()))
+			fmt.Fprintf(&content, "    CPU: %s\n", cpu.String())
 		}
 		if memory := node.Status.Capacity[v1.ResourceMemory]; !memory.IsZero() {
-			content.WriteString(fmt.Sprintf("    Memory: %s\n", memory.String()))
+			fmt.Fprintf(&content, "    Memory: %s\n", memory.String())
 		}
 		if pods := node.Status.Capacity[v1.ResourcePods]; !pods.IsZero() {
-			content.WriteString(fmt.Sprintf("    Pods: %s\n", pods.String()))
+			fmt.Fprintf(&content, "    Pods: %s\n", pods.String())
 		}
 
 		content.WriteString("  Allocatable:\n")
 		if cpu := node.Status.Allocatable[v1.ResourceCPU]; !cpu.IsZero() {
-			content.WriteString(fmt.Sprintf("    CPU: %s\n", cpu.String()))
+			fmt.Fprintf(&content, "    CPU: %s\n", cpu.String())
 		}
 		if memory := node.Status.Allocatable[v1.ResourceMemory]; !memory.IsZero() {
-			content.WriteString(fmt.Sprintf("    Memory: %s\n", memory.String()))
+			fmt.Fprintf(&content, "    Memory: %s\n", memory.String())
 		}
 		if pods := node.Status.Allocatable[v1.ResourcePods]; !pods.IsZero() {
-			content.WriteString(fmt.Sprintf("    Pods: %s\n", pods.String()))
+			fmt.Fprintf(&content, "    Pods: %s\n", pods.String())
 		}
 
 		// Conditions
 		content.WriteString("\nConditions:\n")
 		for _, condition := range node.Status.Conditions {
-			content.WriteString(fmt.Sprintf("  - Type: %s\n", condition.Type))
-			content.WriteString(fmt.Sprintf("    Status: %s\n", condition.Status))
+			fmt.Fprintf(&content, "  - Type: %s\n", condition.Type)
+			fmt.Fprintf(&content, "    Status: %s\n", condition.Status)
 			if condition.Reason != "" {
-				content.WriteString(fmt.Sprintf("    Reason: %s\n", condition.Reason))
+				fmt.Fprintf(&content, "    Reason: %s\n", condition.Reason)
 			}
 			if condition.Message != "" {
-				content.WriteString(fmt.Sprintf("    Message: %s\n", condition.Message))
+				fmt.Fprintf(&content, "    Message: %s\n", condition.Message)
 			}
 		}
 
@@ -1028,7 +1028,7 @@ func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		if len(node.Status.Addresses) > 0 {
 			content.WriteString("\nAddresses:\n")
 			for _, addr := range node.Status.Addresses {
-				content.WriteString(fmt.Sprintf("  - %s: %s\n", addr.Type, addr.Address))
+				fmt.Fprintf(&content, "  - %s: %s\n", addr.Type, addr.Address)
 			}
 		}
 
@@ -1036,11 +1036,11 @@ func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		if len(node.Spec.Taints) > 0 {
 			content.WriteString("\nTaints:\n")
 			for _, taint := range node.Spec.Taints {
-				content.WriteString(fmt.Sprintf("  - Key: %s\n", taint.Key))
+				fmt.Fprintf(&content, "  - Key: %s\n", taint.Key)
 				if taint.Value != "" {
-					content.WriteString(fmt.Sprintf("    Value: %s\n", taint.Value))
+					fmt.Fprintf(&content, "    Value: %s\n", taint.Value)
 				}
-				content.WriteString(fmt.Sprintf("    Effect: %s\n", taint.Effect))
+				fmt.Fprintf(&content, "    Effect: %s\n", taint.Effect)
 			}
 		}
 

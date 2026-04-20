@@ -250,7 +250,7 @@ func TestUpdateGoldenFile(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		got, err := os.ReadFile(goldenPath)
+		got, err := os.ReadFile(goldenPath) //#nosec G304 -- test reads file just written to t.TempDir()
 		if err != nil {
 			t.Fatalf("failed to read written file: %v", err)
 		}
@@ -270,7 +270,7 @@ func TestUpdateGoldenFile(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		got, err := os.ReadFile(goldenPath)
+		got, err := os.ReadFile(goldenPath) //#nosec G304 -- test reads file just written to t.TempDir()
 		if err != nil {
 			t.Fatalf("failed to read written file: %v", err)
 		}
@@ -294,7 +294,7 @@ func TestUpdateGoldenFile(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		got, err := os.ReadFile(goldenPath)
+		got, err := os.ReadFile(goldenPath) //#nosec G304 -- test reads file just written to t.TempDir()
 		if err != nil {
 			t.Fatalf("failed to read written file: %v", err)
 		}

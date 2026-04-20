@@ -33,7 +33,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 		harness.New(t).
 			ToolCall("capi_node_status").
-			WithArg("namespace", "test-clusters").
+			WithArg("namespace", testNamespace).
 			AssertError("missing_machine_name.golden").
 			Execute()
 	})
@@ -128,7 +128,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 	t.Run("retrieves node status via machine_name lookup", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -183,7 +183,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 	t.Run("returns error when machine has no associated node", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
@@ -197,7 +197,7 @@ func TestCapiNodeStatus(t *testing.T) {
 
 	t.Run("returns error when machine_name not found", func(t *testing.T) {
 		t.Parallel()
-		namespace := "test-clusters"
+		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
