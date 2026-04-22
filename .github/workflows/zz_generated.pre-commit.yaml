@@ -9,6 +9,7 @@ on:
     branches: [main]
 
 env:
+  GOLANGCI_LINT_VERSION: "2.11.4"
   HELM_VERSION: "3.17.3"
   HELM_DOCS_VERSION: "1.14.2"
   HELM_VALUES_SCHEMA_JSON_VERSION: "2.3.1"
@@ -27,6 +28,11 @@ jobs:
         binary: helm
         version: "${{ env.HELM_VERSION }}"
         download_url: "https://get.helm.sh/helm-v${version}-linux-amd64.tar.gz"
+    - name: Install golangci-lint
+      uses: giantswarm/install-binary-action@e2730babbc89f02ef1559b042d33cbe24f5c3547 # v4.0.2
+      with:
+        binary: golangci-lint
+        download_url: https://github.com/golangci/golangci-lint/releases/download/v${version}/golangci-lint-${version}-linux-amd64.tar.gz
     - name: Install helm-docs
       uses: giantswarm/install-binary-action@e2730babbc89f02ef1559b042d33cbe24f5c3547 # v4.0.2
       with:
