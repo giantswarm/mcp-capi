@@ -6,6 +6,7 @@ workflows:
   build:
     jobs:
     - architect/go-build:
+        context: architect
         name: go-build-mcp-capi
         binary: mcp-capi
         filters:
