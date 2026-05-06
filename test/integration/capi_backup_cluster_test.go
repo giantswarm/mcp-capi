@@ -110,7 +110,7 @@ func TestCapiBackupCluster(t *testing.T) {
 			CreateNamespace(namespace).
 			CreateClusters(namespace, "no-secrets-cluster").
 			CreateSecret(namespace, "no-secrets-cluster-kubeconfig", map[string][]byte{
-				"value": []byte("apiVersion: v1\nclusters:\n- cluster:\n    server: https://example.com\n"),
+				kubeconfigSecretKey: []byte("apiVersion: v1\nclusters:\n- cluster:\n    server: https://example.com\n"),
 			}).
 			ToolCall("capi_backup_cluster").
 			WithArg("namespace", namespace).

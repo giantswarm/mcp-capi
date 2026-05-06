@@ -11,6 +11,10 @@ import (
 // testNamespace is the default namespace used across integration tests.
 const testNamespace = "test-clusters"
 
+// kubeconfigSecretKey is the data key under which kubeconfig contents are stored
+// in CAPI-managed Secrets (matches the convention used by cluster-api).
+const kubeconfigSecretKey = "value"
+
 func TestMain(m *testing.M) {
 	if err := harness.InitManager(); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize test harness: %v\n", err)

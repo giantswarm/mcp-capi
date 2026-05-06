@@ -107,7 +107,7 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -191,7 +191,7 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -220,7 +220,7 @@ func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
 					mcp.TextContent{
-						Type: "text",
+						Type: textContentType,
 						Text: content.String(),
 					},
 				},
@@ -247,7 +247,7 @@ func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
 					mcp.TextContent{
-						Type: "text",
+						Type: textContentType,
 						Text: content.String(),
 					},
 				},
@@ -269,7 +269,7 @@ func CreateGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -301,7 +301,7 @@ func CreateClusterStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -378,7 +378,7 @@ func CreateClusterHealthHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -424,7 +424,7 @@ func CreateScaleClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: fmt.Sprintf("Cluster %s/%s scaled successfully", namespace, name),
 				},
 			},
@@ -462,7 +462,7 @@ func CreateGetKubeconfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -499,7 +499,7 @@ func CreatePauseClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -536,7 +536,7 @@ func CreateResumeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -585,7 +585,7 @@ func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 				return &mcp.CallToolResult{
 					Content: []mcp.Content{
 						mcp.TextContent{
-							Type: "text",
+							Type: textContentType,
 							Text: content.String(),
 						},
 					},
@@ -609,7 +609,7 @@ func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -687,7 +687,7 @@ func CreateUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -791,7 +791,7 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -876,7 +876,7 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -956,7 +956,7 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},

@@ -13,29 +13,29 @@ func TestProviderInfraRef(t *testing.T) {
 		wantAPIVersion string
 		wantKind       string
 	}{
-		"aws": {
-			provider:       "aws",
+		providerAWS: {
+			provider:       providerAWS,
 			wantAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
 			wantKind:       "AWSCluster",
 		},
-		"azure": {
-			provider:       "azure",
-			wantAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+		providerAzure: {
+			provider:       providerAzure,
+			wantAPIVersion: infraAPIV1Beta1,
 			wantKind:       "AzureCluster",
 		},
-		"gcp": {
-			provider:       "gcp",
-			wantAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+		providerGCP: {
+			provider:       providerGCP,
+			wantAPIVersion: infraAPIV1Beta1,
 			wantKind:       "GCPCluster",
 		},
-		"vsphere": {
-			provider:       "vsphere",
-			wantAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+		providerVSphere: {
+			provider:       providerVSphere,
+			wantAPIVersion: infraAPIV1Beta1,
 			wantKind:       "VSphereCluster",
 		},
-		"vcd": {
-			provider:       "vcd",
-			wantAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+		providerVCD: {
+			provider:       providerVCD,
+			wantAPIVersion: infraAPIV1Beta1,
 			wantKind:       "VCDCluster",
 		},
 		"unknown provider returns empty strings": {

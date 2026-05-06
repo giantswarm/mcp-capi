@@ -47,7 +47,7 @@ users:
 		harness.New(t).
 			CreateNamespace(namespace).
 			CreateSecret(namespace, "my-cluster-kubeconfig", map[string][]byte{
-				"value": []byte(kubeconfigData),
+				kubeconfigSecretKey: []byte(kubeconfigData),
 			}).
 			ToolCall("capi_get_kubeconfig").
 			WithArg("namespace", namespace).
@@ -124,7 +124,7 @@ clusters:
 		harness.New(t).
 			CreateNamespace(namespace).
 			CreateSecret(namespace, "empty-cluster-kubeconfig", map[string][]byte{
-				"value": []byte(""),
+				kubeconfigSecretKey: []byte(""),
 			}).
 			ToolCall("capi_get_kubeconfig").
 			WithArg("namespace", namespace).
@@ -140,8 +140,8 @@ clusters:
 		harness.New(t).
 			CreateNamespace(namespace).
 			CreateSecret(namespace, "both-keys-cluster-kubeconfig", map[string][]byte{
-				"value": []byte("value-kubeconfig-content"),
-				"data":  []byte("data-kubeconfig-content"),
+				kubeconfigSecretKey: []byte("value-kubeconfig-content"),
+				"data":              []byte("data-kubeconfig-content"),
 			}).
 			ToolCall("capi_get_kubeconfig").
 			WithArg("namespace", namespace).

@@ -7,6 +7,11 @@ import (
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
+const (
+	textContentType = "text"
+	infraAPIV1Beta1 = "infrastructure.cluster.x-k8s.io/v1beta1"
+)
+
 // ServerContext holds shared resources for the MCP server handlers.
 // It provides access to the CAPI client and other shared resources needed
 // by handler functions.

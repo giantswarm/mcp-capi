@@ -59,7 +59,7 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -112,7 +112,7 @@ func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -140,7 +140,7 @@ func CreateVSphereManageVMsHandler(serverCtx *ServerContext) server.ToolHandlerF
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},

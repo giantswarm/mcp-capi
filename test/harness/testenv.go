@@ -327,19 +327,27 @@ func (o *clusterCreateOptions) needsStatusUpdate() bool {
 
 const infraAPIV1Beta1 = "infrastructure.cluster.x-k8s.io/v1beta1"
 
+const (
+	providerAWS     = "aws"
+	providerAzure   = "azure"
+	providerGCP     = "gcp"
+	providerVSphere = "vsphere"
+	providerVCD     = "vcd"
+)
+
 // providerInfraRef returns the APIVersion and Kind for a provider's infrastructure reference.
 // Returns empty strings for unknown providers (no InfrastructureRef is set).
 func providerInfraRef(provider string) (apiVersion, kind string) {
 	switch provider {
-	case "aws":
+	case providerAWS:
 		return "infrastructure.cluster.x-k8s.io/v1beta2", "AWSCluster"
-	case "azure":
+	case providerAzure:
 		return infraAPIV1Beta1, "AzureCluster"
-	case "gcp":
+	case providerGCP:
 		return infraAPIV1Beta1, "GCPCluster"
-	case "vsphere":
+	case providerVSphere:
 		return infraAPIV1Beta1, "VSphereCluster"
-	case "vcd":
+	case providerVCD:
 		return infraAPIV1Beta1, "VCDCluster"
 	default:
 		return "", ""
@@ -397,7 +405,7 @@ func (te *testEnv) createClusterFull(ctx context.Context, opts clusterCreateOpti
 	if opts.customInfraRef != nil {
 		// Custom InfrastructureRef overrides provider
 		cluster.Spec.InfrastructureRef = &corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIV1Beta1,
 			Kind:       opts.customInfraRef.kind,
 			Name:       opts.customInfraRef.name,
 			Namespace:  opts.namespace,
@@ -499,7 +507,7 @@ func (te *testEnv) createKubeadmControlPlane(ctx context.Context, namespace, nam
 			Replicas: &replicas,
 			MachineTemplate: controlplanev1.KubeadmControlPlaneMachineTemplate{
 				InfrastructureRef: corev1.ObjectReference{
-					APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+					APIVersion: infraAPIV1Beta1,
 					Kind:       "GenericInfrastructureMachineTemplate",
 					Name:       name + "-machine-template",
 				},
@@ -590,7 +598,7 @@ func (te *testEnv) createMachineDeployment(ctx context.Context, opts machineDepl
 
 	if opts.infraRefKind != "" {
 		md.Spec.Template.Spec.InfrastructureRef = corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIV1Beta1,
 			Kind:       opts.infraRefKind,
 			Name:       opts.infraRefName,
 		}
@@ -685,7 +693,7 @@ func (te *testEnv) createMachineSet(ctx context.Context, opts machineSetCreateOp
 
 	if opts.infraRefKind != "" {
 		ms.Spec.Template.Spec.InfrastructureRef = corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIV1Beta1,
 			Kind:       opts.infraRefKind,
 			Name:       opts.infraRefName,
 		}
@@ -923,7 +931,7 @@ func (te *testEnv) createMachineCustom(ctx context.Context, opts machineCustomCr
 
 	if opts.infraRefKind != "" {
 		machine.Spec.InfrastructureRef = corev1.ObjectReference{
-			APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
+			APIVersion: infraAPIV1Beta1,
 			Kind:       opts.infraRefKind,
 			Name:       opts.infraRefName,
 		}

@@ -19,7 +19,7 @@ func TestToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
-				Type: "text",
+				Type: textContentType,
 				Text: response,
 			},
 		},
