@@ -19,51 +19,21 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 
-		// List all clusters
 		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
 
-		var content strings.Builder
-		content.WriteString("vSphere Clusters:\n\n")
-
-		vsphereClusterCount := 0
-		for _, cluster := range clusters.Items {
-			// Check if this is a vSphere cluster
-			if cluster.Spec.InfrastructureRef != nil &&
-				cluster.Spec.InfrastructureRef.Kind == "VSphereCluster" {
-				vsphereClusterCount++
-
-				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
-				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
-				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
-				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
-
-				// Try to get provider information
-				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
-				if provider == capi.ProviderVSphere {
-					content.WriteString("  Provider: vSphere (confirmed)\n")
-				}
-
-				content.WriteString("\n")
+		items := make([]capi.ClusterListItem, 0, len(clusters.Items))
+		for i := range clusters.Items {
+			cl := &clusters.Items[i]
+			if cl.Spec.InfrastructureRef == nil || cl.Spec.InfrastructureRef.Kind != "VSphereCluster" {
+				continue
 			}
+			provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cl.Namespace, cl.Name)
+			items = append(items, capi.SummarizeCluster(cl, nil, provider, ""))
 		}
-
-		if vsphereClusterCount == 0 {
-			content.WriteString("No vSphere clusters found.\n")
-		} else {
-			fmt.Fprintf(&content, "Total vSphere clusters: %d\n", vsphereClusterCount)
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return paginatedResult(items, "")
 	}
 }
 
