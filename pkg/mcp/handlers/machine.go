@@ -21,51 +21,22 @@ func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 			return nil, fmt.Errorf("namespace argument is required")
 		}
 		clusterName, _ := arguments["clusterName"].(string)
+		cursor, _ := arguments["cursor"].(string)
+		limitArg, _ := arguments["limit"].(float64)
 
-		machines, err := serverCtx.CAPIClient.ListMachines(ctx, namespace, clusterName)
+		page, nextCursor, err := serverCtx.CAPIClient.ListMachinesPage(ctx, namespace, clusterName, capi.PageOptions{
+			Cursor: cursor,
+			Limit:  pageLimit(limitArg, 50, 200),
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machines: %w", err)
 		}
 
-		var content strings.Builder
-		fmt.Fprintf(&content, "Found %d machines", len(machines.Items))
-		if clusterName != "" {
-			fmt.Fprintf(&content, " in cluster %s", clusterName)
+		items := make([]capi.MachineListItem, 0, len(page.Items))
+		for i := range page.Items {
+			items = append(items, capi.SummarizeMachine(&page.Items[i]))
 		}
-		content.WriteString(":\n\n")
-
-		for _, machine := range machines.Items {
-			fmt.Fprintf(&content, "Machine: %s/%s\n", machine.Namespace, machine.Name)
-			fmt.Fprintf(&content, "  Cluster: %s\n", machine.Spec.ClusterName)
-			if machine.Status.Phase != "" {
-				fmt.Fprintf(&content, "  Phase: %s\n", machine.Status.Phase)
-			}
-			if machine.Status.NodeRef != nil {
-				fmt.Fprintf(&content, "  Node: %s\n", machine.Status.NodeRef.Name)
-			}
-			if machine.Spec.ProviderID != nil {
-				fmt.Fprintf(&content, "  Provider ID: %s\n", *machine.Spec.ProviderID)
-			}
-			// Check if machine has Ready condition
-			ready := false
-			for _, condition := range machine.Status.Conditions {
-				if condition.Type == "Ready" && condition.Status == "True" {
-					ready = true
-					break
-				}
-			}
-			fmt.Fprintf(&content, "  Ready: %v\n", ready)
-			content.WriteString("\n")
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return paginatedResult(items, nextCursor)
 	}
 }
 
@@ -78,48 +49,22 @@ func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 			return nil, fmt.Errorf("namespace argument is required")
 		}
 		clusterName, _ := arguments["clusterName"].(string)
+		cursor, _ := arguments["cursor"].(string)
+		limitArg, _ := arguments["limit"].(float64)
 
-		mds, err := serverCtx.CAPIClient.ListMachineDeployments(ctx, namespace, clusterName)
+		page, nextCursor, err := serverCtx.CAPIClient.ListMachineDeploymentsPage(ctx, namespace, clusterName, capi.PageOptions{
+			Cursor: cursor,
+			Limit:  pageLimit(limitArg, 50, 200),
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machine deployments: %w", err)
 		}
 
-		var content strings.Builder
-		fmt.Fprintf(&content, "Found %d machine deployments", len(mds.Items))
-		if clusterName != "" {
-			fmt.Fprintf(&content, " in cluster %s", clusterName)
+		items := make([]capi.MachineDeploymentListItem, 0, len(page.Items))
+		for i := range page.Items {
+			items = append(items, capi.SummarizeMachineDeployment(&page.Items[i]))
 		}
-		content.WriteString(":\n\n")
-
-		for _, md := range mds.Items {
-			fmt.Fprintf(&content, "MachineDeployment: %s/%s\n", md.Namespace, md.Name)
-			fmt.Fprintf(&content, "  Cluster: %s\n", md.Spec.ClusterName)
-			if md.Spec.Replicas != nil {
-				fmt.Fprintf(&content, "  Replicas: %d\n", *md.Spec.Replicas)
-			}
-			if md.Status.Replicas > 0 {
-				fmt.Fprintf(&content, "  Status: %d ready / %d updated / %d available\n",
-					md.Status.ReadyReplicas,
-					md.Status.UpdatedReplicas,
-					md.Status.AvailableReplicas)
-			}
-			if md.Status.Phase != "" {
-				fmt.Fprintf(&content, "  Phase: %s\n", md.Status.Phase)
-			}
-			if md.Spec.Template.Spec.Version != nil {
-				fmt.Fprintf(&content, "  Kubernetes Version: %s\n", *md.Spec.Template.Spec.Version)
-			}
-			content.WriteString("\n")
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return paginatedResult(items, nextCursor)
 	}
 }
 
@@ -655,52 +600,22 @@ func CreateListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFu
 			return nil, fmt.Errorf("namespace argument is required")
 		}
 		clusterName, _ := arguments["clusterName"].(string)
+		cursor, _ := arguments["cursor"].(string)
+		limitArg, _ := arguments["limit"].(float64)
 
-		machineSets, err := serverCtx.CAPIClient.ListMachineSets(ctx, namespace, clusterName)
+		page, nextCursor, err := serverCtx.CAPIClient.ListMachineSetsPage(ctx, namespace, clusterName, capi.PageOptions{
+			Cursor: cursor,
+			Limit:  pageLimit(limitArg, 50, 200),
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machine sets: %w", err)
 		}
 
-		var content strings.Builder
-		fmt.Fprintf(&content, "Found %d machine sets", len(machineSets.Items))
-		if clusterName != "" {
-			fmt.Fprintf(&content, " in cluster %s", clusterName)
+		items := make([]capi.MachineSetListItem, 0, len(page.Items))
+		for i := range page.Items {
+			items = append(items, capi.SummarizeMachineSet(&page.Items[i]))
 		}
-		content.WriteString(":\n\n")
-
-		for _, ms := range machineSets.Items {
-			fmt.Fprintf(&content, "MachineSet: %s/%s\n", ms.Namespace, ms.Name)
-			fmt.Fprintf(&content, "  Cluster: %s\n", ms.Spec.ClusterName)
-			if ms.Spec.Replicas != nil {
-				fmt.Fprintf(&content, "  Replicas: %d\n", *ms.Spec.Replicas)
-			}
-			fmt.Fprintf(&content, "  Ready: %d/%d\n", ms.Status.ReadyReplicas, ms.Status.Replicas)
-			fmt.Fprintf(&content, "  Available: %d\n", ms.Status.AvailableReplicas)
-
-			// Show owner reference (usually MachineDeployment)
-			for _, owner := range ms.OwnerReferences {
-				if owner.Kind == "MachineDeployment" {
-					fmt.Fprintf(&content, "  Owner: MachineDeployment/%s\n", owner.Name)
-				}
-			}
-
-			// Show machine template
-			if ms.Spec.Template.Spec.InfrastructureRef.Name != "" {
-				fmt.Fprintf(&content, "  Infrastructure: %s/%s\n",
-					ms.Spec.Template.Spec.InfrastructureRef.Kind,
-					ms.Spec.Template.Spec.InfrastructureRef.Name)
-			}
-			content.WriteString("\n")
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return paginatedResult(items, nextCursor)
 	}
 }
 

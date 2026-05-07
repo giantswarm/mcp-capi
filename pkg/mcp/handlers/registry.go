@@ -66,10 +66,12 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 	tools = append(tools, ToolRegistration{
 		Tool: mcp.NewTool(
 			"capi_list_clusters",
-			mcp.WithDescription("List all CAPI clusters. Supports filtering by namespace, label key=value pairs, or searching by a term that matches any label value."),
+			mcp.WithDescription("List CAPI clusters as paginated JSON of the shape {items, nextCursor}. Filter by namespace and/or label_selector. The optional search term matches any label value or the cluster name (case-insensitive); search-mode loads all matching clusters in one page and ignores cursor."),
 			mcp.WithString("namespace", mcp.Description("Namespace to filter clusters (optional, empty for all)")),
 			mcp.WithObject("label_selector", mcp.Description("Label key-value pairs to filter clusters (e.g. {\"env\": \"production\", \"team\": \"platform\"})")),
-			mcp.WithString("search", mcp.Description("Search term to match against cluster names and label values (case-insensitive)")),
+			mcp.WithString("search", mcp.Description("Search term to match against cluster names and label values (case-insensitive). When set, cursor is ignored.")),
+			mcp.WithString("cursor", mcp.Description("Continue token from a previous page's nextCursor. Empty for the first page.")),
+			mcp.WithNumber("limit", mcp.Description("Page size, default 50, max 200.")),
 		),
 		Handler: CreateListClustersHandler(serverCtx),
 	})
@@ -233,9 +235,11 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 	tools = append(tools, ToolRegistration{
 		Tool: mcp.NewTool(
 			"capi_list_machines",
-			mcp.WithDescription("List CAPI machines"),
+			mcp.WithDescription("List CAPI machines as paginated JSON of the shape {items, nextCursor}."),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace to search")),
 			mcp.WithString("clusterName", mcp.Description("Filter by cluster name")),
+			mcp.WithString("cursor", mcp.Description("Continue token from a previous page's nextCursor. Empty for the first page.")),
+			mcp.WithNumber("limit", mcp.Description("Page size, default 50, max 200.")),
 		),
 		Handler: CreateListMachinesHandler(serverCtx),
 	})
@@ -278,9 +282,11 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 	tools = append(tools, ToolRegistration{
 		Tool: mcp.NewTool(
 			"capi_list_machinedeployments",
-			mcp.WithDescription("List machine deployments"),
+			mcp.WithDescription("List machine deployments as paginated JSON of the shape {items, nextCursor}."),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace to search")),
 			mcp.WithString("clusterName", mcp.Description("Filter by cluster name")),
+			mcp.WithString("cursor", mcp.Description("Continue token from a previous page's nextCursor. Empty for the first page.")),
+			mcp.WithNumber("limit", mcp.Description("Page size, default 50, max 200.")),
 		),
 		Handler: CreateListMachineDeploymentsHandler(serverCtx),
 	})
@@ -345,9 +351,11 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 	tools = append(tools, ToolRegistration{
 		Tool: mcp.NewTool(
 			"capi_list_machinesets",
-			mcp.WithDescription("List machine sets"),
+			mcp.WithDescription("List machine sets as paginated JSON of the shape {items, nextCursor}."),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace")),
 			mcp.WithString("clusterName", mcp.Description("Filter by cluster name")),
+			mcp.WithString("cursor", mcp.Description("Continue token from a previous page's nextCursor. Empty for the first page.")),
+			mcp.WithNumber("limit", mcp.Description("Page size, default 50, max 200.")),
 		),
 		Handler: CreateListMachineSetsHandler(serverCtx),
 	})

@@ -9,60 +9,28 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// providerInfo is the per-provider entry in the list_infrastructure_providers
+// tool result. This is a bounded enum (4 entries today), so the result is
+// returned as a single page with no nextCursor.
+type providerInfo struct {
+	Name        string `json:"name"`
+	APIVersion  string `json:"apiVersion"`
+	Description string `json:"description"`
+}
+
 // createListInfrastructureProvidersHandler creates a handler for listing available infrastructure providers
 func CreateListInfrastructureProvidersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// In a real implementation, this would discover installed providers
-		// For now, we'll return a static list of commonly available providers
-
-		var content strings.Builder
-		content.WriteString("Available Infrastructure Providers:\n\n")
-
-		providers := []struct {
-			Name        string
-			APIVersion  string
-			Description string
-		}{
-			{
-				Name:        "AWS",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta2",
-				Description: "Amazon Web Services infrastructure provider",
-			},
-			{
-				Name:        "Azure",
-				APIVersion:  infraAPIV1Beta1,
-				Description: "Microsoft Azure infrastructure provider",
-			},
-			{
-				Name:        "GCP",
-				APIVersion:  infraAPIV1Beta1,
-				Description: "Google Cloud Platform infrastructure provider",
-			},
-			{
-				Name:        "vSphere",
-				APIVersion:  infraAPIV1Beta1,
-				Description: "VMware vSphere infrastructure provider",
-			},
+		// Static list — does not reflect actually installed providers in
+		// the management cluster. To discover deployed providers,
+		// inspect the controller manager namespace.
+		providers := []providerInfo{
+			{Name: "AWS", APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2", Description: "Amazon Web Services infrastructure provider"},
+			{Name: "Azure", APIVersion: infraAPIV1Beta1, Description: "Microsoft Azure infrastructure provider"},
+			{Name: "GCP", APIVersion: infraAPIV1Beta1, Description: "Google Cloud Platform infrastructure provider"},
+			{Name: "vSphere", APIVersion: infraAPIV1Beta1, Description: "VMware vSphere infrastructure provider"},
 		}
-
-		for _, provider := range providers {
-			fmt.Fprintf(&content, "Provider: %s\n", provider.Name)
-			fmt.Fprintf(&content, "  API Version: %s\n", provider.APIVersion)
-			fmt.Fprintf(&content, "  Description: %s\n", provider.Description)
-			content.WriteString("\n")
-		}
-
-		content.WriteString("Note: This list shows commonly available providers.\n")
-		content.WriteString("To see actually installed providers in your cluster, check the deployed controllers.\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return paginatedResult(providers, "")
 	}
 }
 

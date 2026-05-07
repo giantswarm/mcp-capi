@@ -121,8 +121,9 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 		search, _ := arguments["search"].(string)
+		cursor, _ := arguments["cursor"].(string)
+		limitArg, _ := arguments["limit"].(float64)
 
-		// Parse label_selector from arguments
 		var labelSelector map[string]string
 		if ls, ok := arguments["label_selector"].(map[string]interface{}); ok && len(ls) > 0 {
 			labelSelector = make(map[string]string)
@@ -133,70 +134,89 @@ func CreateListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 			}
 		}
 
-		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, labelSelector)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list clusters: %w", err)
-		}
-
-		// If a search term is provided, filter clusters by name or label values
+		// search is a client-side substring match against name + label values.
+		// The K8s API server can't express that, so search-mode loads every
+		// matching cluster in one shot and ignores the cursor — the result
+		// fits on one page.
+		var clusters []clusterv1.Cluster
+		var nextCursor string
 		if search != "" {
+			all, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, labelSelector)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list clusters: %w", err)
+			}
 			searchLower := strings.ToLower(search)
-			var filtered []clusterv1.Cluster
-			for _, cluster := range clusters.Items {
-				if strings.Contains(strings.ToLower(cluster.Name), searchLower) {
-					filtered = append(filtered, cluster)
-					continue
-				}
-				matched := false
-				for _, v := range cluster.Labels {
-					if strings.Contains(strings.ToLower(v), searchLower) {
-						matched = true
-						break
-					}
-				}
-				if matched {
-					filtered = append(filtered, cluster)
+			for _, cl := range all.Items {
+				if matchesSearch(cl.Name, cl.Labels, searchLower) {
+					clusters = append(clusters, cl)
 				}
 			}
-			clusters.Items = filtered
+		} else {
+			page, next, err := serverCtx.CAPIClient.ListClustersPage(ctx, namespace, labelSelector, capi.PageOptions{
+				Cursor: cursor,
+				Limit:  pageLimit(limitArg, 50, 200),
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to list clusters: %w", err)
+			}
+			clusters = page.Items
+			nextCursor = next
 		}
 
-		// Bulk fetch all machines in the namespace to avoid N+1 queries
+		// Bulk-fetch machines in the namespace for an O(1) join. With
+		// namespace="" this fetches all machines in the management cluster;
+		// the cost is unchanged from the pre-pagination behaviour.
 		allMachines, err := serverCtx.CAPIClient.ListMachines(ctx, namespace, "")
 		if err != nil {
 			return nil, fmt.Errorf("failed to list machines: %w", err)
 		}
-
-		// Group machines by cluster name
 		machinesByCluster := make(map[string][]clusterv1.Machine)
 		for _, m := range allMachines.Items {
-			clusterName := m.Labels[clusterv1.ClusterNameLabel]
-			key := m.Namespace + "/" + clusterName
+			key := m.Namespace + "/" + m.Labels[clusterv1.ClusterNameLabel]
 			machinesByCluster[key] = append(machinesByCluster[key], m)
 		}
 
-		var content strings.Builder
-		fmt.Fprintf(&content, "Found %d clusters:\n\n", len(clusters.Items))
-
-		for i := range clusters.Items {
-			cluster := &clusters.Items[i]
-			key := cluster.Namespace + "/" + cluster.Name
-			status, _ := serverCtx.CAPIClient.GetClusterStatusFromList(ctx, cluster, machinesByCluster[key])
-			if status != nil {
-				content.WriteString(capi.FormatClusterInfo(status))
-				content.WriteString("\n---\n\n")
-			}
+		items := make([]capi.ClusterListItem, 0, len(clusters))
+		for i := range clusters {
+			cluster := &clusters[i]
+			provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+			version := clusterVersion(serverCtx, ctx, cluster)
+			items = append(items, capi.SummarizeCluster(
+				cluster,
+				machinesByCluster[cluster.Namespace+"/"+cluster.Name],
+				provider, version,
+			))
 		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return paginatedResult(items, nextCursor)
 	}
+}
+
+// matchesSearch reports whether name or any label value contains
+// searchLower (already lower-cased).
+func matchesSearch(name string, labels map[string]string, searchLower string) bool {
+	if strings.Contains(strings.ToLower(name), searchLower) {
+		return true
+	}
+	for _, v := range labels {
+		if strings.Contains(strings.ToLower(v), searchLower) {
+			return true
+		}
+	}
+	return false
+}
+
+// clusterVersion resolves the effective Kubernetes version for a cluster:
+// Spec.Topology.Version when set, falling back to KubeadmControlPlane spec.
+func clusterVersion(serverCtx *ServerContext, ctx context.Context, cluster *clusterv1.Cluster) string {
+	if cluster.Spec.Topology != nil && cluster.Spec.Topology.Version != "" {
+		return cluster.Spec.Topology.Version
+	}
+	if cluster.Spec.ControlPlaneRef != nil && cluster.Spec.ControlPlaneRef.Kind == "KubeadmControlPlane" {
+		if kcp, err := serverCtx.CAPIClient.GetKubeadmControlPlane(ctx, cluster.Namespace, cluster.Spec.ControlPlaneRef.Name); err == nil {
+			return kcp.Spec.Version
+		}
+	}
+	return ""
 }
 
 // createGetClusterHandler creates a handler for getting a specific cluster
