@@ -61,7 +61,7 @@ func CreateListMachinesHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -115,7 +115,7 @@ func CreateListMachineDeploymentsHandler(serverCtx *ServerContext) server.ToolHa
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -204,7 +204,7 @@ func CreateGetMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -249,7 +249,7 @@ func CreateDeleteMachineHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -305,7 +305,7 @@ func CreateRemediateMachineHandler(serverCtx *ServerContext) server.ToolHandlerF
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -403,7 +403,7 @@ func CreateCreateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -487,7 +487,7 @@ func CreateScaleMachineDeploymentHandler(serverCtx *ServerContext) server.ToolHa
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -585,7 +585,7 @@ func CreateUpdateMachineDeploymentHandler(serverCtx *ServerContext) server.ToolH
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -638,7 +638,7 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -696,7 +696,7 @@ func CreateListMachineSetsHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -786,7 +786,7 @@ func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -847,7 +847,7 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 				return &mcp.CallToolResult{
 					Content: []mcp.Content{
 						mcp.TextContent{
-							Type: "text",
+							Type: textContentType,
 							Text: content.String(),
 						},
 					},
@@ -872,7 +872,7 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -931,7 +931,7 @@ func CreateCordonNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -1047,7 +1047,7 @@ func CreateNodeStatusHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},

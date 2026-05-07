@@ -60,7 +60,7 @@ func CreateAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandler
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -114,7 +114,7 @@ func CreateAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -139,7 +139,7 @@ func CreateAzureManageResourceGroupHandler(serverCtx *ServerContext) server.Tool
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -167,7 +167,7 @@ func CreateAzureNetworkConfigHandler(serverCtx *ServerContext) server.ToolHandle
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -224,7 +224,7 @@ func CreateGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -278,7 +278,7 @@ func CreateGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -306,7 +306,7 @@ func CreateGCPManageNetworkHandler(serverCtx *ServerContext) server.ToolHandlerF
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},

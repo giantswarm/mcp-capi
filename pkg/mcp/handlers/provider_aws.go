@@ -60,7 +60,7 @@ func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFu
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -138,7 +138,7 @@ func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -197,7 +197,7 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -227,7 +227,7 @@ func CreateAWSCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerF
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -251,7 +251,7 @@ func CreateAWSUpdateVPCHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -278,7 +278,7 @@ func CreateAWSManageSecurityGroupsHandler(serverCtx *ServerContext) server.ToolH
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},

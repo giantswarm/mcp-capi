@@ -30,17 +30,17 @@ func CreateListInfrastructureProvidersHandler(serverCtx *ServerContext) server.T
 			},
 			{
 				Name:        "Azure",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
+				APIVersion:  infraAPIV1Beta1,
 				Description: "Microsoft Azure infrastructure provider",
 			},
 			{
 				Name:        "GCP",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
+				APIVersion:  infraAPIV1Beta1,
 				Description: "Google Cloud Platform infrastructure provider",
 			},
 			{
 				Name:        "vSphere",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta1",
+				APIVersion:  infraAPIV1Beta1,
 				Description: "VMware vSphere infrastructure provider",
 			},
 		}
@@ -58,7 +58,7 @@ func CreateListInfrastructureProvidersHandler(serverCtx *ServerContext) server.T
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
@@ -148,7 +148,7 @@ func CreateGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandler
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
-					Type: "text",
+					Type: textContentType,
 					Text: content.String(),
 				},
 			},
