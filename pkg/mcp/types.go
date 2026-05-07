@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"io"
+	"log/slog"
 	"os"
 )
 
@@ -48,6 +49,10 @@ type ServerOptions struct {
 
 	// StdioOutput is the output stream for stdio transport (default: os.Stdout)
 	StdioOutput io.Writer
+
+	// Logger is the structured logger threaded through the server and the
+	// transport runners. Required.
+	Logger *slog.Logger
 }
 
 // DefaultServerOptions returns ServerOptions with default values

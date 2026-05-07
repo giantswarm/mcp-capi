@@ -3,11 +3,15 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/giantswarm/mcp-toolkit/health"
+	"github.com/giantswarm/mcp-toolkit/middleware/responsecap"
+	"github.com/giantswarm/mcp-toolkit/middleware/timeout"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
@@ -17,57 +21,64 @@ import (
 // Server represents an MCP CAPI server instance
 type Server struct {
 	options       ServerOptions
+	logger        *slog.Logger
 	mcpServer     *server.MCPServer
 	serverContext *handlers.ServerContext
+	health        *health.Health
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
 
 // NewServer creates a new MCP CAPI server with the given options
 func NewServer(opts ServerOptions) (*Server, error) {
-	// Create context that cancels on interrupt
+	if opts.Logger == nil {
+		return nil, fmt.Errorf("server: Logger is required")
+	}
+	logger := opts.Logger
+
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Initialize CAPI client
-	log.Println("Initializing CAPI client...")
+	hc := health.New()
+
+	logger.Info("initializing CAPI client")
 	capiClient, err := capi.NewClient(opts.KubeconfigPath)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("failed to create CAPI client: %v", err)
+		return nil, fmt.Errorf("failed to create CAPI client: %w", err)
 	}
 
-	// Initialize providers
 	if err := capiClient.InitializeProviders(); err != nil {
-		log.Printf("Warning: Failed to initialize providers: %v", err)
-		log.Printf("Server will continue but some provider-specific tools may not work")
+		logger.Warn("provider initialization partial; some provider-specific tools may not work", "error", err)
 	}
-	// Create server context
 	serverCtx := handlers.NewServerContext(capiClient)
 
-	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		opts.ServerName,
 		opts.ServerVersion,
 		server.WithToolCapabilities(true),
-		server.WithResourceCapabilities(true, true), // subscribe, list
+		server.WithResourceCapabilities(true, true),
 		server.WithPromptCapabilities(true),
 		server.WithLogging(),
+		server.WithToolHandlerMiddleware(timeout.New(30*time.Second)),
+		server.WithToolHandlerMiddleware(responsecap.New(responsecap.Options{})),
 	)
 
 	s := &Server{
 		options:       opts,
+		logger:        logger,
 		mcpServer:     mcpServer,
 		serverContext: serverCtx,
+		health:        hc,
 		ctx:           ctx,
 		cancel:        cancel,
 	}
 
-	// Register all tools
 	if err := s.RegisterTools(handlers.BuildAllTools); err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to register tools: %w", err)
 	}
 
+	hc.SetReady(true)
 	return s, nil
 }
 
@@ -88,26 +99,25 @@ func (s *Server) RegisterTools(registerFunc func(*handlers.ServerContext) ([]han
 // Run starts the server with the configured transport
 func (s *Server) Run() error {
 	defer s.cancel()
+	defer s.health.SetReady(false)
 
-	// Handle shutdown gracefully
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		log.Println("Shutdown signal received, closing server...")
+		s.logger.Info("shutdown signal received, closing server")
 		s.cancel()
 	}()
 
-	fmt.Printf("Starting MCP CAPI server with %s transport...\n", s.options.Transport)
+	s.logger.Info("starting MCP CAPI server", "transport", s.options.Transport)
 
-	// Start the appropriate server based on transport type
 	switch s.options.Transport {
 	case TransportStdio:
-		return RunStdioServer(s.mcpServer, s.options.StdioInput, s.options.StdioOutput)
+		return RunStdioServer(s.mcpServer, s.options.StdioInput, s.options.StdioOutput, s.logger)
 	case TransportSSE:
-		return RunSSEServer(s.mcpServer, s.options.HTTPAddr, s.options.SSEEndpoint, s.options.MessageEndpoint, s.ctx)
+		return RunSSEServer(s.ctx, s.mcpServer, s.health, s.options.HTTPAddr, s.options.SSEEndpoint, s.options.MessageEndpoint, s.logger)
 	case TransportStreamableHTTP:
-		return RunStreamableHTTPServer(s.mcpServer, s.options.HTTPAddr, s.options.HTTPEndpoint, s.ctx)
+		return RunStreamableHTTPServer(s.ctx, s.mcpServer, s.health, s.options.HTTPAddr, s.options.HTTPEndpoint, s.logger)
 	default:
 		return fmt.Errorf("unsupported transport type: %s (supported: stdio, sse, streamable-http)", s.options.Transport)
 	}
