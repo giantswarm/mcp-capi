@@ -1,15 +1,23 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
+// serviceName is the OTEL service.name, the cobra command name, and the
+// MCP server identifier. Default is "mcp-capi"; goreleaser overrides at
+// build time via -ldflags "-X github.com/giantswarm/mcp-capi/cmd.serviceName=...".
+// Const cannot be -X-overridden — keep this as a var so rebrands / fork
+// flavors flip a build flag instead of patching source.
+var serviceName = "mcp-capi"
+
 // rootCmd represents the base command for the mcp-capi application.
 // It is the entry point when the application is called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "mcp-capi",
+	Use:   serviceName,
 	Short: "MCP server for Cluster API operations",
 	Long: `mcp-capi is a Model Context Protocol (MCP) server that provides
 tools for interacting with Cluster API (CAPI) clusters. It offers various capabilities
@@ -34,7 +42,7 @@ func SetVersion(v string) {
 func Execute() {
 	// SetVersionTemplate defines a custom template for displaying the version.
 	// This is used when the --version flag is invoked.
-	rootCmd.SetVersionTemplate(`{{printf "mcp-capi version %s\n" .Version}}`)
+	rootCmd.SetVersionTemplate(fmt.Sprintf("%s version {{.Version}}\n", serviceName))
 
 	// If no subcommand is provided, run the serve command by default
 	if len(os.Args) == 1 {

@@ -1,19 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/giantswarm/mcp-toolkit/logging"
+	"github.com/giantswarm/mcp-toolkit/tracing"
 	"github.com/spf13/cobra"
 
 	mcppkg "github.com/giantswarm/mcp-capi/pkg/mcp"
-)
-
-const (
-	serverName    = "mcp-capi"
-	serverVersion = "0.1.0"
 )
 
 // newServeCmd creates the Cobra command for starting the MCP server.
@@ -48,7 +47,8 @@ Supports multiple transport types:
 	}
 
 	// Transport flags
-	cmd.Flags().StringVar(&transport, "transport", "stdio", "Transport type: stdio, sse, or streamable-http")
+	cmd.Flags().StringVar(&transport, "transport", string(mcppkg.TransportStdio),
+		fmt.Sprintf("Transport type: %s, %s, or %s", mcppkg.TransportStdio, mcppkg.TransportSSE, mcppkg.TransportStreamableHTTP))
 	cmd.Flags().StringVar(&httpAddr, "http-addr", ":8080", "HTTP server address (for sse and streamable-http transports)")
 	cmd.Flags().StringVar(&sseEndpoint, "sse-endpoint", "/sse", "SSE endpoint path (for sse transport)")
 	cmd.Flags().StringVar(&messageEndpoint, "message-endpoint", "/message", "Message endpoint path (for sse transport)")
@@ -60,8 +60,11 @@ Supports multiple transport types:
 
 // validateServeFlags validates the input parameters for the serve command
 func validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint string) error {
-	// Validate transport type
-	validTransports := []string{"stdio", "sse", "streamable-http"}
+	validTransports := []string{
+		string(mcppkg.TransportStdio),
+		string(mcppkg.TransportSSE),
+		string(mcppkg.TransportStreamableHTTP),
+	}
 	isValidTransport := false
 	for _, valid := range validTransports {
 		if transport == valid {
@@ -73,8 +76,7 @@ func validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpE
 		return fmt.Errorf("unsupported transport type: %s (supported: %s)", transport, strings.Join(validTransports, ", "))
 	}
 
-	// Validate HTTP address for non-stdio transports
-	if transport != "stdio" {
+	if transport != string(mcppkg.TransportStdio) {
 		if err := validateHTTPAddr(httpAddr); err != nil {
 			return fmt.Errorf("invalid http-addr: %w", err)
 		}
@@ -144,7 +146,19 @@ func validateEndpointPath(path string) error {
 // RunServe contains the main server logic with support for multiple transports
 // This function is exported to allow testing
 func RunServe(kubeconfigPath, transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint string) error {
-	// Create server options
+	logger := logging.New(logging.Options{})
+
+	shutdownOTEL, err := tracing.Init(context.Background(), serviceName, rootCmd.Version)
+	if err != nil {
+		logger.Warn("otel init failed; continuing without tracing", "error", err)
+	} else {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = shutdownOTEL(ctx)
+		}()
+	}
+
 	opts := mcppkg.ServerOptions{
 		KubeconfigPath:  kubeconfigPath,
 		Transport:       mcppkg.TransportType(transport),
@@ -152,16 +166,15 @@ func RunServe(kubeconfigPath, transport, httpAddr, sseEndpoint, messageEndpoint,
 		SSEEndpoint:     sseEndpoint,
 		MessageEndpoint: messageEndpoint,
 		HTTPEndpoint:    httpEndpoint,
-		ServerName:      serverName,
+		ServerName:      serviceName,
 		ServerVersion:   rootCmd.Version,
+		Logger:          logger,
 	}
 
-	// Create server
 	srv, err := mcppkg.NewServer(opts)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %w", err)
 	}
 
-	// Run server
 	return srv.Run()
 }
