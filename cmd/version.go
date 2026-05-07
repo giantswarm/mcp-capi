@@ -11,11 +11,10 @@ import (
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print the version number of mcp-capi",
-		Long:  `All software has versions. This is mcp-capi's.`,
+		Short: fmt.Sprintf("Print the version number of %s", serviceName),
+		Long:  `All software has versions. This is its.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			// rootCmd.Version is expected to be set, typically in root.go during build time.
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "mcp-capi version %s\n", rootCmd.Version)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s version %s\n", serviceName, rootCmd.Version)
 		},
 	}
 }

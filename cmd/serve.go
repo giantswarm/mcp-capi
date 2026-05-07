@@ -15,8 +15,6 @@ import (
 	mcppkg "github.com/giantswarm/mcp-capi/pkg/mcp"
 )
 
-const serverName = "mcp-capi"
-
 // newServeCmd creates the Cobra command for starting the MCP server.
 func newServeCmd() *cobra.Command {
 	var (
@@ -150,7 +148,7 @@ func validateEndpointPath(path string) error {
 func RunServe(kubeconfigPath, transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint string) error {
 	logger := logging.New(logging.Options{})
 
-	shutdownOTEL, err := tracing.Init(context.Background(), serverName, rootCmd.Version)
+	shutdownOTEL, err := tracing.Init(context.Background(), serviceName, rootCmd.Version)
 	if err != nil {
 		logger.Warn("otel init failed; continuing without tracing", "error", err)
 	} else {
@@ -168,7 +166,7 @@ func RunServe(kubeconfigPath, transport, httpAddr, sseEndpoint, messageEndpoint,
 		SSEEndpoint:     sseEndpoint,
 		MessageEndpoint: messageEndpoint,
 		HTTPEndpoint:    httpEndpoint,
-		ServerName:      serverName,
+		ServerName:      serviceName,
 		ServerVersion:   rootCmd.Version,
 		Logger:          logger,
 	}

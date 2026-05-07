@@ -50,6 +50,7 @@ builds:
       - >-
         -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
         -X main.date={{.Date}}
+        -X github.com/giantswarm/mcp-capi/cmd.serviceName={{.ProjectName}}
 
 archives:
   - id: default
