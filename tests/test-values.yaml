@@ -1,0 +1,3 @@
+# Values used by app-test-suite when installing the chart on the kind smoke
+# cluster. The chart renders only core resources (Deployment, Service,
+# ServiceAccount), so it installs on a bare kind cluster as-is.
