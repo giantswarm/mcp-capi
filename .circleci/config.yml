@@ -9,6 +9,7 @@ workflows:
         context: architect
         name: go-build-mcp-capi
         binary: mcp-capi
+        pre_test_target: install-test-binaries
         filters:
           tags:
             only: /^v.*/
