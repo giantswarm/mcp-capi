@@ -70,3 +70,6 @@ tasks/
 # Build artifacts
 build/
 bin/ mcp-capi
+
+# graphify knowledge graph (regenerable, rebuilt by the post-commit hook)
+graphify-out/
