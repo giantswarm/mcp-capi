@@ -3,6 +3,7 @@ package integration_test
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/giantswarm/mcp-capi/test/harness"
@@ -16,6 +17,16 @@ const testNamespace = "test-clusters"
 const kubeconfigSecretKey = "value"
 
 func TestMain(m *testing.M) {
+	// The harness needs kine and kube-apiserver (installed via
+	// `make install-test-binaries`). Plain `go test ./...` runs without them
+	// (e.g. the generated CircleCI go-build job), so skip instead of failing;
+	// the Lint and Test workflow installs the binaries and keeps full coverage.
+	for _, bin := range []string{"kine", "kube-apiserver"} {
+		if _, err := exec.LookPath(bin); err != nil {
+			fmt.Fprintf(os.Stderr, "skipping integration tests: %s not found in PATH (run `make install-test-binaries`)\n", bin)
+			os.Exit(0)
+		}
+	}
 	if err := harness.InitManager(); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize test harness: %v\n", err)
 		os.Exit(1)
