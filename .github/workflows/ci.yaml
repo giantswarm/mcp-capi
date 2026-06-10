@@ -42,7 +42,6 @@ jobs:
       - name: Run yamllint
         run: >-
           yamllint
-          .github/workflows/auto-release.yaml
           .github/workflows/ci.yaml
           .goreleaser.yaml
 
