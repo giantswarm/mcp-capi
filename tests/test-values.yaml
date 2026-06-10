@@ -1,0 +1,3 @@
+# Values used by app-test-suite when installing the chart on the kind smoke
+# cluster. A single replica is enough for the smoke test.
+replicaCount: 1
