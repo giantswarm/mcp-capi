@@ -1,16 +1,7 @@
-FROM --platform=$BUILDPLATFORM golang:1.26.4 AS builder
-
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-ARG TARGETOS
-ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath \
-    -ldflags "-w -extldflags '-static'" \
-    -o mcp-capi .
-
+# The Go binary is built by CircleCI (architect/go-build) and attached to the
+# build context as <binary>-<os>-<arch>; this image only assembles the runtime.
+# For a local build, produce the binary first:
+#   CGO_ENABLED=0 go build -o mcp-capi-linux-amd64 .
 FROM gsoci.azurecr.io/giantswarm/alpine:3.20.3-giantswarm AS certs
 FROM scratch
 
@@ -18,7 +9,9 @@ COPY --from=certs /etc/passwd /etc/passwd
 COPY --from=certs /etc/group /etc/group
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-COPY --from=builder /app/mcp-capi /mcp-capi
+ARG TARGETOS
+ARG TARGETARCH
+COPY mcp-capi-${TARGETOS}-${TARGETARCH} /mcp-capi
 USER giantswarm
 
 ENTRYPOINT ["/mcp-capi"]
