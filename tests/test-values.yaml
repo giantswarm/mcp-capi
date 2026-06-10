@@ -1,0 +1,9 @@
+# Values used by app-test-suite when installing the chart on the kind smoke
+# cluster. The image is pinned to a released tag because the branch path is
+# build+test only -- the dev image referenced by the packaged chart is never
+# pushed, so the pod would hang in ImagePullBackOff. A single replica is
+# enough for the smoke test.
+replicaCount: 1
+
+image:
+  tag: "0.0.43"
