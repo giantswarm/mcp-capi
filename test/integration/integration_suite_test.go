@@ -17,10 +17,10 @@ const testNamespace = "test-clusters"
 const kubeconfigSecretKey = "value"
 
 func TestMain(m *testing.M) {
-	// The harness needs kine and kube-apiserver (installed via
-	// `make install-test-binaries`). Plain `go test ./...` runs without them
-	// (e.g. the generated CircleCI go-build job), so skip instead of failing;
-	// the Lint and Test workflow installs the binaries and keeps full coverage.
+	// The harness needs kine and kube-apiserver. `make test` installs them
+	// first (the install-test-binaries prerequisite), so the architect go-build
+	// test_target runs the full suite. A bare `go test ./...` without them
+	// (e.g. a quick local run) skips instead of failing.
 	for _, bin := range []string{"kine", "kube-apiserver"} {
 		if _, err := exec.LookPath(bin); err != nil {
 			fmt.Fprintf(os.Stderr, "skipping integration tests: %s not found in PATH (run `make install-test-binaries`)\n", bin)

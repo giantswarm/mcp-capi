@@ -1,6 +1,13 @@
 KINE_VERSION := v0.14.12
 KUBE_APISERVER_VERSION := v1.35.2
 
+# The architect go-build job runs `make test` (test_target: test). The kine +
+# kube-apiserver integration suite skips (os.Exit 0) unless those binaries are
+# on PATH, so install them as a `make test` prerequisite -- this used to be a
+# separate ci.yaml step. Only adds a prerequisite; the generated `go test`
+# recipe in Makefile.gen.go.mk is not overridden.
+test: install-test-binaries
+
 .PHONY: install-test-binaries
 install-test-binaries: ## Install kine and kube-apiserver needed by integration tests (Linux amd64).
 	mkdir -p "$(shell go env GOPATH)/bin"
