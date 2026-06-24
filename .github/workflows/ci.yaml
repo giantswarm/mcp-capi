@@ -43,29 +43,9 @@ jobs:
         run: >-
           yamllint
           .github/workflows/ci.yaml
-          .goreleaser.yaml
 
       - name: Run lint
         run: make lint
 
       - name: Run tests
         run: make test
-
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
-        with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
-          distribution: goreleaser
-          version: latest
-          install-only: true
-
-      - name: Run Release Dry-Run
-        # Only run on PRs, not on direct pushes to main
-        if: github.event_name == 'pull_request'
-        run: >-
-          goreleaser release --snapshot --clean
-          --skip=announce,publish,validate
-        env:
-          # GoReleaser needs a GITHUB_TOKEN even for dry runs
-          # to check API rate limits, etc.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

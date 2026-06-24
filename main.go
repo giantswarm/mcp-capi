@@ -4,7 +4,7 @@ import (
 	"github.com/giantswarm/mcp-capi/cmd"
 )
 
-// version will be set by goreleaser during build
+// version is set at build time via -X ldflags by architect-orb's go-build job
 var version = "dev"
 
 func main() {
