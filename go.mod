@@ -7,7 +7,7 @@ require (
 	github.com/giantswarm/k8senv v0.3.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
-	github.com/mark3labs/mcp-go v0.55.1
+	github.com/mark3labs/mcp-go v0.56.0
 	github.com/spf13/cobra v1.10.2
 	k8s.io/api v0.36.2
 	k8s.io/apimachinery v0.36.2
