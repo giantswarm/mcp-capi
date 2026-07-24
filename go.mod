@@ -9,9 +9,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/mark3labs/mcp-go v0.56.0
 	github.com/spf13/cobra v1.10.2
-	k8s.io/api v0.36.2
+	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
-	k8s.io/client-go v0.36.2
+	k8s.io/client-go v0.36.3
 	sigs.k8s.io/cluster-api v1.13.4
 	sigs.k8s.io/controller-runtime v0.24.1
 )
