@@ -825,49 +825,25 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			opts.GracePeriodSeconds = &gracePeriod
 		}
 
-		// Drain the node
-		err := serverCtx.CAPIClient.DrainNode(ctx, opts)
-		if err != nil {
-			// Check if it's our placeholder error
-			if strings.Contains(err.Error(), "has been cordoned") {
-				var content strings.Builder
-				content.WriteString("⚠️  Node drain partially implemented\n\n")
-				content.WriteString("Node has been cordoned (marked as unschedulable)\n")
-				content.WriteString("\nFull drain implementation would:\n")
-				content.WriteString("1. List all pods on the node\n")
-				content.WriteString("2. Filter out DaemonSet pods if requested\n")
-				content.WriteString("3. Create pod evictions respecting PodDisruptionBudgets\n")
-				content.WriteString("4. Wait for pods to terminate gracefully\n")
-				content.WriteString("5. Force delete pods that exceed grace period\n\n")
-				content.WriteString("For now, you can manually drain using kubectl:\n")
-				if nodeName != "" {
-					fmt.Fprintf(&content, "  kubectl drain %s --ignore-daemonsets --delete-emptydir-data\n", nodeName)
-				}
-
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: textContentType,
-							Text: content.String(),
-						},
-					},
-				}, nil
-			}
+		// Drain the node. DrainNode currently only cordons the node; pod
+		// eviction is not implemented yet, so report the partial result.
+		if err := serverCtx.CAPIClient.DrainNode(ctx, opts); err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to drain node: %v", err)), nil
 		}
 
 		var content strings.Builder
-		content.WriteString("✅ Successfully drained node\n\n")
-		content.WriteString("Drain Options Applied:\n")
-		fmt.Fprintf(&content, "  • Ignore DaemonSets: %v\n", opts.IgnoreDaemonSets)
-		fmt.Fprintf(&content, "  • Delete Local Data: %v\n", opts.DeleteLocalData)
-		fmt.Fprintf(&content, "  • Force: %v\n", opts.Force)
-		if opts.GracePeriodSeconds != nil {
-			fmt.Fprintf(&content, "  • Grace Period: %d seconds\n", *opts.GracePeriodSeconds)
+		content.WriteString("⚠️  Node drain partially implemented\n\n")
+		content.WriteString("Node has been cordoned (marked as unschedulable)\n")
+		content.WriteString("\nFull drain implementation would:\n")
+		content.WriteString("1. List all pods on the node\n")
+		content.WriteString("2. Filter out DaemonSet pods if requested\n")
+		content.WriteString("3. Create pod evictions respecting PodDisruptionBudgets\n")
+		content.WriteString("4. Wait for pods to terminate gracefully\n")
+		content.WriteString("5. Force delete pods that exceed grace period\n\n")
+		content.WriteString("For now, you can manually drain using kubectl:\n")
+		if nodeName != "" {
+			fmt.Fprintf(&content, "  kubectl drain %s --ignore-daemonsets --delete-emptydir-data\n", nodeName)
 		}
-		content.WriteString("\nThe node is now:\n")
-		content.WriteString("• Cordoned (no new pods will be scheduled)\n")
-		content.WriteString("• Drained (existing pods have been evicted)\n")
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
