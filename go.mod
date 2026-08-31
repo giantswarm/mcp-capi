@@ -99,3 +99,12 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+// Pin transitive modules flagged by the OSS Index scan (nancy) in CI.
+// go mod tidy would otherwise resolve them below the fixed versions,
+// because nothing imports them directly.
+replace golang.org/x/mod => golang.org/x/mod v0.40.0
+
+replace go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.44.0
+
+replace go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.44.0
