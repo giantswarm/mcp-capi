@@ -111,4 +111,4 @@ replace go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.44.0
 
 replace golang.org/x/crypto => golang.org/x/crypto v0.56.0
 
-replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.5
+replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.6
