@@ -7,154 +7,36 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-
-	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
 // AWS Provider Tools
 
-// createAWSListClustersHandler lists AWS clusters
+const awsClusterNote = "Provider-specific infrastructure details (VPC, subnets, security groups) live on the AWSCluster resource, which this tool does not read."
+
+// CreateAWSListClustersHandler lists AWS clusters as {items: [...]}.
 func CreateAWSListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		capiClient, err := serverCtx.Client(ctx)
-		if err != nil {
-			return nil, err
-		}
-		arguments := request.GetArguments()
-		namespace, _ := arguments["namespace"].(string)
-
-		// List all clusters
-		clusters, err := capiClient.ListClusters(ctx, namespace, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list clusters: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString("AWS Clusters:\n\n")
-
-		awsClusterCount := 0
-		for _, cluster := range clusters.Items {
-			// Check if this is an AWS cluster
-			if cluster.Spec.InfrastructureRef != nil &&
-				(cluster.Spec.InfrastructureRef.Kind == "AWSCluster" ||
-					cluster.Spec.InfrastructureRef.Kind == "AWSManagedCluster") {
-				awsClusterCount++
-
-				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
-				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
-				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
-				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
-
-				// Try to get provider information
-				provider, _ := capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
-				if provider == capi.ProviderAWS {
-					content.WriteString("  Provider: AWS (confirmed)\n")
-				}
-
-				content.WriteString("\n")
-			}
-		}
-
-		if awsClusterCount == 0 {
-			content.WriteString("No AWS clusters found.\n")
-		} else {
-			fmt.Fprintf(&content, "Total AWS clusters: %d\n", awsClusterCount)
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return createProviderListClustersHandler(serverCtx, "AWSCluster", "AWSManagedCluster")
 }
 
-// createAWSGetClusterHandler gets details of an AWS cluster
+// CreateAWSGetClusterHandler gets details of an AWS cluster.
 func CreateAWSGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		capiClient, err := serverCtx.Client(ctx)
-		if err != nil {
-			return nil, err
-		}
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		name, ok := arguments["name"].(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
-		}
-
-		// Get the cluster
-		cluster, err := capiClient.GetCluster(ctx, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cluster: %w", err)
-		}
-
-		// Verify it's an AWS cluster
-		if cluster.Spec.InfrastructureRef == nil ||
-			(cluster.Spec.InfrastructureRef.Kind != "AWSCluster" &&
-				cluster.Spec.InfrastructureRef.Kind != "AWSManagedCluster") {
-			return mcp.NewToolResultError(fmt.Sprintf("Cluster %s/%s is not an AWS cluster", namespace, name)), nil
-		}
-
-		var content strings.Builder
-		fmt.Fprintf(&content, "AWS Cluster: %s/%s\n\n", namespace, name)
-
-		// Basic cluster info
-		content.WriteString("Cluster Information:\n")
-		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
-		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
-		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
-
-		// Infrastructure reference
-		content.WriteString("\nInfrastructure:\n")
-		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
-		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
-		fmt.Fprintf(&content, "  API Version: %s\n", cluster.Spec.InfrastructureRef.APIVersion)
-
-		// Network configuration
-		if cluster.Spec.ClusterNetwork != nil {
-			content.WriteString("\nNetwork Configuration:\n")
-			if cluster.Spec.ClusterNetwork.Pods != nil && len(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 {
-				fmt.Fprintf(&content, "  Pod CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Pods.CIDRBlocks, ", "))
-			}
-			if cluster.Spec.ClusterNetwork.Services != nil && len(cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
-				fmt.Fprintf(&content, "  Service CIDR: %s\n", strings.Join(cluster.Spec.ClusterNetwork.Services.CIDRBlocks, ", "))
-			}
-		}
-
-		// Conditions
-		if len(cluster.Status.Conditions) > 0 {
-			content.WriteString("\nConditions:\n")
-			for _, condition := range cluster.Status.Conditions {
-				fmt.Fprintf(&content, "  - %s: %s", condition.Type, condition.Status)
-				if condition.Reason != "" {
-					fmt.Fprintf(&content, " (%s)", condition.Reason)
-				}
-				content.WriteString("\n")
-			}
-		}
-
-		content.WriteString("\nNote: For detailed AWS infrastructure information (VPC, subnets, etc.),\n")
-		content.WriteString("you would need to query the AWSCluster resource directly.\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return createProviderGetClusterHandler(serverCtx, "AWS", awsClusterNote, "AWSCluster", "AWSManagedCluster")
 }
 
-// createAWSGetMachineTemplateHandler gets AWS machine templates
+// awsMachineTemplateResult is the result for one named AWS machine template.
+type awsMachineTemplateResult struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	Note      string `json:"note"`
+}
+
+// awsMachineTemplateSummary is one entry of the AWS machine template list.
+type awsMachineTemplateSummary struct {
+	Name   string    `json:"name"`
+	UsedBy ObjectRef `json:"usedBy"`
+}
+
+// CreateAWSGetMachineTemplateHandler gets or lists AWS machine templates.
 func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		capiClient, err := serverCtx.Client(ctx)
@@ -168,58 +50,40 @@ func CreateAWSGetMachineTemplateHandler(serverCtx *ServerContext) server.ToolHan
 		}
 		name, _ := arguments["name"].(string)
 
-		var content strings.Builder
-
 		if name != "" {
-			// Get specific machine template
-			fmt.Fprintf(&content, "AWS Machine Template: %s/%s\n\n", namespace, name)
-			content.WriteString("Note: Direct access to AWSMachineTemplate requires the AWS provider CRDs.\n")
-			content.WriteString("In a full implementation, this would show:\n")
-			content.WriteString("  - Instance type\n")
-			content.WriteString("  - AMI ID\n")
-			content.WriteString("  - Security groups\n")
-			content.WriteString("  - SSH key name\n")
-			content.WriteString("  - IAM instance profile\n")
-			content.WriteString("  - User data configuration\n")
-		} else {
-			// List all machine templates
-			fmt.Fprintf(&content, "AWS Machine Templates in namespace %s:\n\n", namespace)
-
-			// In a real implementation, we would list AWSMachineTemplate resources
-			// For now, we'll check for machine deployments and their templates
-			mds, err := capiClient.ListMachineDeployments(ctx, namespace, "")
-			if err != nil {
-				return nil, fmt.Errorf("failed to list machine deployments: %w", err)
-			}
-
-			awsTemplateCount := 0
-			for _, md := range mds.Items {
-				if md.Spec.Template.Spec.InfrastructureRef.Kind == "AWSMachineTemplate" {
-					awsTemplateCount++
-					fmt.Fprintf(&content, "Template: %s (used by MachineDeployment: %s)\n",
-						md.Spec.Template.Spec.InfrastructureRef.Name, md.Name)
-				}
-			}
-
-			if awsTemplateCount == 0 {
-				content.WriteString("No AWS machine templates found in use.\n")
-			}
+			return jsonResult(awsMachineTemplateResult{
+				Namespace: namespace,
+				Name:      name,
+				Note:      "Reading an AWSMachineTemplate (instance type, AMI, security groups, SSH key, IAM profile, user data) requires the AWS provider CRDs and is not implemented.",
+			})
 		}
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		// Templates are discovered through the MachineDeployments that reference them.
+		mds, err := capiClient.ListMachineDeployments(ctx, namespace, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list machine deployments: %w", err)
+		}
+
+		items := make([]awsMachineTemplateSummary, 0)
+		for _, md := range mds.Items {
+			ref := md.Spec.Template.Spec.InfrastructureRef
+			if ref.Kind != "AWSMachineTemplate" {
+				continue
+			}
+			items = append(items, awsMachineTemplateSummary{
+				Name:   ref.Name,
+				UsedBy: ObjectRef{Kind: "MachineDeployment", Name: md.Name},
+			})
+		}
+
+		return listResult(items)
 	}
 }
 
-// Placeholder handlers for provider-specific operations
+// Placeholder handlers for provider-specific operations. They are not
+// registered as tools.
 
-// createAWSCreateClusterHandler creates AWS-specific cluster configuration
+// CreateAWSCreateClusterHandler creates AWS-specific cluster configuration
 func CreateAWSCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
@@ -247,7 +111,7 @@ func CreateAWSCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerF
 	}
 }
 
-// createAWSUpdateVPCHandler updates AWS VPC configuration
+// CreateAWSUpdateVPCHandler updates AWS VPC configuration
 func CreateAWSUpdateVPCHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
@@ -271,7 +135,7 @@ func CreateAWSUpdateVPCHandler(serverCtx *ServerContext) server.ToolHandlerFunc 
 	}
 }
 
-// createAWSManageSecurityGroupsHandler manages AWS security groups
+// CreateAWSManageSecurityGroupsHandler manages AWS security groups
 func CreateAWSManageSecurityGroupsHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder

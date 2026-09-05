@@ -1,6 +1,1 @@
-Cluster: test-clusters/no-ready-cluster
-Phase: 
-Ready: false
-Provider: vsphere
-Version: 
-Machines: 0/4 ready
+{"name":"no-ready-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vsphere","totalMachines":4,"readyMachines":0}

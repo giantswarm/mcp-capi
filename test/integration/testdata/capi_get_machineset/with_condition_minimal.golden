@@ -1,16 +1,1 @@
-MachineSet: test-clusters/cond-minimal-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 2
-
-Status:
-  Total Replicas: 2
-  Ready Replicas: 2
-  Available Replicas: 2
-
-Machine Template:
-
-Conditions:
-  - Type: Ready
-    Status: True
+{"name":"cond-minimal-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":2,"currentReplicas":2,"readyReplicas":2,"availableReplicas":2,"template":{},"conditions":[{"type":"Ready","status":"True"}]}

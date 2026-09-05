@@ -1,13 +1,1 @@
-GCP Cluster: test-clusters/my-gcp-cluster
-
-Cluster Information:
-  Phase: 
-  Infrastructure Ready: false
-  Control Plane Ready: false
-
-Infrastructure:
-  Kind: GCPCluster
-  Name: my-gcp-cluster
-
-Note: For detailed GCP infrastructure information (VPC, firewall rules, etc.),
-you would need to query the GCPCluster resource directly.
+{"name":"my-gcp-cluster","namespace":"test-clusters","infrastructureReady":false,"controlPlaneReady":false,"infrastructure":{"kind":"GCPCluster","name":"my-gcp-cluster"},"network":{"podCIDRs":["192.168.0.0/16"]},"note":"Provider-specific infrastructure details (VPC, subnets, firewall rules) live on the GCPCluster resource, which this tool does not read."}

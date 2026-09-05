@@ -1,11 +1,1 @@
-Found 2 machines in cluster cluster-a:
-
-Machine: test-clusters/cluster-a-machine-0
-  Cluster: cluster-a
-  Node: cluster-a-machine-0-node
-  Ready: false
-
-Machine: test-clusters/cluster-a-machine-1
-  Cluster: cluster-a
-  Ready: false
-
+{"items":[{"name":"cluster-a-machine-0","namespace":"test-clusters","clusterName":"cluster-a","nodeName":"cluster-a-machine-0-node","ready":false},{"name":"cluster-a-machine-1","namespace":"test-clusters","clusterName":"cluster-a","ready":false}]}

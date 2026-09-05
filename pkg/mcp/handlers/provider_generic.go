@@ -7,66 +7,104 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
-// createListInfrastructureProvidersHandler creates a handler for listing available infrastructure providers
+// infrastructureProvider describes one infrastructure provider.
+type infrastructureProvider struct {
+	Name        string `json:"name"`
+	APIVersion  string `json:"apiVersion"`
+	Description string `json:"description"`
+}
+
+// infrastructureProvidersResult is the result of capi_list_infrastructure_providers.
+type infrastructureProvidersResult struct {
+	Items []infrastructureProvider `json:"items"`
+	Note  string                   `json:"note"`
+}
+
+// CreateListInfrastructureProvidersHandler lists the commonly available
+// infrastructure providers. The list is static; it does not inspect the cluster.
 func CreateListInfrastructureProvidersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// In a real implementation, this would discover installed providers
-		// For now, we'll return a static list of commonly available providers
-
-		var content strings.Builder
-		content.WriteString("Available Infrastructure Providers:\n\n")
-
-		providers := []struct {
-			Name        string
-			APIVersion  string
-			Description string
-		}{
-			{
-				Name:        "AWS",
-				APIVersion:  "infrastructure.cluster.x-k8s.io/v1beta2",
-				Description: "Amazon Web Services infrastructure provider",
+		return jsonResult(infrastructureProvidersResult{
+			Items: []infrastructureProvider{
+				{Name: "AWS", APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2", Description: "Amazon Web Services infrastructure provider"},
+				{Name: "Azure", APIVersion: infraAPIV1Beta1, Description: "Microsoft Azure infrastructure provider"},
+				{Name: "GCP", APIVersion: infraAPIV1Beta1, Description: "Google Cloud Platform infrastructure provider"},
+				{Name: "vSphere", APIVersion: infraAPIV1Beta1, Description: "VMware vSphere infrastructure provider"},
 			},
-			{
-				Name:        "Azure",
-				APIVersion:  infraAPIV1Beta1,
-				Description: "Microsoft Azure infrastructure provider",
-			},
-			{
-				Name:        "GCP",
-				APIVersion:  infraAPIV1Beta1,
-				Description: "Google Cloud Platform infrastructure provider",
-			},
-			{
-				Name:        "vSphere",
-				APIVersion:  infraAPIV1Beta1,
-				Description: "VMware vSphere infrastructure provider",
-			},
-		}
-
-		for _, provider := range providers {
-			fmt.Fprintf(&content, "Provider: %s\n", provider.Name)
-			fmt.Fprintf(&content, "  API Version: %s\n", provider.APIVersion)
-			fmt.Fprintf(&content, "  Description: %s\n", provider.Description)
-			content.WriteString("\n")
-		}
-
-		content.WriteString("Note: This list shows commonly available providers.\n")
-		content.WriteString("To see actually installed providers in your cluster, check the deployed controllers.\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+			Note: "Commonly available providers; the controllers deployed in the management cluster determine which are actually installed.",
+		})
 	}
 }
 
-// createGetProviderConfigHandler creates a handler for getting provider configuration
+// providerResource describes one CRD kind a provider brings.
+type providerResource struct {
+	Kind        string `json:"kind"`
+	Description string `json:"description"`
+}
+
+// providerConfig is the result of capi_get_provider_config.
+type providerConfig struct {
+	Provider            string             `json:"provider"`
+	RequiredCredentials []string           `json:"requiredCredentials"`
+	RequiredSettings    []string           `json:"requiredSettings,omitempty"`
+	OptionalSettings    []string           `json:"optionalSettings,omitempty"`
+	Resources           []providerResource `json:"resources"`
+}
+
+const descMachineTemplate = "Template for creating machines"
+
+var providerConfigs = map[capi.Provider]providerConfig{
+	capi.ProviderAWS: {
+		Provider:            string(capi.ProviderAWS),
+		RequiredCredentials: []string{"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"},
+		OptionalSettings:    []string{"AWS_SESSION_TOKEN (temporary credentials)", "AWS_PROFILE (use a specific profile)"},
+		Resources: []providerResource{
+			{Kind: "AWSCluster", Description: "Manages VPC, subnets, security groups"},
+			{Kind: "AWSMachine", Description: "Individual EC2 instances"},
+			{Kind: "AWSMachineTemplate", Description: descMachineTemplate},
+			{Kind: "AWSManagedControlPlane", Description: "EKS-based control plane"},
+		},
+	},
+	capi.ProviderAzure: {
+		Provider:            string(capi.ProviderAzure),
+		RequiredCredentials: []string{"AZURE_SUBSCRIPTION_ID", "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET"},
+		OptionalSettings:    []string{"AZURE_ENVIRONMENT (AzurePublicCloud, AzureGermanCloud, ...)"},
+		Resources: []providerResource{
+			{Kind: "AzureCluster", Description: "Manages resource group, vnet, subnets"},
+			{Kind: "AzureMachine", Description: "Individual VM instances"},
+			{Kind: "AzureMachineTemplate", Description: descMachineTemplate},
+			{Kind: "AzureManagedControlPlane", Description: "AKS-based control plane"},
+		},
+	},
+	capi.ProviderGCP: {
+		Provider:            string(capi.ProviderGCP),
+		RequiredCredentials: []string{"GOOGLE_APPLICATION_CREDENTIALS (path to service account key)", "GCP_PROJECT_ID", "GCP_REGION"},
+		OptionalSettings:    []string{"GCP_NETWORK (custom network name)"},
+		Resources: []providerResource{
+			{Kind: "GCPCluster", Description: "Manages VPC, subnets, firewall rules"},
+			{Kind: "GCPMachine", Description: "Individual GCE instances"},
+			{Kind: "GCPMachineTemplate", Description: descMachineTemplate},
+		},
+	},
+	capi.ProviderVSphere: {
+		Provider:            string(capi.ProviderVSphere),
+		RequiredCredentials: []string{"VSPHERE_SERVER", "VSPHERE_USERNAME", "VSPHERE_PASSWORD"},
+		RequiredSettings:    []string{"VSPHERE_DATACENTER", "VSPHERE_DATASTORE", "VSPHERE_NETWORK", "VSPHERE_RESOURCE_POOL"},
+		OptionalSettings:    []string{"VSPHERE_FOLDER", "VSPHERE_TEMPLATE (VM template to clone)"},
+		Resources: []providerResource{
+			{Kind: "VSphereCluster", Description: "Manages cluster-level settings"},
+			{Kind: "VSphereMachine", Description: "Individual VM instances"},
+			{Kind: "VSphereMachineTemplate", Description: descMachineTemplate},
+		},
+	},
+}
+
+// CreateGetProviderConfigHandler returns the credentials, settings and CRD
+// kinds of one infrastructure provider.
 func CreateGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arguments := request.GetArguments()
@@ -75,83 +113,11 @@ func CreateGetProviderConfigHandler(serverCtx *ServerContext) server.ToolHandler
 			return nil, fmt.Errorf("provider argument is required (aws, azure, gcp, vsphere)")
 		}
 
-		var content strings.Builder
-		fmt.Fprintf(&content, "Configuration for %s Provider:\n\n", strings.ToUpper(provider))
-
-		switch strings.ToLower(provider) {
-		case "aws":
-			content.WriteString("AWS Provider Configuration:\n")
-			content.WriteString("  Required Credentials:\n")
-			content.WriteString("    - AWS_ACCESS_KEY_ID\n")
-			content.WriteString("    - AWS_SECRET_ACCESS_KEY\n")
-			content.WriteString("    - AWS_REGION\n")
-			content.WriteString("  Optional:\n")
-			content.WriteString("    - AWS_SESSION_TOKEN (for temporary credentials)\n")
-			content.WriteString("    - AWS_PROFILE (to use a specific profile)\n\n")
-			content.WriteString("  Common Resources:\n")
-			content.WriteString("    - AWSCluster: Manages VPC, subnets, security groups\n")
-			content.WriteString("    - AWSMachine: Individual EC2 instances\n")
-			content.WriteString("    - AWSMachineTemplate: Template for creating machines\n")
-			content.WriteString("    - AWSManagedControlPlane: EKS-based control plane\n")
-
-		case "azure":
-			content.WriteString("Azure Provider Configuration:\n")
-			content.WriteString("  Required Credentials:\n")
-			content.WriteString("    - AZURE_SUBSCRIPTION_ID\n")
-			content.WriteString("    - AZURE_TENANT_ID\n")
-			content.WriteString("    - AZURE_CLIENT_ID\n")
-			content.WriteString("    - AZURE_CLIENT_SECRET\n")
-			content.WriteString("  Optional:\n")
-			content.WriteString("    - AZURE_ENVIRONMENT (AzurePublicCloud, AzureGermanCloud, etc.)\n\n")
-			content.WriteString("  Common Resources:\n")
-			content.WriteString("    - AzureCluster: Manages resource group, vnet, subnets\n")
-			content.WriteString("    - AzureMachine: Individual VM instances\n")
-			content.WriteString("    - AzureMachineTemplate: Template for creating machines\n")
-			content.WriteString("    - AzureManagedControlPlane: AKS-based control plane\n")
-
-		case "gcp":
-			content.WriteString("GCP Provider Configuration:\n")
-			content.WriteString("  Required Credentials:\n")
-			content.WriteString("    - GOOGLE_APPLICATION_CREDENTIALS (path to service account key)\n")
-			content.WriteString("    - GCP_PROJECT_ID\n")
-			content.WriteString("    - GCP_REGION\n")
-			content.WriteString("  Optional:\n")
-			content.WriteString("    - GCP_NETWORK (custom network name)\n\n")
-			content.WriteString("  Common Resources:\n")
-			content.WriteString("    - GCPCluster: Manages VPC, subnets, firewall rules\n")
-			content.WriteString("    - GCPMachine: Individual GCE instances\n")
-			content.WriteString("    - GCPMachineTemplate: Template for creating machines\n")
-
-		case "vsphere":
-			content.WriteString("vSphere Provider Configuration:\n")
-			content.WriteString("  Required Credentials:\n")
-			content.WriteString("    - VSPHERE_SERVER\n")
-			content.WriteString("    - VSPHERE_USERNAME\n")
-			content.WriteString("    - VSPHERE_PASSWORD\n")
-			content.WriteString("  Required Settings:\n")
-			content.WriteString("    - VSPHERE_DATACENTER\n")
-			content.WriteString("    - VSPHERE_DATASTORE\n")
-			content.WriteString("    - VSPHERE_NETWORK\n")
-			content.WriteString("    - VSPHERE_RESOURCE_POOL\n")
-			content.WriteString("  Optional:\n")
-			content.WriteString("    - VSPHERE_FOLDER\n")
-			content.WriteString("    - VSPHERE_TEMPLATE (VM template to clone)\n\n")
-			content.WriteString("  Common Resources:\n")
-			content.WriteString("    - VSphereCluster: Manages cluster-level settings\n")
-			content.WriteString("    - VSphereMachine: Individual VM instances\n")
-			content.WriteString("    - VSphereMachineTemplate: Template for creating machines\n")
-
-		default:
+		config, ok := providerConfigs[capi.Provider(strings.ToLower(provider))]
+		if !ok {
 			return mcp.NewToolResultError(fmt.Sprintf("Unknown provider: %s. Supported providers: aws, azure, gcp, vsphere", provider)), nil
 		}
 
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
+		return jsonResult(config)
 	}
 }

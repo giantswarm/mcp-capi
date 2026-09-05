@@ -1,6 +1,1 @@
-Cluster: test-clusters/partial-cluster
-Phase: 
-Ready: false
-Provider: azure
-Version: 
-Machines: 1/3 ready
+{"name":"partial-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"azure","totalMachines":3,"readyMachines":1}

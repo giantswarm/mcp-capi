@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: other-clusters/cluster-in-other-ns
-Phase: 
-Ready: false
-Provider: unknown
-Version: 
-Machines: 0/0 ready
-
----
-
+{"items":[{"name":"cluster-in-other-ns","namespace":"other-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"unknown","totalMachines":0,"readyMachines":0}]}

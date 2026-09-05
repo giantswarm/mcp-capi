@@ -1,6 +1,1 @@
-Found 1 machine deployments:
-
-MachineDeployment: test-clusters/md-nil-replicas
-  Cluster: test-cluster
-  Phase: Running
-
+{"items":[{"name":"md-nil-replicas","namespace":"test-clusters","clusterName":"test-cluster","phase":"Running","replicas":0,"readyReplicas":0,"updatedReplicas":0,"availableReplicas":0}]}

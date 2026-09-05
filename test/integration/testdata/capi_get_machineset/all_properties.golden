@@ -1,18 +1,1 @@
-MachineSet: test-clusters/full-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 5
-
-Status:
-  Total Replicas: 5
-  Ready Replicas: 4
-  Available Replicas: 3
-
-Machine Template:
-  Kubernetes Version: v1.29.0
-  Infrastructure: AWSMachineTemplate/aws-mt
-  Bootstrap: KubeadmConfigTemplate/bootstrap-config
-
-Owners:
-  - MachineDeployment: parent-md
+{"name":"full-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":5,"currentReplicas":5,"readyReplicas":4,"availableReplicas":3,"template":{"version":"v1.29.0","infrastructure":{"kind":"AWSMachineTemplate","name":"aws-mt"},"bootstrap":{"kind":"KubeadmConfigTemplate","name":"bootstrap-config"}},"owners":[{"kind":"MachineDeployment","name":"parent-md"}]}

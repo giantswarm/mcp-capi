@@ -1,11 +1,1 @@
-Machine: test-clusters/sparse-machine
-
-Basic Information:
-  Cluster: sparse-cluster
-  Phase: Running
-
-Conditions:
-  - Type: Ready
-    Status: True
-  - Type: InfrastructureReady
-    Status: False
+{"name":"sparse-machine","namespace":"test-clusters","clusterName":"sparse-cluster","phase":"Running","ready":true,"conditions":[{"type":"Ready","status":"True"},{"type":"InfrastructureReady","status":"False"}]}

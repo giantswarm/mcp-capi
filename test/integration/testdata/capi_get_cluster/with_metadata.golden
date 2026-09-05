@@ -1,13 +1,1 @@
-Cluster: test-clusters/metadata-cluster
-Phase: 
-Ready: false
-Provider: aws
-Version: 
-Machines: 0/0 ready
-
-Labels:
-  env: prod
-  team: infra
-
-Annotations:
-  description: Production cluster
+{"name":"metadata-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"aws","totalMachines":0,"readyMachines":0,"labels":{"env":"prod","team":"infra"},"annotations":{"description":"Production cluster"}}

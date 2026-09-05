@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/vsphere-partial
-Phase: 
-Ready: false
-Provider: vsphere
-Version: 
-Machines: 1/2 ready
-
----
-
+{"items":[{"name":"vsphere-partial","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vsphere","totalMachines":2,"readyMachines":1}]}

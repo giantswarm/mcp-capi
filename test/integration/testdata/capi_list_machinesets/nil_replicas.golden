@@ -1,7 +1,1 @@
-Found 1 machine sets:
-
-MachineSet: test-clusters/ms-nil-replicas
-  Cluster: test-cluster
-  Ready: 1/2
-  Available: 1
-
+{"items":[{"name":"ms-nil-replicas","namespace":"test-clusters","clusterName":"test-cluster","replicas":0,"currentReplicas":2,"readyReplicas":1,"availableReplicas":1}]}

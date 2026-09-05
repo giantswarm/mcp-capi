@@ -1,11 +1,1 @@
-Cluster: test-clusters/vcd-full-cluster
-Phase: Provisioned
-Ready: true
-Provider: vcd
-Version: v1.29.0
-Machines: 2/3 ready
-
-Conditions:
-  Ready: True (ClusterReady)
-  ControlPlaneReady: True (ControlPlaneInitialized)
-  InfrastructureReady: True (InfrastructureProvisioned)
+{"name":"vcd-full-cluster","namespace":"test-clusters","phase":"Provisioned","ready":true,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vcd","version":"v1.29.0","totalMachines":3,"readyMachines":2,"conditions":[{"type":"Ready","status":"True","reason":"ClusterReady","message":"Cluster is fully operational"},{"type":"ControlPlaneReady","status":"True","reason":"ControlPlaneInitialized","message":"Control plane is ready"},{"type":"InfrastructureReady","status":"True","reason":"InfrastructureProvisioned","message":"Infrastructure is ready"}]}

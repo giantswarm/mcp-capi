@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/azure-partial
-Phase: 
-Ready: false
-Provider: azure
-Version: 
-Machines: 1/2 ready
-
----
-
+{"items":[{"name":"azure-partial","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"azure","totalMachines":2,"readyMachines":1}]}

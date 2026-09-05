@@ -1,16 +1,1 @@
-Found 3 machines:
-
-Machine: test-clusters/my-cluster-machine-0
-  Cluster: my-cluster
-  Node: my-cluster-machine-0-node
-  Ready: false
-
-Machine: test-clusters/my-cluster-machine-1
-  Cluster: my-cluster
-  Node: my-cluster-machine-1-node
-  Ready: false
-
-Machine: test-clusters/my-cluster-machine-2
-  Cluster: my-cluster
-  Ready: false
-
+{"items":[{"name":"my-cluster-machine-0","namespace":"test-clusters","clusterName":"my-cluster","nodeName":"my-cluster-machine-0-node","ready":false},{"name":"my-cluster-machine-1","namespace":"test-clusters","clusterName":"my-cluster","nodeName":"my-cluster-machine-1-node","ready":false},{"name":"my-cluster-machine-2","namespace":"test-clusters","clusterName":"my-cluster","ready":false}]}

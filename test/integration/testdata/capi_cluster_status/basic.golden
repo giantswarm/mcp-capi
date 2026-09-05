@@ -1,6 +1,1 @@
-Cluster: test-clusters/only-cluster
-Phase: 
-Ready: false
-Provider: unknown
-Version: 
-Machines: 0/0 ready
+{"name":"only-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"unknown","totalMachines":0,"readyMachines":0}

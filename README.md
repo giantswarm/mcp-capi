@@ -237,6 +237,23 @@ This MCP server can be integrated with various AI assistants that support the Mo
 
 ## Available Tools
 
+### Tool results
+
+Every tool returns its result as one JSON document in the text content, so
+aggregators (muster), UIs and LLM clients parse it instead of scraping prose.
+List tools follow the [mcp-toolkit paginated result
+convention](https://github.com/giantswarm/mcp-toolkit/blob/main/docs/conventions.md):
+
+```json
+{ "items": [ { "name": "my-cluster", "namespace": "org-example", "phase": "Provisioned", "ready": true, "provider": "aws", "version": "v1.31.0", "totalMachines": 6, "readyMachines": 6 } ] }
+```
+
+`nextCursor` is omitted because the tools return all matches in one page;
+server-side pagination (`limit`/`cursor` arguments) is a follow-up. Read tools
+return the object digest directly (for example `capi_get_cluster` returns the
+cluster, `capi_node_status` the node); action tools return the identifiers they
+acted on plus a `message`. Errors stay plain-text MCP tool errors (`isError`).
+
 ### Cluster Management
 - `capi_create_cluster` - Create a new CAPI cluster
 - `capi_list_clusters` - List all clusters

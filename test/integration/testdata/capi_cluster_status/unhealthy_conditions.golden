@@ -1,11 +1,1 @@
-Cluster: test-clusters/unhealthy-cluster
-Phase: 
-Ready: false
-Provider: azure
-Version: 
-Machines: 0/0 ready
-
-Conditions:
-  Ready: False (ClusterNotReady)
-  ControlPlaneReady: False (ControlPlaneUnhealthy)
-  InfrastructureReady: False (WaitingForInfrastructure)
+{"name":"unhealthy-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"azure","totalMachines":0,"readyMachines":0,"conditions":[{"type":"Ready","status":"False","reason":"ClusterNotReady","message":"Cluster has issues"},{"type":"ControlPlaneReady","status":"False","reason":"ControlPlaneUnhealthy","message":"Control plane has unhealthy replicas"},{"type":"InfrastructureReady","status":"False","reason":"WaitingForInfrastructure","message":"Infrastructure provisioning failed"}]}

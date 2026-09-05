@@ -1,13 +1,1 @@
-MachineSet: test-clusters/versioned-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 3
-
-Status:
-  Total Replicas: 3
-  Ready Replicas: 3
-  Available Replicas: 3
-
-Machine Template:
-  Kubernetes Version: v1.29.0
+{"name":"versioned-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"template":{"version":"v1.29.0"}}

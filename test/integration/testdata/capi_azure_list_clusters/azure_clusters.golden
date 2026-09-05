@@ -1,9 +1,1 @@
-Azure Clusters:
-
-Cluster: test-clusters/my-azure-cluster
-  Infrastructure: AzureCluster
-  Phase: 
-  Ready: false
-  Provider: Azure (confirmed)
-
-Total Azure clusters: 1
+{"items":[{"name":"my-azure-cluster","namespace":"test-clusters","infrastructureKind":"AzureCluster","infrastructureReady":false}]}

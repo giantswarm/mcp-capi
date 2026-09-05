@@ -1,17 +1,1 @@
-Found 3 machines:
-
-Machine: test-clusters/healthy-cluster-machine-0
-  Cluster: healthy-cluster
-  Node: healthy-cluster-machine-0-node
-  Ready: false
-
-Machine: test-clusters/healthy-cluster-machine-1
-  Cluster: healthy-cluster
-  Node: healthy-cluster-machine-1-node
-  Ready: false
-
-Machine: test-clusters/healthy-cluster-machine-2
-  Cluster: healthy-cluster
-  Node: healthy-cluster-machine-2-node
-  Ready: false
-
+{"items":[{"name":"healthy-cluster-machine-0","namespace":"test-clusters","clusterName":"healthy-cluster","nodeName":"healthy-cluster-machine-0-node","ready":false},{"name":"healthy-cluster-machine-1","namespace":"test-clusters","clusterName":"healthy-cluster","nodeName":"healthy-cluster-machine-1-node","ready":false},{"name":"healthy-cluster-machine-2","namespace":"test-clusters","clusterName":"healthy-cluster","nodeName":"healthy-cluster-machine-2-node","ready":false}]}

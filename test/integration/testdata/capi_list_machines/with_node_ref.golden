@@ -1,8 +1,1 @@
-Found 1 machines:
-
-Machine: test-clusters/noderef-machine
-  Cluster: noderef-cluster
-  Phase: Running
-  Node: worker-node-1
-  Ready: false
-
+{"items":[{"name":"noderef-machine","namespace":"test-clusters","clusterName":"noderef-cluster","phase":"Running","nodeName":"worker-node-1","ready":false}]}

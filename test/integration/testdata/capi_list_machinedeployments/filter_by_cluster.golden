@@ -1,6 +1,1 @@
-Found 1 machine deployments in cluster cluster-a:
-
-MachineDeployment: test-clusters/md-a
-  Cluster: cluster-a
-  Replicas: 3
-
+{"items":[{"name":"md-a","namespace":"test-clusters","clusterName":"cluster-a","replicas":3,"readyReplicas":0,"updatedReplicas":0,"availableReplicas":0}]}

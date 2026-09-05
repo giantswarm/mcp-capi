@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/vcd-all-ready
-Phase: 
-Ready: false
-Provider: vcd
-Version: 
-Machines: 3/3 ready
-
----
-
+{"items":[{"name":"vcd-all-ready","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vcd","totalMachines":3,"readyMachines":3}]}

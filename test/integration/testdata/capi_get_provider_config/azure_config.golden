@@ -1,16 +1,1 @@
-Configuration for AZURE Provider:
-
-Azure Provider Configuration:
-  Required Credentials:
-    - AZURE_SUBSCRIPTION_ID
-    - AZURE_TENANT_ID
-    - AZURE_CLIENT_ID
-    - AZURE_CLIENT_SECRET
-  Optional:
-    - AZURE_ENVIRONMENT (AzurePublicCloud, AzureGermanCloud, etc.)
-
-  Common Resources:
-    - AzureCluster: Manages resource group, vnet, subnets
-    - AzureMachine: Individual VM instances
-    - AzureMachineTemplate: Template for creating machines
-    - AzureManagedControlPlane: AKS-based control plane
+{"provider":"azure","requiredCredentials":["AZURE_SUBSCRIPTION_ID","AZURE_TENANT_ID","AZURE_CLIENT_ID","AZURE_CLIENT_SECRET"],"optionalSettings":["AZURE_ENVIRONMENT (AzurePublicCloud, AzureGermanCloud, ...)"],"resources":[{"kind":"AzureCluster","description":"Manages resource group, vnet, subnets"},{"kind":"AzureMachine","description":"Individual VM instances"},{"kind":"AzureMachineTemplate","description":"Template for creating machines"},{"kind":"AzureManagedControlPlane","description":"AKS-based control plane"}]}

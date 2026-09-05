@@ -1,12 +1,1 @@
-Found 2 machine deployments:
-
-MachineDeployment: test-clusters/md-v128
-  Cluster: test-cluster
-  Replicas: 3
-  Kubernetes Version: v1.28.0
-
-MachineDeployment: test-clusters/md-v129
-  Cluster: test-cluster
-  Replicas: 2
-  Kubernetes Version: v1.29.0
-
+{"items":[{"name":"md-v128","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"readyReplicas":0,"updatedReplicas":0,"availableReplicas":0,"version":"v1.28.0"},{"name":"md-v129","namespace":"test-clusters","clusterName":"test-cluster","replicas":2,"readyReplicas":0,"updatedReplicas":0,"availableReplicas":0,"version":"v1.29.0"}]}

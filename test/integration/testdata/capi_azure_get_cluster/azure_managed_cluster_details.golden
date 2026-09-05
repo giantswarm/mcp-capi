@@ -1,13 +1,1 @@
-Azure Cluster: test-clusters/my-managed-cluster
-
-Cluster Information:
-  Phase: 
-  Infrastructure Ready: false
-  Control Plane Ready: false
-
-Infrastructure:
-  Kind: AzureManagedCluster
-  Name: my-managed-cluster
-
-Note: For detailed Azure infrastructure information (resource group, vnet, etc.),
-you would need to query the AzureCluster resource directly.
+{"name":"my-managed-cluster","namespace":"test-clusters","infrastructureReady":false,"controlPlaneReady":false,"infrastructure":{"kind":"AzureManagedCluster","name":"my-managed-cluster"},"network":{"podCIDRs":["192.168.0.0/16"]},"note":"Provider-specific infrastructure details (resource group, virtual network, subnets) live on the AzureCluster resource, which this tool does not read."}

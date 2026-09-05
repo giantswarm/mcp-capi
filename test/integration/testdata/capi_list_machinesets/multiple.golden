@@ -1,14 +1,1 @@
-Found 2 machine sets:
-
-MachineSet: test-clusters/ms-1
-  Cluster: test-cluster
-  Replicas: 3
-  Ready: 3/3
-  Available: 3
-
-MachineSet: test-clusters/ms-2
-  Cluster: test-cluster
-  Replicas: 2
-  Ready: 1/2
-  Available: 1
-
+{"items":[{"name":"ms-1","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3},{"name":"ms-2","namespace":"test-clusters","clusterName":"test-cluster","replicas":2,"currentReplicas":2,"readyReplicas":1,"availableReplicas":1}]}

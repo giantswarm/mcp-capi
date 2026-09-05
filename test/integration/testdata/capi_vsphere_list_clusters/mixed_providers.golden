@@ -1,9 +1,1 @@
-vSphere Clusters:
-
-Cluster: test-clusters/my-vsphere-cluster
-  Infrastructure: VSphereCluster
-  Phase: 
-  Ready: false
-  Provider: vSphere (confirmed)
-
-Total vSphere clusters: 1
+{"items":[{"name":"my-vsphere-cluster","namespace":"test-clusters","infrastructureKind":"VSphereCluster","infrastructureReady":false}]}

@@ -1,13 +1,1 @@
-MachineSet: test-clusters/infra-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 3
-
-Status:
-  Total Replicas: 3
-  Ready Replicas: 3
-  Available Replicas: 3
-
-Machine Template:
-  Infrastructure: AWSMachineTemplate/aws-mt
+{"name":"infra-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"template":{"infrastructure":{"kind":"AWSMachineTemplate","name":"aws-mt"}}}

@@ -1,6 +1,1 @@
-Found 1 machines:
-
-Machine: test-clusters/nophase-machine
-  Cluster: nophase-cluster
-  Ready: false
-
+{"items":[{"name":"nophase-machine","namespace":"test-clusters","clusterName":"nophase-cluster","ready":false}]}

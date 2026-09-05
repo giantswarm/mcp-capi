@@ -1,8 +1,1 @@
-Found 1 machine sets:
-
-MachineSet: test-clusters/ms-orphan
-  Cluster: test-cluster
-  Replicas: 2
-  Ready: 2/2
-  Available: 2
-
+{"items":[{"name":"ms-orphan","namespace":"test-clusters","clusterName":"test-cluster","replicas":2,"currentReplicas":2,"readyReplicas":2,"availableReplicas":2}]}

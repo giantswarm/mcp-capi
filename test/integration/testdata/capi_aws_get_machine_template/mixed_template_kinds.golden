@@ -1,3 +1,1 @@
-AWS Machine Templates in namespace test-clusters:
-
-Template: aws-template (used by MachineDeployment: aws-md)
+{"items":[{"name":"aws-template","usedBy":{"kind":"MachineDeployment","name":"aws-md"}}]}

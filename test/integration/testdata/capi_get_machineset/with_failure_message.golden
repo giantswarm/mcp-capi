@@ -1,12 +1,1 @@
-MachineSet: test-clusters/failure-message-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 3
-
-Status:
-  Total Replicas: 3
-  Ready Replicas: 0
-  Available Replicas: 0
-
-Machine Template:
+{"name":"failure-message-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":0,"availableReplicas":0,"template":{}}

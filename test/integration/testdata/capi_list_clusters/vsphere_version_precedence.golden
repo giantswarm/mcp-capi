@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/vsphere-cluster
-Phase: 
-Ready: false
-Provider: vsphere
-Version: v1.28.0
-Machines: 0/0 ready
-
----
-
+{"items":[{"name":"vsphere-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vsphere","version":"v1.28.0","totalMachines":0,"readyMachines":0}]}

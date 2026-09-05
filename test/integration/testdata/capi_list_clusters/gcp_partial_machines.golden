@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/gcp-partial
-Phase: 
-Ready: false
-Provider: gcp
-Version: 
-Machines: 1/2 ready
-
----
-
+{"items":[{"name":"gcp-partial","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"gcp","totalMachines":2,"readyMachines":1}]}

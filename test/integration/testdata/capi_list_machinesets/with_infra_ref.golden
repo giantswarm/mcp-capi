@@ -1,9 +1,1 @@
-Found 1 machine sets:
-
-MachineSet: test-clusters/ms-infra
-  Cluster: test-cluster
-  Replicas: 3
-  Ready: 3/3
-  Available: 3
-  Infrastructure: AWSMachineTemplate/aws-machine-template
-
+{"items":[{"name":"ms-infra","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"infrastructure":{"kind":"AWSMachineTemplate","name":"aws-machine-template"}}]}

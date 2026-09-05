@@ -1,10 +1,1 @@
-Cluster: test-clusters/mixed-2
-Phase: Provisioning
-Ready: false
-Provider: azure
-Version: 
-Machines: 0/0 ready
-
-Conditions:
-  Ready: False (ClusterNotReady)
-  InfrastructureReady: True (InfraReady)
+{"name":"mixed-2","namespace":"test-clusters","phase":"Provisioning","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"azure","totalMachines":0,"readyMachines":0,"conditions":[{"type":"Ready","status":"False","reason":"ClusterNotReady","message":"Cluster not ready"},{"type":"InfrastructureReady","status":"True","reason":"InfraReady","message":"Infrastructure is ready"}]}

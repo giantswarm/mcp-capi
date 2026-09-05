@@ -1,8 +1,1 @@
-Found 1 machines:
-
-Machine: test-clusters/pid-machine
-  Cluster: pid-cluster
-  Phase: Running
-  Provider ID: aws://us-east-1/i-1234567890abcdef0
-  Ready: false
-
+{"items":[{"name":"pid-machine","namespace":"test-clusters","clusterName":"pid-cluster","phase":"Running","providerID":"aws://us-east-1/i-1234567890abcdef0","ready":false}]}

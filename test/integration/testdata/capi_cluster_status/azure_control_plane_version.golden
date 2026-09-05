@@ -1,6 +1,1 @@
-Cluster: test-clusters/azure-kcp-cluster
-Phase: 
-Ready: false
-Provider: azure
-Version: v1.30.0
-Machines: 0/0 ready
+{"name":"azure-kcp-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"azure","version":"v1.30.0","totalMachines":0,"readyMachines":0}

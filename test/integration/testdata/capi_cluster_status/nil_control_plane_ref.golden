@@ -1,10 +1,1 @@
-Cluster: test-clusters/nocp-cluster
-Phase: Provisioned
-Ready: true
-Provider: aws
-Version: v1.29.0
-Machines: 0/0 ready
-
-Conditions:
-  Ready: True (ClusterReady)
-  InfrastructureReady: True (InfraReady)
+{"name":"nocp-cluster","namespace":"test-clusters","phase":"Provisioned","ready":true,"controlPlaneReady":false,"infrastructureReady":false,"provider":"aws","version":"v1.29.0","totalMachines":0,"readyMachines":0,"conditions":[{"type":"Ready","status":"True","reason":"ClusterReady","message":"Cluster is ready"},{"type":"InfrastructureReady","status":"True","reason":"InfraReady","message":"Infrastructure is ready"}]}

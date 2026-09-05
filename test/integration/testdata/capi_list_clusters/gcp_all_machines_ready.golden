@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/gcp-all-ready
-Phase: 
-Ready: false
-Provider: gcp
-Version: 
-Machines: 3/3 ready
-
----
-
+{"items":[{"name":"gcp-all-ready","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"gcp","totalMachines":3,"readyMachines":3}]}
