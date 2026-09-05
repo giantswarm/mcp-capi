@@ -1,3 +1,9 @@
+# Platform identity contract. An umbrella chart (agent-platform-standalone)
+# describes the platform's single identity provider once under global.identity
+# (issuerUrl, clientId, existingSecret, ca.secretName) and global.domain; the
+# oauth.* values below fall back to it when they are empty.
+global: {}  # @schema additionalProperties: true
+
 replicaCount: 1
 
 image:
@@ -10,14 +16,18 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# The ServiceAccount exists so the pod has an identity for admission and
+# policy; it carries no RBAC. With oauth.enabled the pod does not even mount
+# its token: every Kubernetes API call is made with the caller's own OIDC ID
+# token (oauth.downstream), so the person's RBAC governs every CAPI operation.
 serviceAccount:
   create: true
   automount: false
-  annotations: {}
+  annotations: {}  # @schema additionalProperties: true
   name: ""
 
-podAnnotations: {}
-podLabels: {}
+podAnnotations: {}  # @schema additionalProperties: true
+podLabels: {}  # @schema additionalProperties: true
 
 podSecurityContext:
   runAsNonRoot: true
@@ -53,6 +63,107 @@ resources:
 volumes: []
 volumeMounts: []
 
-nodeSelector: {}
+nodeSelector: {}  # @schema additionalProperties: true
 tolerations: []
-affinity: {}
+affinity: {}  # @schema additionalProperties: true
+
+# OAuth 2.1: the server validates bearers against the identity provider and
+# acts as the authenticated person towards the Kubernetes API server.
+oauth:
+  # Enable OAuth 2.1 authentication on the MCP endpoint. Requires the
+  # streamable-http transport (the chart default).
+  enabled: false
+  # Public base URL of this server, e.g. https://mcp-capi.example.com. Used as
+  # the OAuth issuer and for the callback URL. Falls back to
+  # https://<fullname>.<global.domain>.
+  baseURL: ""
+  # Identity provider: dex (default) or google.
+  provider: dex
+  dex:
+    # Dex OIDC issuer URL, e.g. https://dex.example.com. Falls back to
+    # global.identity.issuerUrl.
+    issuerURL: ""
+    # Dex client ID of this server. Falls back to global.identity.clientId.
+    clientID: ""
+    # Dex client secret; prefer oauth.existingSecret for production.
+    clientSecret: ""
+    # Dex client the Kubernetes API server accepts as token audience
+    # (Giant Swarm: dex-k8s-authenticator). Interactive logins through this
+    # server then request the cross-client audience so the ID token is valid
+    # at the apiserver. Requires this server's Dex client to be a trusted
+    # peer of that client. Forwarded tokens are unaffected.
+    kubernetesAuthenticatorClientID: ""
+    # CA of a private Dex (Secret with the PEM certificate). Falls back to
+    # global.identity.ca.secretName / key.
+    caSecret:
+      name: ""
+      key: "ca.crt"
+  google:
+    clientID: ""
+    # Google client secret; prefer oauth.existingSecret for production.
+    clientSecret: ""
+  # Existing Secret with the credentials. Keys: dex-client-secret or
+  # google-client-secret, oauth-encryption-key (optional), valkey-password
+  # (optional). Falls back to global.identity.existingSecret. When empty the
+  # chart renders <fullname>-oauth from the values above.
+  existingSecret: ""
+  # AES-256-GCM key for tokens at rest (32 bytes, base64 or hex; generate
+  # with: openssl rand -base64 32). Used only when the chart renders the
+  # Secret itself. Empty stores tokens unencrypted.
+  encryptionKey: ""
+  # Allow unauthenticated dynamic client registration (development only).
+  allowPublicRegistration: false
+  # Allow the identity provider (issuer and JWKS) to resolve to private IP
+  # addresses, e.g. dex.<mc>.<base> on a private management cluster.
+  allowPrivateURLs: false
+  # OAuth client IDs whose ID tokens are accepted as bearers: single sign-on
+  # through an aggregator (muster with forwardToken: true) that forwards the
+  # person's ID token. Falls back to [global.identity.clientId]. Tokens must
+  # still come from the configured issuer and verify against its JWKS.
+  trustedAudiences: []
+  downstream:
+    # Act as the caller: every Kubernetes API call authenticates with the
+    # person's ID token. No ServiceAccount token is mounted and no RBAC is
+    # rendered. Disable only for a static-credential deployment (kubeconfig
+    # or in-cluster ServiceAccount), which this chart does not grant any
+    # permissions to.
+    enabled: true
+  storage:
+    # Token store: memory (single replica, lost on restart) or valkey.
+    type: memory
+    valkey:
+      # Valkey address, e.g. mcp-capi-valkey.mcp-capi.svc:6379.
+      url: ""
+      # Password; prefer existingSecret.
+      password: ""
+      tls:
+        enabled: false
+      keyPrefix: "mcp:"
+      # Existing Secret holding the password (key: secretKeyPassword). Falls
+      # back to the OAuth Secret's valkey-password key.
+      existingSecret: ""
+      secretKeyPassword: "valkey-password"
+
+# Gateway API HTTPRoute for the public hostname (Envoy Gateway).
+gatewayAPI:
+  enabled: false
+  httpRoute:
+    # Required when enabled, e.g.
+    #   - name: giantswarm-default
+    #     namespace: envoy-gateway-system
+    parentRefs: []
+    hostnames: []
+    labels: {}  # @schema additionalProperties: true
+    annotations: {}  # @schema additionalProperties: true
+  backendTrafficPolicy:
+    # Envoy Gateway BackendTrafficPolicy; 0s disables the request timeout
+    # that would otherwise cut long-lived MCP streams.
+    enabled: false
+    timeout: "0s"
+    labels: {}  # @schema additionalProperties: true
+    annotations: {}  # @schema additionalProperties: true
+
+ciliumNetworkPolicy:
+  enabled: true
+  labels: {}  # @schema additionalProperties: true
+  annotations: {}  # @schema additionalProperties: true

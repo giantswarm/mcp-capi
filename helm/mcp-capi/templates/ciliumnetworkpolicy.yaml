@@ -1,0 +1,34 @@
+{{- if .Values.ciliumNetworkPolicy.enabled }}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "mcp-capi.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mcp-capi.labels" . | nindent 4 }}
+    {{- with .Values.ciliumNetworkPolicy.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.ciliumNetworkPolicy.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  egress:
+    # Kubernetes API server (the caller's token authenticates every call).
+    - toEntities:
+        - kube-apiserver
+    - toEntities:
+        - cluster
+    {{- if .Values.oauth.enabled }}
+    # Identity provider discovery, token endpoint and JWKS.
+    - toEntities:
+        - world
+    {{- end }}
+  ingress:
+    - fromEntities:
+        - cluster
+  endpointSelector:
+    matchLabels:
+      {{- include "mcp-capi.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -16,11 +16,15 @@ import (
 // createVSphereListClustersHandler lists vSphere clusters
 func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		capiClient, err := serverCtx.Client(ctx)
+		if err != nil {
+			return nil, err
+		}
 		arguments := request.GetArguments()
 		namespace, _ := arguments["namespace"].(string)
 
 		// List all clusters
-		clusters, err := serverCtx.CAPIClient.ListClusters(ctx, namespace, nil)
+		clusters, err := capiClient.ListClusters(ctx, namespace, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list clusters: %w", err)
 		}
@@ -41,7 +45,7 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
 
 				// Try to get provider information
-				provider, _ := serverCtx.CAPIClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
+				provider, _ := capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
 				if provider == capi.ProviderVSphere {
 					content.WriteString("  Provider: vSphere (confirmed)\n")
 				}
@@ -70,6 +74,10 @@ func CreateVSphereListClustersHandler(serverCtx *ServerContext) server.ToolHandl
 // createVSphereGetClusterHandler gets details of a vSphere cluster
 func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		capiClient, err := serverCtx.Client(ctx)
+		if err != nil {
+			return nil, err
+		}
 		arguments := request.GetArguments()
 		namespace, ok := arguments["namespace"].(string)
 		if !ok || namespace == "" {
@@ -81,7 +89,7 @@ func CreateVSphereGetClusterHandler(serverCtx *ServerContext) server.ToolHandler
 		}
 
 		// Get the cluster
-		cluster, err := serverCtx.CAPIClient.GetCluster(ctx, namespace, name)
+		cluster, err := capiClient.GetCluster(ctx, namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get cluster: %w", err)
 		}

@@ -1,0 +1,36 @@
+{{- if .Values.gatewayAPI.enabled -}}
+{{- if not .Values.gatewayAPI.httpRoute.parentRefs }}
+{{- fail "gatewayAPI.httpRoute.parentRefs is required when gatewayAPI.enabled is true" }}
+{{- end }}
+{{- $fullName := include "mcp-capi.fullname" . -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mcp-capi.labels" . | nindent 4 }}
+    {{- with .Values.gatewayAPI.httpRoute.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.gatewayAPI.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.gatewayAPI.httpRoute.parentRefs | nindent 4 }}
+  {{- with .Values.gatewayAPI.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    # MCP endpoint and the OAuth 2.1 endpoints share the service.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ $fullName }}
+          port: {{ .Values.service.port }}
+{{- end }}
