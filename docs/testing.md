@@ -196,6 +196,7 @@ test/integration/testdata/
 harness.New(t)                           // Create new harness (GitOps guard on, writes offered)
     .ReadOnly()                          // Start the server read-only (no mutating tools)
     .WithoutGitOpsGuard()                // Let writes to Flux/Argo/Helm-owned objects through
+    .ExposeKubeconfig()                  // Offer capi_get_kubeconfig and Secret-carrying backups
     .CreateNamespace(name)               // Create namespace
     .CreateCluster(namespace, name)      // Create single generic cluster
     .CreateClusters(namespace, names...) // Create multiple generic clusters

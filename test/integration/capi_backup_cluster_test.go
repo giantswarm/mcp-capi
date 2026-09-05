@@ -76,6 +76,7 @@ func TestCapiBackupCluster(t *testing.T) {
 		namespace := testNamespace
 
 		harness.New(t).
+			ExposeKubeconfig().
 			CreateNamespace(namespace).
 			CreateClusters(namespace, "secrets-cluster").
 			ToolCall("capi_backup_cluster").
@@ -86,11 +87,46 @@ func TestCapiBackupCluster(t *testing.T) {
 			Execute()
 	})
 
+	t.Run("refuses to include secrets without --expose-kubeconfig", func(t *testing.T) {
+		t.Parallel()
+		namespace := testNamespace
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "guarded-cluster").
+			CreateSecret(namespace, "guarded-cluster-kubeconfig", map[string][]byte{
+				kubeconfigSecretKey: []byte("apiVersion: v1\nkind: Config\n"),
+			}).
+			ToolCall("capi_backup_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "guarded-cluster").
+			WithArg("include_secrets", true).
+			AssertError("include_secrets_refused.golden").
+			Execute()
+	})
+
+	t.Run("refuses to include secrets on a read-only server without --expose-kubeconfig", func(t *testing.T) {
+		t.Parallel()
+		namespace := testNamespace
+
+		harness.New(t).
+			ReadOnly().
+			CreateNamespace(namespace).
+			CreateClusters(namespace, "guarded-cluster").
+			ToolCall("capi_backup_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "guarded-cluster").
+			WithArg("include_secrets", true).
+			AssertError("include_secrets_refused.golden").
+			Execute()
+	})
+
 	t.Run("backs up cluster with JSON format and secrets", func(t *testing.T) {
 		t.Parallel()
 		namespace := testNamespace
 
 		harness.New(t).
+			ExposeKubeconfig().
 			CreateNamespace(namespace).
 			CreateClusters(namespace, "full-backup-cluster").
 			ToolCall("capi_backup_cluster").

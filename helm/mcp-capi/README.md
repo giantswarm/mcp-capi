@@ -59,6 +59,7 @@ A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 | affinity | object | `{}` |  |
 | readOnly | bool | `true` | Register only the tools that read (list, get, inspect, export) and refuse every mutating Kubernetes call. Set to false to offer the create, scale, upgrade, pause, resume and delete tools; the person's RBAC still applies. |
 | gitopsGuard | bool | `true` | Refuse writes to objects owned by a GitOps controller (Flux Kustomization or HelmRelease, Argo CD Application) or a Helm release: the change would be reverted on the next reconciliation and belongs in Git. Only matters when readOnly is false. An object labelled giantswarm.io/prevent-deletion is never deleted, whatever the policy. |
+| exposeKubeconfig | bool | `false` | Offer capi_get_kubeconfig and let capi_backup_cluster include Secrets: the workload cluster's admin kubeconfig leaves the server. Off by default and independent of readOnly; without it the tool is not registered and the server refuses the export. Never enable this on a Giant Swarm management cluster. |
 | oauth.enabled | bool | `false` |  |
 | oauth.baseURL | string | `""` |  |
 | oauth.provider | string | `"dex"` |  |

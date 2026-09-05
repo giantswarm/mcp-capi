@@ -48,9 +48,15 @@ var ErrManagedResource = errors.New("resource is managed declaratively")
 // PreventDeletionLabel.
 var ErrDeletionPrevented = errors.New("resource is protected against deletion")
 
-// WritePolicy decides whether a mutating call may reach the API server. The
-// zero value permits everything; the serve command turns both switches on by
-// default.
+// ErrCredentialExport is returned when a call would hand out a workload
+// cluster's credentials (its kubeconfig Secret, or Secret data in a backup)
+// and ExposeKubeconfig is off.
+var ErrCredentialExport = errors.New("workload cluster credentials are not exported")
+
+// WritePolicy decides whether a mutating call may reach the API server, and
+// whether a workload cluster's credentials may leave it. The zero value
+// permits everything except the credential export; the serve command turns
+// ReadOnly and GitOpsGuard on by default and leaves ExposeKubeconfig off.
 type WritePolicy struct {
 	// ReadOnly refuses every mutating call (create, update, patch, delete).
 	ReadOnly bool
@@ -59,6 +65,12 @@ type WritePolicy struct {
 	// and belongs in the Git source instead. Creates are not affected, there
 	// is no object to inspect.
 	GitOpsGuard bool
+	// ExposeKubeconfig allows a workload cluster's credentials to leave the
+	// server: the admin kubeconfig Secret through GetKubeconfig, and Secret
+	// data in BackupCluster. Off by default and independent of ReadOnly:
+	// reading a kubeconfig is not a write, but handing it out is the power to
+	// do anything to the workload cluster, so it takes an explicit opt-in.
+	ExposeKubeconfig bool
 }
 
 // Owner names the declarative controller that owns an object.
@@ -135,6 +147,17 @@ func ManagedBy(obj metav1.Object) (Owner, bool) {
 		}, true
 	}
 	return Owner{}, false
+}
+
+// CheckCredentialExport applies the policy to the export of the credentials
+// of Cluster namespace/name; what names them ("the kubeconfig", "Secrets in
+// the backup"). Only ExposeKubeconfig applies: the export is a read, so
+// neither ReadOnly nor the GitOps guard has a say.
+func (p WritePolicy) CheckCredentialExport(what, namespace, name string) error {
+	if p.ExposeKubeconfig {
+		return nil
+	}
+	return fmt.Errorf("refusing to export %s of Cluster %s: %w (start the server with --expose-kubeconfig to allow it)", what, qualified(namespace, name), ErrCredentialExport)
 }
 
 // CheckCreate applies the policy to the creation of a new object of kind in

@@ -35,8 +35,9 @@ func newServeCmd() *cobra.Command {
 		downstreamOAuth bool
 
 		// Write policy
-		readOnly    bool
-		gitopsGuard bool
+		readOnly         bool
+		gitopsGuard      bool
+		exposeKubeconfig bool
 
 		debug bool
 	)
@@ -72,13 +73,20 @@ With --downstream-oauth every Kubernetes API call authenticates with the
 caller's own OIDC ID token; the server holds no credentials of its own and
 the apiserver applies the person's RBAC.
 
-Write policy (both on by default):
-  --read-only      only the tools that read are registered; every mutating
-                   Kubernetes call is refused. Pass --read-only=false to
-                   offer the create/scale/upgrade/pause/delete tools.
-  --gitops-guard   mutating calls on objects owned by Flux, Argo CD or a
-                   Helm release are refused: the change would be reverted
-                   on the next reconciliation and belongs in Git.
+Write policy (--read-only and --gitops-guard on by default):
+  --read-only          only the tools that read are registered; every
+                       mutating Kubernetes call is refused. Pass
+                       --read-only=false to offer the
+                       create/scale/upgrade/pause/delete tools.
+  --gitops-guard       mutating calls on objects owned by Flux, Argo CD or
+                       a Helm release are refused: the change would be
+                       reverted on the next reconciliation and belongs in
+                       Git.
+  --expose-kubeconfig  offer capi_get_kubeconfig and let capi_backup_cluster
+                       include Secrets: the workload cluster's admin
+                       credentials leave the server. Off by default,
+                       independent of --read-only; without it the tool is
+                       not registered and the export is refused.
 An object labelled giantswarm.io/prevent-deletion is never deleted.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Validate input parameters before starting server
@@ -86,16 +94,17 @@ An object labelled giantswarm.io/prevent-deletion is never deleted.`,
 				return fmt.Errorf("invalid configuration: %w", err)
 			}
 			cfg := ServeConfig{
-				KubeconfigPath:  kubeconfigPath,
-				Transport:       transport,
-				HTTPAddr:        httpAddr,
-				SSEEndpoint:     sseEndpoint,
-				MessageEndpoint: messageEndpoint,
-				HTTPEndpoint:    httpEndpoint,
-				DownstreamOAuth: downstreamOAuth,
-				ReadOnly:        readOnly,
-				GitOpsGuard:     gitopsGuard,
-				Debug:           debug,
+				KubeconfigPath:   kubeconfigPath,
+				Transport:        transport,
+				HTTPAddr:         httpAddr,
+				SSEEndpoint:      sseEndpoint,
+				MessageEndpoint:  messageEndpoint,
+				HTTPEndpoint:     httpEndpoint,
+				DownstreamOAuth:  downstreamOAuth,
+				ReadOnly:         readOnly,
+				GitOpsGuard:      gitopsGuard,
+				ExposeKubeconfig: exposeKubeconfig,
+				Debug:            debug,
 			}
 			if enableOAuth {
 				oauthCfg := oauth.ConfigFromEnv()
@@ -120,6 +129,7 @@ An object labelled giantswarm.io/prevent-deletion is never deleted.`,
 	// Write policy flags
 	cmd.Flags().BoolVar(&readOnly, "read-only", true, "Register only the tools that read and refuse every mutating Kubernetes call (default: true; pass --read-only=false to offer the mutating tools)")
 	cmd.Flags().BoolVar(&gitopsGuard, "gitops-guard", true, "Refuse mutating calls on objects owned by a GitOps controller (Flux, Argo CD) or a Helm release; the change belongs in Git (default: true)")
+	cmd.Flags().BoolVar(&exposeKubeconfig, "expose-kubeconfig", false, "Offer capi_get_kubeconfig and let capi_backup_cluster include Secrets, handing out workload cluster admin credentials (default: false; independent of --read-only)")
 
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
 
@@ -225,7 +235,9 @@ type ServeConfig struct {
 	ReadOnly bool
 	// GitOpsGuard refuses mutating calls on GitOps- or Helm-owned objects.
 	GitOpsGuard bool
-	Debug       bool
+	// ExposeKubeconfig offers capi_get_kubeconfig and Secret-carrying backups.
+	ExposeKubeconfig bool
+	Debug            bool
 }
 
 // RunServe contains the main server logic with support for multiple transports
@@ -246,19 +258,20 @@ func RunServe(cfg ServeConfig) error {
 
 	// Create server options
 	opts := mcppkg.ServerOptions{
-		KubeconfigPath:  cfg.KubeconfigPath,
-		Transport:       mcppkg.TransportType(cfg.Transport),
-		HTTPAddr:        cfg.HTTPAddr,
-		SSEEndpoint:     cfg.SSEEndpoint,
-		MessageEndpoint: cfg.MessageEndpoint,
-		HTTPEndpoint:    cfg.HTTPEndpoint,
-		ServerName:      serverName,
-		ServerVersion:   rootCmd.Version,
-		OAuth:           cfg.OAuth,
-		CallerIdentity:  cfg.DownstreamOAuth,
-		ReadOnly:        cfg.ReadOnly,
-		GitOpsGuard:     cfg.GitOpsGuard,
-		Logger:          logger,
+		KubeconfigPath:   cfg.KubeconfigPath,
+		Transport:        mcppkg.TransportType(cfg.Transport),
+		HTTPAddr:         cfg.HTTPAddr,
+		SSEEndpoint:      cfg.SSEEndpoint,
+		MessageEndpoint:  cfg.MessageEndpoint,
+		HTTPEndpoint:     cfg.HTTPEndpoint,
+		ServerName:       serverName,
+		ServerVersion:    rootCmd.Version,
+		OAuth:            cfg.OAuth,
+		CallerIdentity:   cfg.DownstreamOAuth,
+		ReadOnly:         cfg.ReadOnly,
+		GitOpsGuard:      cfg.GitOpsGuard,
+		ExposeKubeconfig: cfg.ExposeKubeconfig,
+		Logger:           logger,
 	}
 
 	// Create server

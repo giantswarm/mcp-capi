@@ -51,6 +51,10 @@
         "clusterID": {
             "type": "string"
         },
+        "exposeKubeconfig": {
+            "type": "boolean",
+            "description": "Offer capi_get_kubeconfig and let capi_backup_cluster include Secrets: the workload cluster's admin kubeconfig leaves the server. Off by default and independent of readOnly; without it the tool is not registered and the server refuses the export. Never enable this on a Giant Swarm management cluster."
+        },
         "fullnameOverride": {
             "type": "string"
         },

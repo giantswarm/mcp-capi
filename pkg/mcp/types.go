@@ -76,13 +76,20 @@ type ServerOptions struct {
 	// only when ReadOnly is false.
 	GitOpsGuard bool
 
+	// ExposeKubeconfig registers capi_get_kubeconfig and lets
+	// capi_backup_cluster include Secrets: a workload cluster's admin
+	// credentials leave the server. Off by default and independent of
+	// ReadOnly; without it the tool is not offered and the client refuses
+	// the export.
+	ExposeKubeconfig bool
+
 	// Logger receives structured logs (default: slog.Default()).
 	Logger *slog.Logger
 }
 
 // WritePolicy is the capi.WritePolicy these options describe.
 func (o ServerOptions) WritePolicy() capi.WritePolicy {
-	return capi.WritePolicy{ReadOnly: o.ReadOnly, GitOpsGuard: o.GitOpsGuard}
+	return capi.WritePolicy{ReadOnly: o.ReadOnly, GitOpsGuard: o.GitOpsGuard, ExposeKubeconfig: o.ExposeKubeconfig}
 }
 
 // DefaultServerOptions returns ServerOptions with default values

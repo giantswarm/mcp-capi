@@ -177,11 +177,13 @@ chart renders no RBAC.
 
 ### Write policy: read-only and the GitOps guard
 
-Two switches decide what an agent may change. Both are **on by default**, in
-the CLI and in the Helm chart (`readOnly`, `gitopsGuard`).
+Two switches decide what an agent may change, a third what it may take away.
+`--read-only` and `--gitops-guard` are **on by default**, `--expose-kubeconfig`
+is **off**, in the CLI and in the Helm chart (`readOnly`, `gitopsGuard`,
+`exposeKubeconfig`).
 
 - `--read-only` registers only the tools that read (list, get, status,
-  health, kubeconfig, backup, provider lookups). The create, scale, upgrade,
+  health, backup, provider lookups). The create, scale, upgrade,
   pause, resume, update, move, delete, remediate, rollout, drain and cordon
   tools are not offered at all, and every mutating Kubernetes call is refused
   should one be reached anyway. Pass `--read-only=false` to offer them; the
@@ -197,8 +199,16 @@ the CLI and in the Helm chart (`readOnly`, `gitopsGuard`).
   reconciliation; the error names the owner and where the change belongs.
   Creating new objects is not guarded (there is nothing to inspect); with the
   guard off, writes go through. Only meaningful with `--read-only=false`.
+- `--expose-kubeconfig` offers `capi_get_kubeconfig` and lets
+  `capi_backup_cluster` honour `include_secrets`. Both hand out the workload
+  cluster's admin credentials from its kubeconfig Secret: reading a Secret is
+  not a write, but the kubeconfig is the power to do anything to that cluster,
+  so the export is a class of its own. Without the switch the tool is not
+  registered, whatever `--read-only` says, and the client refuses the export
+  (`ErrCredentialExport`) should it be reached anyway; a backup never carries
+  Secret data. On a Giant Swarm management cluster this stays off.
 
-Independently of both switches, an object labelled
+Independently of all three switches, an object labelled
 `giantswarm.io/prevent-deletion` is never deleted.
 
 ```bash
@@ -206,7 +216,12 @@ Independently of both switches, an object labelled
 mcp-capi serve --read-only=false
 # operator use on a GitOps-managed management cluster: writes only to unmanaged objects
 mcp-capi serve --read-only=false --gitops-guard
+# a local operator who wants the workload cluster kubeconfig through the agent
+mcp-capi serve --expose-kubeconfig
 ```
+
+The pod logs `Write policy readOnly=… gitopsGuard=… exposeKubeconfig=…` at
+startup; that line, not the arguments, is what to check.
 
 ### Version Management
 
@@ -288,8 +303,10 @@ cluster, `capi_node_status` the node); action tools return the identifiers they
 acted on plus a `message`. Errors stay plain-text MCP tool errors (`isError`).
 
 Tools marked **(write)** change resources. They are hidden when the server runs
-`--read-only` (the default) and subject to the GitOps guard otherwise; see
-[Write policy](#write-policy-read-only-and-the-gitops-guard).
+`--read-only` (the default) and subject to the GitOps guard otherwise. The tool
+marked **(credentials)** hands out a workload cluster's admin kubeconfig; it is
+hidden unless the server runs `--expose-kubeconfig`, whatever `--read-only`
+says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 
 ### Cluster Management
 - `capi_create_cluster` **(write)** - Create a new CAPI cluster
@@ -297,8 +314,8 @@ Tools marked **(write)** change resources. They are hidden when the server runs
 - `capi_get_cluster` - Get cluster details
 - `capi_cluster_status` - Detailed cluster status
 - `capi_cluster_health` - Cluster health summary
-- `capi_get_kubeconfig` - Retrieve the cluster kubeconfig
-- `capi_backup_cluster` - Export the cluster resources as YAML or JSON
+- `capi_get_kubeconfig` **(credentials)** - Retrieve the cluster's admin kubeconfig
+- `capi_backup_cluster` - Export the cluster resources as YAML or JSON; `include_secrets` needs `--expose-kubeconfig`
 - `capi_delete_cluster` **(write)** - Delete a cluster
 - `capi_scale_cluster` **(write)** - Scale cluster nodes
 - `capi_upgrade_cluster` **(write)** - Upgrade the Kubernetes version

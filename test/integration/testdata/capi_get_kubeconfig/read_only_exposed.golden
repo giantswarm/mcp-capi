@@ -1,0 +1,1 @@
+{"namespace":"test-clusters","name":"exposed-cluster","kubeconfig":"apiVersion: v1\nkind: Config\n"}

@@ -67,9 +67,11 @@ nodeSelector: {}  # @schema additionalProperties: true
 tolerations: []
 affinity: {}  # @schema additionalProperties: true
 
-# Write policy. Both switches are on by default: agents get read-only access
-# to Cluster API, and the clusters on a management cluster are managed
-# declaratively (Flux, Argo CD, Helm releases from Git).
+# Write policy. readOnly and gitopsGuard are on by default: agents get
+# read-only access to Cluster API, and the clusters on a management cluster
+# are managed declaratively (Flux, Argo CD, Helm releases from Git).
+# exposeKubeconfig is off: a workload cluster's admin credentials never leave
+# the server unless someone asks for it explicitly.
 #
 # -- Register only the tools that read (list, get, inspect, export) and refuse
 # every mutating Kubernetes call. Set to false to offer the create, scale,
@@ -81,6 +83,12 @@ readOnly: true
 # readOnly is false. An object labelled giantswarm.io/prevent-deletion is
 # never deleted, whatever the policy.
 gitopsGuard: true
+# -- Offer capi_get_kubeconfig and let capi_backup_cluster include Secrets:
+# the workload cluster's admin kubeconfig leaves the server. Off by default
+# and independent of readOnly; without it the tool is not registered and the
+# server refuses the export. Never enable this on a Giant Swarm management
+# cluster.
+exposeKubeconfig: false
 
 # OAuth 2.1: the server validates bearers against the identity provider and
 # acts as the authenticated person towards the Kubernetes API server.
