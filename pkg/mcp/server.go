@@ -100,7 +100,7 @@ func validateOptions(opts ServerOptions) error {
 // when acting as the caller, else one static client.
 func newServerContext(opts ServerOptions, logger *slog.Logger) (*handlers.ServerContext, error) {
 	policy := opts.WritePolicy()
-	logger.Info("Write policy", "readOnly", policy.ReadOnly, "gitopsGuard", policy.GitOpsGuard)
+	logger.Info("Write policy", "readOnly", policy.ReadOnly, "gitopsGuard", policy.GitOpsGuard, "exposeKubeconfig", policy.ExposeKubeconfig)
 
 	if opts.CallerIdentity {
 		var (

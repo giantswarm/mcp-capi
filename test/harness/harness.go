@@ -139,6 +139,16 @@ func (h *Harness) ReadOnly() *Harness {
 	return h
 }
 
+// ExposeKubeconfig starts the server under test with the credential export
+// on: capi_get_kubeconfig is registered and capi_backup_cluster may include
+// Secrets. Off by default, like the serve command. Must be called before
+// Execute().
+func (h *Harness) ExposeKubeconfig() *Harness {
+	h.t.Helper()
+	h.policy.ExposeKubeconfig = true
+	return h
+}
+
 // WithoutGitOpsGuard starts the server under test with the GitOps guard off,
 // so writes to Flux-, Argo CD- or Helm-owned objects go through. Must be
 // called before Execute().

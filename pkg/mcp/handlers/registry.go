@@ -10,22 +10,33 @@ import (
 // contains tool definitions paired with their handler functions, ready
 // to be registered with an MCP server.
 //
-// When the server context's write policy is read-only, only the tools listed
-// in readOnlyTools are returned: mutating tools are not offered at all rather
-// than failing on every call (the clients refuse the writes as well).
+// The server context's write policy decides which tools are offered, rather
+// than letting them fail on every call (the clients refuse as well):
+//
+//   - mutatingTools only when the policy is not read-only;
+//   - credentialTools (capi_get_kubeconfig) only when ExposeKubeconfig is
+//     set, whatever ReadOnly says;
+//   - readOnlyTools always.
 func BuildAllTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
 	tools, err := buildTools(serverCtx)
 	if err != nil {
 		return nil, err
 	}
-	if !serverCtx.WritePolicy().ReadOnly {
-		return tools, nil
-	}
+	policy := serverCtx.WritePolicy()
 	filtered := make([]ToolRegistration, 0, len(tools))
 	for _, reg := range tools {
-		if IsReadOnlyTool(reg.Tool.Name) {
-			filtered = append(filtered, reg)
+		name := reg.Tool.Name
+		switch {
+		case IsCredentialTool(name):
+			if !policy.ExposeKubeconfig {
+				continue
+			}
+		case IsMutatingTool(name):
+			if policy.ReadOnly {
+				continue
+			}
 		}
+		filtered = append(filtered, reg)
 	}
 	return filtered, nil
 }
@@ -147,7 +158,7 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 	tools = append(tools, ToolRegistration{
 		Tool: mcp.NewTool(
 			"capi_get_kubeconfig",
-			mcp.WithDescription("Retrieve cluster kubeconfig"),
+			mcp.WithDescription("Retrieve the workload cluster's admin kubeconfig from its Secret. Only offered when the server runs with --expose-kubeconfig."),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
 			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
 		),
@@ -235,7 +246,7 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 			mcp.WithDescription("Backup cluster configuration"),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
 			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
-			mcp.WithBoolean("include_secrets", mcp.Description("Include secrets in backup")),
+			mcp.WithBoolean("include_secrets", mcp.Description("Include the cluster's Secrets (kubeconfig, certificates) in the backup. Refused unless the server runs with --expose-kubeconfig; the default backup carries no Secret data.")),
 			mcp.WithString("output_format", mcp.Description("Output format (yaml or json, default: yaml)")),
 		),
 		Handler: CreateBackupClusterHandler(serverCtx),

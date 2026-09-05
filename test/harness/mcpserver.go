@@ -27,14 +27,15 @@ func initializeMCPServer(t TestingT, kubeconfigPath string, input io.Reader, out
 	// Create MCP server with stdio transport
 	t.Log("creating MCP server with stdio transport")
 	opts := mcppkg.ServerOptions{
-		KubeconfigPath: kubeconfigPath,
-		Transport:      mcppkg.TransportStdio,
-		StdioInput:     input,
-		StdioOutput:    output,
-		ServerName:     serverName,
-		ServerVersion:  serverVersion,
-		ReadOnly:       policy.ReadOnly,
-		GitOpsGuard:    policy.GitOpsGuard,
+		KubeconfigPath:   kubeconfigPath,
+		Transport:        mcppkg.TransportStdio,
+		StdioInput:       input,
+		StdioOutput:      output,
+		ServerName:       serverName,
+		ServerVersion:    serverVersion,
+		ReadOnly:         policy.ReadOnly,
+		GitOpsGuard:      policy.GitOpsGuard,
+		ExposeKubeconfig: policy.ExposeKubeconfig,
 	}
 
 	srv, err := mcppkg.NewServer(opts)

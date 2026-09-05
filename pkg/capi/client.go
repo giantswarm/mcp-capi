@@ -364,8 +364,15 @@ func (c *Client) GetMachineDeployment(ctx context.Context, namespace, name strin
 	return md, nil
 }
 
-// GetKubeconfig retrieves the kubeconfig for a workload cluster
+// GetKubeconfig retrieves the kubeconfig for a workload cluster. It is the
+// cluster's admin credential, so the policy must have ExposeKubeconfig set;
+// otherwise the call is refused with ErrCredentialExport before the Secret is
+// read.
 func (c *Client) GetKubeconfig(ctx context.Context, namespace, clusterName string) (string, error) {
+	if err := c.policy.CheckCredentialExport("the kubeconfig", namespace, clusterName); err != nil {
+		return "", err
+	}
+
 	// The kubeconfig is typically stored in a secret named {cluster-name}-kubeconfig
 	secretName := fmt.Sprintf("%s-kubeconfig", clusterName)
 
@@ -719,14 +726,24 @@ func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (stri
 
 // BackupClusterOptions contains options for backing up a cluster
 type BackupClusterOptions struct {
-	Namespace      string
-	Name           string
+	Namespace string
+	Name      string
+	// IncludeSecrets adds the cluster's Secrets (kubeconfig, certificates) to
+	// the backup. Requires the policy's ExposeKubeconfig; refused otherwise.
 	IncludeSecrets bool
 	OutputFormat   string // yaml or json
 }
 
-// BackupCluster creates a backup of cluster resources
+// BackupCluster creates a backup of cluster resources. A backup never carries
+// Secret data unless opts.IncludeSecrets is set and the policy allows the
+// credential export (ExposeKubeconfig).
 func (c *Client) BackupCluster(ctx context.Context, opts BackupClusterOptions) (string, error) {
+	if opts.IncludeSecrets {
+		if err := c.policy.CheckCredentialExport("Secrets in the backup", opts.Namespace, opts.Name); err != nil {
+			return "", err
+		}
+	}
+
 	// Get the cluster
 	cluster := &clusterv1.Cluster{}
 	key := client.ObjectKey{

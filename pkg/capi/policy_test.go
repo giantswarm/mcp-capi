@@ -13,6 +13,10 @@ const (
 	testNamespace     = "org-giantswarm"
 	testCluster       = "gazelle"
 	testKustomization = "clusters"
+
+	// Names of the policies the credential-export tests run under.
+	caseZeroPolicy = "zero policy"
+	caseReadOnly   = "read-only"
 )
 
 func clusterWith(labels, annotations map[string]string) *clusterv1.Cluster {
@@ -165,4 +169,36 @@ func TestWritePolicy(t *testing.T) {
 			t.Fatalf("CheckDelete(unmanaged) = %v, want ErrReadOnly", err)
 		}
 	})
+}
+
+func TestCheckCredentialExport(t *testing.T) {
+	for name, policy := range map[string]WritePolicy{
+		caseZeroPolicy:       {},
+		caseReadOnly:         {ReadOnly: true, GitOpsGuard: true},
+		"writes and guard":   {GitOpsGuard: true},
+		"writes without any": {ReadOnly: false, GitOpsGuard: false},
+	} {
+		t.Run(name+" refuses", func(t *testing.T) {
+			err := policy.CheckCredentialExport("the kubeconfig", testNamespace, testCluster)
+			if !errors.Is(err, ErrCredentialExport) {
+				t.Fatalf("CheckCredentialExport() = %v, want ErrCredentialExport", err)
+			}
+			for _, want := range []string{"the kubeconfig", testNamespace + "/" + testCluster, "--expose-kubeconfig"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error %q does not mention %q", err, want)
+				}
+			}
+		})
+	}
+	for name, policy := range map[string]WritePolicy{
+		"exposed, read-only":  {ReadOnly: true, GitOpsGuard: true, ExposeKubeconfig: true},
+		"exposed, writes":     {ExposeKubeconfig: true},
+		"exposed, everything": {GitOpsGuard: true, ExposeKubeconfig: true},
+	} {
+		t.Run(name+" allows", func(t *testing.T) {
+			if err := policy.CheckCredentialExport("Secrets in the backup", testNamespace, testCluster); err != nil {
+				t.Fatalf("CheckCredentialExport() = %v, want nil", err)
+			}
+		})
+	}
 }

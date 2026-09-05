@@ -71,11 +71,16 @@
 // GitOps guard refuses writes to objects owned by Flux, Argo CD or a Helm
 // release (ErrManagedResource), naming the owner and where the change
 // belongs. Objects labelled giantswarm.io/prevent-deletion are never deleted
-// (ErrDeletionPrevented). The zero policy permits everything:
+// (ErrDeletionPrevented). The same policy decides whether a workload
+// cluster's credentials may leave the server: GetKubeconfig, and
+// BackupCluster with IncludeSecrets, are refused (ErrCredentialExport) unless
+// ExposeKubeconfig is set. The zero policy permits every write and no
+// credential export:
 //
 //	client, err := capi.NewClient("", capi.WithWritePolicy(capi.WritePolicy{
-//	    ReadOnly:    false,
-//	    GitOpsGuard: true,
+//	    ReadOnly:         false,
+//	    GitOpsGuard:      true,
+//	    ExposeKubeconfig: false,
 //	}))
 //
 // # Error Handling
