@@ -67,6 +67,21 @@ nodeSelector: {}  # @schema additionalProperties: true
 tolerations: []
 affinity: {}  # @schema additionalProperties: true
 
+# Write policy. Both switches are on by default: agents get read-only access
+# to Cluster API, and the clusters on a management cluster are managed
+# declaratively (Flux, Argo CD, Helm releases from Git).
+#
+# -- Register only the tools that read (list, get, inspect, export) and refuse
+# every mutating Kubernetes call. Set to false to offer the create, scale,
+# upgrade, pause, resume and delete tools; the person's RBAC still applies.
+readOnly: true
+# -- Refuse writes to objects owned by a GitOps controller (Flux Kustomization
+# or HelmRelease, Argo CD Application) or a Helm release: the change would be
+# reverted on the next reconciliation and belongs in Git. Only matters when
+# readOnly is false. An object labelled giantswarm.io/prevent-deletion is
+# never deleted, whatever the policy.
+gitopsGuard: true
+
 # OAuth 2.1: the server validates bearers against the identity provider and
 # acts as the authenticated person towards the Kubernetes API server.
 oauth:

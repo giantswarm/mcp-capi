@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 	"time"
+
+	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
 // defaultExecuteTimeout is the maximum duration for all operations in a single
@@ -14,9 +16,10 @@ const defaultExecuteTimeout = 2 * time.Minute
 // Harness holds all resources for an isolated test environment.
 // Operations are queued when methods are called and executed when Execute() is invoked.
 type Harness struct {
-	t          TestingT    // test interface for logging and cleanup
-	operations []operation // queued operations
-	executed   bool        // true after Execute() has been called
+	t          TestingT         // test interface for logging and cleanup
+	operations []operation      // queued operations
+	executed   bool             // true after Execute() has been called
+	policy     capi.WritePolicy // write policy of the server under test
 }
 
 // New creates an isolated test harness for a single test.
@@ -26,6 +29,9 @@ func New(t TestingT) *Harness {
 
 	h := &Harness{
 		t: t,
+		// The production default: mutating tools are offered (so they can be
+		// tested) but writes to GitOps- or Helm-owned objects are refused.
+		policy: capi.WritePolicy{GitOpsGuard: true},
 	}
 
 	// Register cleanup to check for forgotten Execute()
@@ -66,7 +72,7 @@ func (h *Harness) Execute() *Harness {
 
 	// Initialize test environment
 	k8sEnv := h.initializeEnvironment()
-	mcpClient := initializeMCP(ctx, h.t, k8sEnv.kubeconfigPath)
+	mcpClient := initializeMCP(ctx, h.t, k8sEnv.kubeconfigPath, h.policy)
 
 	// Create execution context
 	execCtx := &executionContext{
@@ -99,7 +105,7 @@ func (h *Harness) initializeEnvironment() *testEnv {
 // initializeMCP creates and initializes the MCP server and client.
 // It sets up pipes for bidirectional stdio communication and coordinates
 // the initialization of both server and client.
-func initializeMCP(ctx context.Context, t TestingT, kubeconfigPath string) *mcpClient {
+func initializeMCP(ctx context.Context, t TestingT, kubeconfigPath string, policy capi.WritePolicy) *mcpClient {
 	t.Helper()
 
 	// Create pipes for bidirectional communication
@@ -117,11 +123,29 @@ func initializeMCP(ctx context.Context, t TestingT, kubeconfigPath string) *mcpC
 	})
 
 	// Initialize server and client
-	initializeMCPServer(t, kubeconfigPath, serverInput, serverOutput)
+	initializeMCPServer(t, kubeconfigPath, serverInput, serverOutput, policy)
 	mcpClient := initializeMCPClient(ctx, t, clientInput, clientOutput)
 
 	t.Log("MCP ready")
 	return mcpClient
+}
+
+// ReadOnly starts the server under test read-only (the serve command's
+// default): only reading tools are registered and every write is refused.
+// Must be called before Execute().
+func (h *Harness) ReadOnly() *Harness {
+	h.t.Helper()
+	h.policy.ReadOnly = true
+	return h
+}
+
+// WithoutGitOpsGuard starts the server under test with the GitOps guard off,
+// so writes to Flux-, Argo CD- or Helm-owned objects go through. Must be
+// called before Execute().
+func (h *Harness) WithoutGitOpsGuard() *Harness {
+	h.t.Helper()
+	h.policy.GitOpsGuard = false
+	return h
 }
 
 // CreateClusters queues creation of multiple clusters in the given namespace.

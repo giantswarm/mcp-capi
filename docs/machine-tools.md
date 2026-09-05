@@ -2,6 +2,14 @@
 
 This document describes the MCP tools available for managing CAPI machines, machine deployments, machine sets, and Kubernetes nodes.
 
+The tools that change resources (`capi_delete_machine`, `capi_remediate_machine`,
+`capi_create_machinedeployment`, `capi_scale_machinedeployment`,
+`capi_update_machinedeployment`, `capi_rollout_machinedeployment`,
+`capi_drain_node`, `capi_cordon_node`) are only offered when the server runs
+with `--read-only=false`, and the GitOps guard refuses them on objects a
+GitOps controller or a Helm release owns. See the
+[write policy](../README.md#write-policy-read-only-and-the-gitops-guard).
+
 ## Machine Operations
 
 ### capi_list_machines

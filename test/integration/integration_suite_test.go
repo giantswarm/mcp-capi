@@ -16,6 +16,14 @@ const testNamespace = "test-clusters"
 // in CAPI-managed Secrets (matches the convention used by cluster-api).
 const kubeconfigSecretKey = "value"
 
+// Helm's ownership marker, as carried by every workload cluster a Giant Swarm
+// cluster chart renders on a management cluster. The GitOps guard refuses
+// writes to such objects.
+const (
+	managedByLabel = "app.kubernetes.io/managed-by"
+	managedByHelm  = "Helm"
+)
+
 func TestMain(m *testing.M) {
 	// The harness needs kine and kube-apiserver. `make test` installs them
 	// first (the install-test-binaries prerequisite), so the architect go-build

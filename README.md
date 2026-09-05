@@ -175,6 +175,39 @@ The Helm chart exposes them under `oauth.*` (see `helm/mcp-capi/README.md`);
 `oauth.downstream.enabled` (default on) mounts no ServiceAccount token and the
 chart renders no RBAC.
 
+### Write policy: read-only and the GitOps guard
+
+Two switches decide what an agent may change. Both are **on by default**, in
+the CLI and in the Helm chart (`readOnly`, `gitopsGuard`).
+
+- `--read-only` registers only the tools that read (list, get, status,
+  health, kubeconfig, backup, provider lookups). The create, scale, upgrade,
+  pause, resume, update, move, delete, remediate, rollout, drain and cordon
+  tools are not offered at all, and every mutating Kubernetes call is refused
+  should one be reached anyway. Pass `--read-only=false` to offer them; the
+  person's RBAC still applies to each call.
+- `--gitops-guard` refuses a write to an object that a GitOps controller or a
+  Helm release owns. Such an object is recognised by its markers:
+  `kustomize.toolkit.fluxcd.io/name` and `helm.toolkit.fluxcd.io/name` (Flux),
+  `argocd.argoproj.io/instance` or the `argocd.argoproj.io/tracking-id`
+  annotation (Argo CD), `meta.helm.sh/release-name` or
+  `app.kubernetes.io/managed-by=Helm` (Helm). On a Giant Swarm management
+  cluster every workload cluster is rendered by a cluster chart from an App or
+  HelmRelease in Git, so a direct change would be reverted on the next
+  reconciliation; the error names the owner and where the change belongs.
+  Creating new objects is not guarded (there is nothing to inspect); with the
+  guard off, writes go through. Only meaningful with `--read-only=false`.
+
+Independently of both switches, an object labelled
+`giantswarm.io/prevent-deletion` is never deleted.
+
+```bash
+# operator use against a cluster you manage by hand
+mcp-capi serve --read-only=false
+# operator use on a GitOps-managed management cluster: writes only to unmanaged objects
+mcp-capi serve --read-only=false --gitops-guard
+```
+
 ### Version Management
 
 ```bash
@@ -254,33 +287,46 @@ return the object digest directly (for example `capi_get_cluster` returns the
 cluster, `capi_node_status` the node); action tools return the identifiers they
 acted on plus a `message`. Errors stay plain-text MCP tool errors (`isError`).
 
+Tools marked **(write)** change resources. They are hidden when the server runs
+`--read-only` (the default) and subject to the GitOps guard otherwise; see
+[Write policy](#write-policy-read-only-and-the-gitops-guard).
+
 ### Cluster Management
-- `capi_create_cluster` - Create a new CAPI cluster
+- `capi_create_cluster` **(write)** - Create a new CAPI cluster
 - `capi_list_clusters` - List all clusters
 - `capi_get_cluster` - Get cluster details
-- `capi_delete_cluster` - Delete a cluster
-- `capi_scale_cluster` - Scale cluster nodes
+- `capi_cluster_status` - Detailed cluster status
+- `capi_cluster_health` - Cluster health summary
+- `capi_get_kubeconfig` - Retrieve the cluster kubeconfig
+- `capi_backup_cluster` - Export the cluster resources as YAML or JSON
+- `capi_delete_cluster` **(write)** - Delete a cluster
+- `capi_scale_cluster` **(write)** - Scale cluster nodes
+- `capi_upgrade_cluster` **(write)** - Upgrade the Kubernetes version
+- `capi_update_cluster` **(write)** - Update labels and annotations
+- `capi_pause_cluster` **(write)** - Pause reconciliation
+- `capi_resume_cluster` **(write)** - Resume reconciliation
+- `capi_move_cluster` **(write)** - Prepare a move to another management cluster
 
 ### Machine Management
 - `capi_list_machines` - List machines
 - `capi_get_machine` - Get machine details
-- `capi_delete_machine` - Delete a specific machine
-- `capi_remediate_machine` - Trigger machine health check remediation
+- `capi_delete_machine` **(write)** - Delete a specific machine
+- `capi_remediate_machine` **(write)** - Trigger machine health check remediation
 
 ### MachineDeployment Operations
-- `capi_create_machinedeployment` - Create new worker node pool
+- `capi_create_machinedeployment` **(write)** - Create new worker node pool
 - `capi_list_machinedeployments` - List machine deployments
-- `capi_scale_machinedeployment` - Scale worker nodes
-- `capi_update_machinedeployment` - Update MachineDeployment configuration
-- `capi_rollout_machinedeployment` - Trigger rolling update
+- `capi_scale_machinedeployment` **(write)** - Scale worker nodes
+- `capi_update_machinedeployment` **(write)** - Update MachineDeployment configuration
+- `capi_rollout_machinedeployment` **(write)** - Trigger rolling update
 
 ### MachineSet Operations
 - `capi_list_machinesets` - List machine sets
 - `capi_get_machineset` - Get machine set details
 
 ### Node Operations
-- `capi_drain_node` - Safely drain a node
-- `capi_cordon_node` - Cordon/uncordon nodes
+- `capi_drain_node` **(write)** - Safely drain a node
+- `capi_cordon_node` **(write)** - Cordon/uncordon nodes
 - `capi_node_status` - Get node status from workload cluster
 
 ### Infrastructure Provider Tools

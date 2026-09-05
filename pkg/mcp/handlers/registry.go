@@ -9,7 +9,29 @@ import (
 // machine operations, and provider-specific tools. The returned slice
 // contains tool definitions paired with their handler functions, ready
 // to be registered with an MCP server.
+//
+// When the server context's write policy is read-only, only the tools listed
+// in readOnlyTools are returned: mutating tools are not offered at all rather
+// than failing on every call (the clients refuse the writes as well).
 func BuildAllTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
+	tools, err := buildTools(serverCtx)
+	if err != nil {
+		return nil, err
+	}
+	if !serverCtx.WritePolicy().ReadOnly {
+		return tools, nil
+	}
+	filtered := make([]ToolRegistration, 0, len(tools))
+	for _, reg := range tools {
+		if IsReadOnlyTool(reg.Tool.Name) {
+			filtered = append(filtered, reg)
+		}
+	}
+	return filtered, nil
+}
+
+// buildTools constructs every tool regardless of the write policy.
+func buildTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
 	var tools []ToolRegistration
 
 	// Test tool

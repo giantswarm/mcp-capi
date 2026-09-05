@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/giantswarm/mcp-capi/pkg/capi"
 	"github.com/giantswarm/mcp-capi/pkg/oauth"
 )
 
@@ -63,8 +64,25 @@ type ServerOptions struct {
 	// server address and CA are used; its credentials are discarded.
 	CallerIdentity bool
 
+	// ReadOnly registers only the tools that read (list, get, inspect,
+	// export) and refuses every mutating Kubernetes call. This is the
+	// posture for agents on a management cluster whose clusters are
+	// managed declaratively.
+	ReadOnly bool
+
+	// GitOpsGuard refuses mutating calls on objects owned by a GitOps
+	// controller (Flux, Argo CD) or a Helm release: the change would be
+	// reverted on the next reconciliation and belongs in Git. Meaningful
+	// only when ReadOnly is false.
+	GitOpsGuard bool
+
 	// Logger receives structured logs (default: slog.Default()).
 	Logger *slog.Logger
+}
+
+// WritePolicy is the capi.WritePolicy these options describe.
+func (o ServerOptions) WritePolicy() capi.WritePolicy {
+	return capi.WritePolicy{ReadOnly: o.ReadOnly, GitOpsGuard: o.GitOpsGuard}
 }
 
 // DefaultServerOptions returns ServerOptions with default values

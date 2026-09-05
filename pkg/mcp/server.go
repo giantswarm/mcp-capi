@@ -99,6 +99,9 @@ func validateOptions(opts ServerOptions) error {
 // newServerContext builds the handler context: a per-caller client factory
 // when acting as the caller, else one static client.
 func newServerContext(opts ServerOptions, logger *slog.Logger) (*handlers.ServerContext, error) {
+	policy := opts.WritePolicy()
+	logger.Info("Write policy", "readOnly", policy.ReadOnly, "gitopsGuard", policy.GitOpsGuard)
+
 	if opts.CallerIdentity {
 		var (
 			factory *capi.BearerClientFactory
@@ -112,13 +115,14 @@ func newServerContext(opts ServerOptions, logger *slog.Logger) (*handlers.Server
 		if err != nil {
 			return nil, fmt.Errorf("failed to prepare caller-identity Kubernetes access: %w", err)
 		}
+		factory.SetWritePolicy(policy)
 		logger.Info("Acting as the authenticated caller against the Kubernetes API; no ServiceAccount credentials are used", "apiServer", factory.Host())
-		return handlers.NewCallerIdentityServerContext(factory), nil
+		return handlers.NewCallerIdentityServerContext(factory, policy), nil
 	}
 
 	// Initialize CAPI client
 	log.Println("Initializing CAPI client...")
-	capiClient, err := capi.NewClient(opts.KubeconfigPath)
+	capiClient, err := capi.NewClient(opts.KubeconfigPath, capi.WithWritePolicy(policy))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CAPI client: %v", err)
 	}

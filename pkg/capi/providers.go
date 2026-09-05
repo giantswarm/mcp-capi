@@ -116,6 +116,9 @@ func (c *Client) ScaleControlPlane(ctx context.Context, namespace, name string, 
 	if err != nil {
 		return err
 	}
+	if err := c.policy.CheckUpdate("KubeadmControlPlane", kcp); err != nil {
+		return err
+	}
 
 	// Update replicas
 	kcp.Spec.Replicas = &replicas
@@ -149,6 +152,9 @@ func (c *Client) ScaleCluster(ctx context.Context, namespace, clusterName, targe
 func (c *Client) ScaleMachineDeployment(ctx context.Context, namespace, name string, replicas int32) error {
 	md, err := c.GetMachineDeployment(ctx, namespace, name)
 	if err != nil {
+		return err
+	}
+	if err := c.policy.CheckUpdate("MachineDeployment", md); err != nil {
 		return err
 	}
 

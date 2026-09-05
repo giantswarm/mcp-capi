@@ -50,6 +50,16 @@ spec:
             {{- if $downstream }}
             - --downstream-oauth
             {{- end }}
+            {{- /* The binary defaults to --read-only --gitops-guard; only an
+                 opt-out is passed, so an image that predates the flags (the
+                 smoke test pins a released tag) still starts with the safe
+                 posture and the pod logs "Write policy" at startup. */}}
+            {{- if not .Values.readOnly }}
+            - --read-only=false
+            {{- end }}
+            {{- if not .Values.gitopsGuard }}
+            - --gitops-guard=false
+            {{- end }}
           ports:
             - name: http
               containerPort: 8080

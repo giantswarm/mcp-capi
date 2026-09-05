@@ -46,6 +46,7 @@ type BearerClientFactory struct {
 	qps     float32
 	burst   int
 	timeout time.Duration
+	policy  WritePolicy
 
 	mu         sync.Mutex
 	cache      map[string]cacheEntry
@@ -103,6 +104,11 @@ func NewBearerClientFactoryFromKubeconfig(path string) (*BearerClientFactory, er
 // Host returns the API server address the factory dials.
 func (f *BearerClientFactory) Host() string { return f.host }
 
+// SetWritePolicy sets the policy every client built by the factory applies
+// to mutating calls. Call it before the first ClientFor; cached clients keep
+// the policy they were built with.
+func (f *BearerClientFactory) SetWritePolicy(p WritePolicy) { f.policy = p }
+
 // ClientFor returns a client that authenticates as the bearer of token.
 func (f *BearerClientFactory) ClientFor(token string) (*Client, error) {
 	if token == "" {
@@ -118,7 +124,7 @@ func (f *BearerClientFactory) ClientFor(token string) (*Client, error) {
 	}
 	f.mu.Unlock()
 
-	c, err := NewClientFromConfig(f.restConfig(token))
+	c, err := NewClientFromConfig(f.restConfig(token), WithWritePolicy(f.policy))
 	if err != nil {
 		return nil, err
 	}

@@ -34,17 +34,32 @@ var ErrNoCallerIdentity = errors.New("authentication required: no identity token
 type ServerContext struct {
 	capiClient *capi.Client
 	factory    *capi.BearerClientFactory
+	policy     capi.WritePolicy
 }
 
-// NewServerContext creates a ServerContext around one static CAPI client.
+// NewServerContext creates a ServerContext around one static CAPI client. The
+// write policy is taken from the client.
 func NewServerContext(capiClient *capi.Client) *ServerContext {
-	return &ServerContext{capiClient: capiClient}
+	sc := &ServerContext{capiClient: capiClient}
+	if capiClient != nil {
+		sc.policy = capiClient.WritePolicy()
+	}
+	return sc
 }
 
 // NewCallerIdentityServerContext creates a ServerContext that acts as the
-// authenticated caller of each request.
-func NewCallerIdentityServerContext(factory *capi.BearerClientFactory) *ServerContext {
-	return &ServerContext{factory: factory}
+// authenticated caller of each request. policy must match the one set on the
+// factory: it decides which tools are registered, the factory's clients
+// enforce it.
+func NewCallerIdentityServerContext(factory *capi.BearerClientFactory, policy capi.WritePolicy) *ServerContext {
+	return &ServerContext{factory: factory, policy: policy}
+}
+
+// WritePolicy returns the policy the clients of this context apply to
+// mutating calls. BuildAllTools registers no mutating tool when it is
+// read-only.
+func (sc *ServerContext) WritePolicy() capi.WritePolicy {
+	return sc.policy
 }
 
 // Client returns the CAPI client for this request.
