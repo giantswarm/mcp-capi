@@ -1,1 +1,1 @@
-{"items":[{"name":"cluster-a-machine-0","namespace":"test-clusters","clusterName":"cluster-a","nodeName":"cluster-a-machine-0-node","ready":false},{"name":"cluster-a-machine-1","namespace":"test-clusters","clusterName":"cluster-a","ready":false}]}
+{"items":[{"name":"cluster-a-machine-0","namespace":"test-clusters","clusterName":"cluster-a","nodeName":"cluster-a-machine-0-node","ready":true},{"name":"cluster-a-machine-1","namespace":"test-clusters","clusterName":"cluster-a","ready":false}]}

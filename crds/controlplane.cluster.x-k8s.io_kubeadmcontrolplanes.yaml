@@ -4957,7 +4957,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       scale:
         labelSelectorPath: .status.selector
@@ -7794,7 +7794,7 @@ spec:
         - spec
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       scale:
         labelSelectorPath: .status.selector

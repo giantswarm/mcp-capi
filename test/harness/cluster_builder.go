@@ -80,7 +80,9 @@ func (cb *ClusterBuilder) WithVersion(version string) *ClusterBuilder {
 }
 
 // WithMachines sets the number of machines to create and how many should be ready.
-// Ready machines will have a NodeRef set in their status.
+// Ready machines have a NodeRef and a Ready=True condition in their status, so
+// both capi_get_cluster (NodeRef) and capi_cluster_health (Ready condition)
+// count them as ready.
 func (cb *ClusterBuilder) WithMachines(total, ready int) *ClusterBuilder {
 	if ready > total {
 		cb.harness.t.Fatalf("WithMachines: ready (%d) cannot exceed total (%d)", ready, total)

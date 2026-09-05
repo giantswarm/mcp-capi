@@ -24,17 +24,17 @@ func TestCapiClusterHealth(t *testing.T) {
 			Execute()
 	})
 
-	t.Run("returns healthy status for basic cluster", func(t *testing.T) {
+	t.Run("returns unhealthy status for a bare cluster without status", func(t *testing.T) {
 		t.Parallel()
 		namespace := testNamespace
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			CreateClusters(namespace, "healthy-basic").
+			CreateClusters(namespace, "bare-cluster").
 			ToolCall("capi_cluster_health").
 			WithArg("namespace", namespace).
-			WithArg("name", "healthy-basic").
-			AssertContent("healthy_basic.golden").
+			WithArg("name", "bare-cluster").
+			AssertContent("bare_cluster.golden").
 			Execute()
 	})
 
@@ -62,7 +62,11 @@ func TestCapiClusterHealth(t *testing.T) {
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			Cluster(namespace, "partial-health").WithProvider("azure").WithMachines(3, 1).Create().
+			Cluster(namespace, "partial-health").WithProvider("azure").WithPhase("Provisioned").
+			WithControlPlaneReady(true).
+			WithInfraReady(true).
+			WithMachines(3, 1).
+			Create().
 			ToolCall("capi_cluster_health").
 			WithArg("namespace", namespace).
 			WithArg("name", "partial-health").
@@ -76,7 +80,10 @@ func TestCapiClusterHealth(t *testing.T) {
 
 		harness.New(t).
 			CreateNamespace(namespace).
-			Cluster(namespace, "fully-healthy").WithProvider("aws").WithPhase("Provisioned").WithMachines(3, 3).
+			Cluster(namespace, "fully-healthy").WithProvider("aws").WithPhase("Provisioned").
+			WithControlPlaneReady(true).
+			WithInfraReady(true).
+			WithMachines(3, 3).
 			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
 			Create().
 			ToolCall("capi_cluster_health").

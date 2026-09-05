@@ -1,1 +1,1 @@
-{"name":"failure-both-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":0,"availableReplicas":0,"template":{}}
+{"name":"failure-both-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":0,"availableReplicas":0,"failureReason":"InvalidConfiguration","failureMessage":"spec.template.spec.infrastructureRef is required","template":{}}

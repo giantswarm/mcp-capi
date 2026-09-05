@@ -477,12 +477,19 @@ func (te *testEnv) createMachine(ctx context.Context, namespace, clusterName, ma
 		te.t.Fatalf("failed to create machine %s/%s: %v", namespace, machineName, err)
 	}
 
-	// If ready, set NodeRef in status
+	// A ready machine has joined the cluster: it carries a NodeRef and a Ready
+	// condition that is True. capi_get_cluster counts the NodeRef, while
+	// capi_cluster_health counts the Ready condition, so set both.
 	if ready {
 		machine.Status.NodeRef = &corev1.ObjectReference{
 			Kind: "Node",
 			Name: machineName + "-node",
 		}
+		machine.Status.Conditions = clusterv1.Conditions{{
+			Type:               clusterv1.ReadyCondition,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		}}
 		if err := te.ctrlClient.Status().Update(ctx, machine); err != nil {
 			te.t.Fatalf("failed to set NodeRef on machine %s/%s: %v", namespace, machineName, err)
 		}

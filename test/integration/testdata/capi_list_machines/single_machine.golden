@@ -1,1 +1,1 @@
-{"items":[{"name":"single-machine-cluster-machine-0","namespace":"test-clusters","clusterName":"single-machine-cluster","nodeName":"single-machine-cluster-machine-0-node","ready":false}]}
+{"items":[{"name":"single-machine-cluster-machine-0","namespace":"test-clusters","clusterName":"single-machine-cluster","nodeName":"single-machine-cluster-machine-0-node","ready":true}]}

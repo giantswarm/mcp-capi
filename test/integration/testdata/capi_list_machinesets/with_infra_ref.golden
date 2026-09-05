@@ -1,1 +1,1 @@
-{"items":[{"name":"ms-infra","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"infrastructure":{"kind":"AWSMachineTemplate","name":"aws-machine-template"}}]}
+{"items":[{"name":"ms-infra","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"infrastructure":{"kind":"AWSMachineTemplate","name":"aws-machine-template","apiVersion":"infrastructure.cluster.x-k8s.io/v1beta1"}}]}

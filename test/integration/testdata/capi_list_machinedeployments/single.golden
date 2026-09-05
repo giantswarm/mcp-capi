@@ -1,1 +1,1 @@
-{"items":[{"name":"only-md","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"readyReplicas":2,"updatedReplicas":0,"availableReplicas":2,"version":"v1.29.0"}]}
+{"items":[{"name":"only-md","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"readyReplicas":2,"updatedReplicas":3,"availableReplicas":2,"version":"v1.29.0"}]}

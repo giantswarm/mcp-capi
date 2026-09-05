@@ -1,1 +1,1 @@
-{"name":"multi-machine-machine-0","namespace":"test-clusters","clusterName":"multi-machine","ready":false,"node":{"name":"multi-machine-machine-0-node"}}
+{"name":"multi-machine-machine-0","namespace":"test-clusters","clusterName":"multi-machine","ready":true,"node":{"name":"multi-machine-machine-0-node"},"conditions":[{"type":"Ready","status":"True"}]}
