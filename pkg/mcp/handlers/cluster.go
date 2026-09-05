@@ -665,7 +665,7 @@ func CreateUpgradeClusterHandler(serverCtx *ServerContext) server.ToolHandlerFun
 }
 
 // updateClusterResult is the result of capi_update_cluster; labels and
-// annotations are the cluster's metadata after the update.
+// annotations are the cluster's user-managed metadata after the update.
 type updateClusterResult struct {
 	Namespace   string            `json:"namespace"`
 	Name        string            `json:"name"`
@@ -725,8 +725,8 @@ func CreateUpdateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		return jsonResult(updateClusterResult{
 			Namespace:   namespace,
 			Name:        name,
-			Labels:      cluster.Labels,
-			Annotations: cluster.Annotations,
+			Labels:      capi.UserMetadata(cluster.Labels),
+			Annotations: capi.UserMetadata(cluster.Annotations),
 			Message:     "Cluster metadata updated",
 		})
 	}

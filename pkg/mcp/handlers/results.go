@@ -83,7 +83,8 @@ type ClusterSummary struct {
 }
 
 // clusterSummary converts a capi.ClusterStatus into its JSON digest. Labels
-// under the cluster.x-k8s.io domain are system-managed and left out.
+// and annotations under the cluster.x-k8s.io domain are system-managed and
+// left out.
 func clusterSummary(status *capi.ClusterStatus) ClusterSummary {
 	return ClusterSummary{
 		Name:                status.Name,
@@ -97,8 +98,8 @@ func clusterSummary(status *capi.ClusterStatus) ClusterSummary {
 		Version:             status.Version,
 		TotalMachines:       status.TotalMachines,
 		ReadyMachines:       status.ReadyMachines,
-		Labels:              capi.UserLabels(status.Labels),
-		Annotations:         status.Annotations,
+		Labels:              capi.UserMetadata(status.Labels),
+		Annotations:         capi.UserMetadata(status.Annotations),
 		Conditions:          capiConditions(status.Conditions),
 	}
 }

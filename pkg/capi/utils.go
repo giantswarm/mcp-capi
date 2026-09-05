@@ -197,12 +197,14 @@ func isConditionTrue(conditions clusterv1.Conditions, conditionType clusterv1.Co
 	return false
 }
 
-// UserLabels returns a copy of labels with internal CAPI labels removed.
-// Internal labels (those under the cluster.x-k8s.io domain) are set by the
-// system and are not useful for user-facing display.
-func UserLabels(labels map[string]string) map[string]string {
+// UserMetadata returns a copy of labels or annotations with the CAPI-managed
+// keys removed. Keys under the cluster.x-k8s.io domain are set by the system
+// (for example the cluster-name label or the multi-kilobyte
+// cluster.x-k8s.io/conversion-data annotation the conversion webhook stores on
+// every object) and only add noise to a tool result.
+func UserMetadata(metadata map[string]string) map[string]string {
 	result := make(map[string]string)
-	for k, v := range labels {
+	for k, v := range metadata {
 		if !strings.Contains(k, "cluster.x-k8s.io") {
 			result[k] = v
 		}
