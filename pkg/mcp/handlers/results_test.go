@@ -92,6 +92,10 @@ func TestClusterSummaryDropsSystemLabelsAndKeepsConditions(t *testing.T) {
 			"cluster.x-k8s.io/cluster-name": "c1",
 			"env":                           "prod",
 		},
+		Annotations: map[string]string{
+			"cluster.x-k8s.io/conversion-data":  `{"apiVersion":"cluster.x-k8s.io/v1beta2"}`,
+			"cluster.giantswarm.io/description": "prod MC",
+		},
 		Conditions: clusterv1.Conditions{
 			{Type: clusterv1.ReadyCondition, Status: "True", Reason: "ClusterReady", Message: "all good"},
 		},
@@ -103,6 +107,12 @@ func TestClusterSummaryDropsSystemLabelsAndKeepsConditions(t *testing.T) {
 	}
 	if got.Labels["env"] != "prod" {
 		t.Fatalf("user labels must be kept, got %v", got.Labels)
+	}
+	if _, ok := got.Annotations["cluster.x-k8s.io/conversion-data"]; ok {
+		t.Fatalf("system annotations must be dropped, got %v", got.Annotations)
+	}
+	if got.Annotations["cluster.giantswarm.io/description"] != "prod MC" {
+		t.Fatalf("user annotations must be kept, got %v", got.Annotations)
 	}
 	if len(got.Conditions) != 1 || got.Conditions[0].Message != "all good" {
 		t.Fatalf("conditions must carry reason and message, got %+v", got.Conditions)
