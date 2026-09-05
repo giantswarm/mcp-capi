@@ -1,1 +1,1 @@
-{"name":"failure-reason-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":1,"availableReplicas":1,"template":{}}
+{"name":"failure-reason-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":1,"availableReplicas":1,"failureReason":"InvalidConfiguration","template":{}}

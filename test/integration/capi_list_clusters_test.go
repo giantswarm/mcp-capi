@@ -25,6 +25,24 @@ func TestCapiListClusters(t *testing.T) {
 			Execute()
 	})
 
+	t.Run("lists cluster with control plane and infrastructure ready", func(t *testing.T) {
+		t.Parallel()
+		namespace := testNamespace
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "ready-cluster").WithProvider("aws").WithPhase("Provisioned").
+			WithControlPlaneReady(true).
+			WithInfraReady(true).
+			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
+			WithMachines(2, 2).
+			Create().
+			ToolCall("capi_list_clusters").
+			WithArg("namespace", namespace).
+			AssertContent("control_plane_and_infra_ready.golden").
+			Execute()
+	})
+
 	t.Run("lists clusters with metadata", func(t *testing.T) {
 		t.Parallel()
 		namespace := testNamespace

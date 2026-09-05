@@ -1,1 +1,1 @@
-{"items":[{"name":"md-nophase","namespace":"test-clusters","clusterName":"test-cluster","replicas":2,"readyReplicas":2,"updatedReplicas":0,"availableReplicas":2}]}
+{"items":[{"name":"md-nophase","namespace":"test-clusters","clusterName":"test-cluster","replicas":2,"readyReplicas":2,"updatedReplicas":2,"availableReplicas":2}]}

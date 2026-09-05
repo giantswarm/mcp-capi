@@ -127,6 +127,25 @@ func TestCapiGetCluster(t *testing.T) {
 			Execute()
 	})
 
+	t.Run("gets cluster with control plane and infrastructure ready", func(t *testing.T) {
+		t.Parallel()
+		namespace := testNamespace
+
+		harness.New(t).
+			CreateNamespace(namespace).
+			Cluster(namespace, "ready-cluster").WithProvider("aws").WithPhase("Provisioned").
+			WithControlPlaneReady(true).
+			WithInfraReady(true).
+			WithCondition("Ready").True().Reason("ClusterReady").Message("Cluster is fully operational").Done().
+			WithMachines(2, 2).
+			Create().
+			ToolCall("capi_get_cluster").
+			WithArg("namespace", namespace).
+			WithArg("name", "ready-cluster").
+			AssertContent("control_plane_and_infra_ready.golden").
+			Execute()
+	})
+
 	t.Run("gets cluster with conditions", func(t *testing.T) {
 		t.Parallel()
 		namespace := testNamespace

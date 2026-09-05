@@ -1,1 +1,1 @@
-{"name":"my-cluster-machine-0","namespace":"test-clusters","clusterName":"my-cluster","ready":false,"node":{"name":"my-cluster-machine-0-node"}}
+{"name":"my-cluster-machine-0","namespace":"test-clusters","clusterName":"my-cluster","ready":true,"node":{"name":"my-cluster-machine-0-node"},"conditions":[{"type":"Ready","status":"True"}]}

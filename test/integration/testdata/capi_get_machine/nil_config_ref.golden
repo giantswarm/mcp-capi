@@ -1,1 +1,1 @@
-{"name":"nobootstrap-machine","namespace":"test-clusters","clusterName":"nobootstrap-cluster","phase":"Running","ready":false,"infrastructure":{"kind":"AWSMachine","name":"nobootstrap-infra"}}
+{"name":"nobootstrap-machine","namespace":"test-clusters","clusterName":"nobootstrap-cluster","phase":"Running","ready":false,"infrastructure":{"kind":"AWSMachine","name":"nobootstrap-infra","apiVersion":"infrastructure.cluster.x-k8s.io/v1beta1"}}

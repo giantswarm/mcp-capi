@@ -1,1 +1,1 @@
-{"name":"bootstrap-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"template":{"bootstrap":{"kind":"KubeadmConfigTemplate","name":"bootstrap-config"}}}
+{"name":"bootstrap-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"template":{"bootstrap":{"kind":"KubeadmConfigTemplate","name":"bootstrap-config","apiVersion":"bootstrap.cluster.x-k8s.io/v1beta1"}}}

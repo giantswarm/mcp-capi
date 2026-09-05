@@ -1,1 +1,1 @@
-{"name":"noinfra-machine","namespace":"test-clusters","clusterName":"noinfra-cluster","phase":"Provisioning","ready":false,"bootstrap":{"kind":"KubeadmConfig","name":"noinfra-bootstrap"}}
+{"name":"noinfra-machine","namespace":"test-clusters","clusterName":"noinfra-cluster","phase":"Provisioning","ready":false,"bootstrap":{"kind":"KubeadmConfig","name":"noinfra-bootstrap","apiVersion":"bootstrap.cluster.x-k8s.io/v1beta1"}}

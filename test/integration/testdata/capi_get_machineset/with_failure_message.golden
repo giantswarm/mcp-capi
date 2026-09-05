@@ -1,1 +1,1 @@
-{"name":"failure-message-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":0,"availableReplicas":0,"template":{}}
+{"name":"failure-message-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":0,"availableReplicas":0,"failureMessage":"unable to create machines: quota exceeded","template":{}}
