@@ -1,3 +1,7 @@
+{{- $oauth := .Values.oauth.enabled -}}
+{{- $downstream := eq (include "mcp-capi.oauth.downstream" .) "true" -}}
+{{- $provider := include "mcp-capi.oauth.provider" . -}}
+{{- $caSecret := and $oauth (eq $provider "dex") (include "mcp-capi.oauth.caSecretName" .) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,6 +44,12 @@ spec:
           args:
             - serve
             - --transport=streamable-http
+            {{- if $oauth }}
+            - --enable-oauth
+            {{- end }}
+            {{- if $downstream }}
+            - --downstream-oauth
+            {{- end }}
           ports:
             - name: http
               containerPort: 8080
@@ -67,6 +77,74 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            {{- if $oauth }}
+            {{- $baseURL := required "oauth.baseURL (or global.domain) is required when oauth.enabled is true" (include "mcp-capi.oauth.baseURL" .) }}
+            - name: MCP_OAUTH_ISSUER
+              value: {{ $baseURL | quote }}
+            - name: OAUTH_REDIRECT_URL
+              value: {{ printf "%s/oauth/callback" $baseURL | quote }}
+            - name: MCP_OAUTH_PROVIDER
+              value: {{ $provider | quote }}
+            {{- if eq $provider "dex" }}
+            - name: DEX_ISSUER_URL
+              value: {{ required "oauth.dex.issuerURL (or global.identity.issuerUrl) is required for the dex provider" (include "mcp-capi.oauth.dexIssuerURL" .) | quote }}
+            - name: DEX_CLIENT_ID
+              value: {{ required "oauth.dex.clientID (or global.identity.clientId) is required for the dex provider" (include "mcp-capi.oauth.dexClientID" .) | quote }}
+            - name: DEX_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mcp-capi.oauth.secretName" . }}
+                  key: dex-client-secret
+            {{- with .Values.oauth.dex.kubernetesAuthenticatorClientID }}
+            - name: DEX_K8S_AUTHENTICATOR_CLIENT_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if $caSecret }}
+            - name: DEX_CA_FILE
+              value: "/etc/ssl/certs/dex-ca/{{ include "mcp-capi.oauth.caSecretKey" . }}"
+            {{- end }}
+            {{- else }}
+            - name: GOOGLE_CLIENT_ID
+              value: {{ required "oauth.google.clientID is required for the google provider" .Values.oauth.google.clientID | quote }}
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mcp-capi.oauth.secretName" . }}
+                  key: google-client-secret
+            {{- end }}
+            - name: MCP_OAUTH_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mcp-capi.oauth.secretName" . }}
+                  key: oauth-encryption-key
+                  optional: true
+            - name: MCP_OAUTH_ALLOW_PUBLIC_REGISTRATION
+              value: {{ .Values.oauth.allowPublicRegistration | quote }}
+            - name: MCP_OAUTH_ALLOW_PRIVATE_URLS
+              value: {{ .Values.oauth.allowPrivateURLs | quote }}
+            {{- with include "mcp-capi.oauth.trustedAudiences" . }}
+            - name: OAUTH_TRUSTED_AUDIENCES
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if eq .Values.oauth.storage.type "valkey" }}
+            - name: OAUTH_STORAGE
+              value: "valkey"
+            - name: VALKEY_URL
+              value: {{ required "oauth.storage.valkey.url is required when oauth.storage.type is valkey" .Values.oauth.storage.valkey.url | quote }}
+            - name: VALKEY_TLS_ENABLED
+              value: {{ .Values.oauth.storage.valkey.tls.enabled | quote }}
+            {{- with .Values.oauth.storage.valkey.keyPrefix }}
+            - name: VALKEY_KEY_PREFIX
+              value: {{ . | quote }}
+            {{- end }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oauth.storage.valkey.existingSecret | default (include "mcp-capi.oauth.secretName" .) }}
+                  key: {{ .Values.oauth.storage.valkey.secretKeyPassword | default "valkey-password" }}
+                  optional: true
+            {{- end }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
@@ -75,18 +153,29 @@ spec:
             - name: sa-token
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount
               readOnly: true
+            {{- if $caSecret }}
+            - name: dex-ca
+              mountPath: /etc/ssl/certs/dex-ca
+              readOnly: true
+            {{- end }}
           {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
+        # The API server address comes from the KUBERNETES_SERVICE_* environment
+        # and its CA from kube-root-ca.crt. Acting as the caller
+        # (oauth.downstream) mounts no ServiceAccount token at all: the pod
+        # holds no Kubernetes credentials of its own.
         - name: sa-token
           projected:
             sources:
+              {{- if not $downstream }}
               - serviceAccountToken:
                   expirationSeconds: 3600
                   path: token
+              {{- end }}
               - configMap:
                   name: kube-root-ca.crt
                   items:
@@ -97,6 +186,14 @@ spec:
                     - path: namespace
                       fieldRef:
                         fieldPath: metadata.namespace
+        {{- if $caSecret }}
+        - name: dex-ca
+          secret:
+            secretName: {{ include "mcp-capi.oauth.caSecretName" . }}
+            items:
+              - key: {{ include "mcp-capi.oauth.caSecretKey" . }}
+                path: {{ include "mcp-capi.oauth.caSecretKey" . }}
+        {{- end }}
       {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}

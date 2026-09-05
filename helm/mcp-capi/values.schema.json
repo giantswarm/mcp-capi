@@ -5,7 +5,7 @@
     "properties": {
         "affinity": {
             "type": "object",
-            "additionalProperties": false
+            "additionalProperties": true
         },
         "baseDomain": {
             "type": "string"
@@ -20,7 +20,20 @@
         },
         "ciliumNetworkPolicy": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+                "annotations": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "labels": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
         },
         "cluster": {
             "type": "object",
@@ -41,16 +54,61 @@
         "fullnameOverride": {
             "type": "string"
         },
+        "gatewayAPI": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "backendTrafficPolicy": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "annotations": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "labels": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "timeout": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "httpRoute": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "annotations": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "hostnames": {
+                            "type": "array"
+                        },
+                        "labels": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "parentRefs": {
+                            "type": "array"
+                        }
+                    }
+                }
+            }
+        },
         "gcpProject": {
             "type": "string"
         },
         "global": {
-            "type": [
-                "object",
-                "null"
-            ],
-            "description": "Global values shared between all subcharts",
-            "$comment": "Added automatically by 'helm schema' to allow this chart to be used as a Helm dependency, as this schema would otherwise not allow Helm's special 'global' values key."
+            "type": "object",
+            "additionalProperties": true
         },
         "image": {
             "type": "object",
@@ -78,15 +136,135 @@
         },
         "nodeSelector": {
             "type": "object",
-            "additionalProperties": false
+            "additionalProperties": true
+        },
+        "oauth": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "allowPrivateURLs": {
+                    "type": "boolean"
+                },
+                "allowPublicRegistration": {
+                    "type": "boolean"
+                },
+                "baseURL": {
+                    "type": "string"
+                },
+                "dex": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "caSecret": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "key": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "clientID": {
+                            "type": "string"
+                        },
+                        "clientSecret": {
+                            "type": "string"
+                        },
+                        "issuerURL": {
+                            "type": "string"
+                        },
+                        "kubernetesAuthenticatorClientID": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "downstream": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        }
+                    }
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "encryptionKey": {
+                    "type": "string"
+                },
+                "existingSecret": {
+                    "type": "string"
+                },
+                "google": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "clientID": {
+                            "type": "string"
+                        },
+                        "clientSecret": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "storage": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "type": {
+                            "type": "string"
+                        },
+                        "valkey": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "existingSecret": {
+                                    "type": "string"
+                                },
+                                "keyPrefix": {
+                                    "type": "string"
+                                },
+                                "password": {
+                                    "type": "string"
+                                },
+                                "secretKeyPassword": {
+                                    "type": "string"
+                                },
+                                "tls": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "enabled": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "trustedAudiences": {
+                    "type": "array"
+                }
+            }
         },
         "podAnnotations": {
             "type": "object",
-            "additionalProperties": false
+            "additionalProperties": true
         },
         "podLabels": {
             "type": "object",
-            "additionalProperties": false
+            "additionalProperties": true
         },
         "podSecurityContext": {
             "type": "object",
@@ -208,7 +386,7 @@
             "properties": {
                 "annotations": {
                     "type": "object",
-                    "additionalProperties": false
+                    "additionalProperties": true
                 },
                 "automount": {
                     "type": "boolean"

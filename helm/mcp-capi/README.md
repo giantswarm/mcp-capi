@@ -20,6 +20,7 @@ A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| global | object | `{}` |  |
 | replicaCount | int | `1` |  |
 | image.registry | string | `"gsoci.azurecr.io"` |  |
 | image.repository | string | `"giantswarm/mcp-capi"` |  |
@@ -56,3 +57,39 @@ A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 | nodeSelector | object | `{}` |  |
 | tolerations | list | `[]` |  |
 | affinity | object | `{}` |  |
+| oauth.enabled | bool | `false` |  |
+| oauth.baseURL | string | `""` |  |
+| oauth.provider | string | `"dex"` |  |
+| oauth.dex.issuerURL | string | `""` |  |
+| oauth.dex.clientID | string | `""` |  |
+| oauth.dex.clientSecret | string | `""` |  |
+| oauth.dex.kubernetesAuthenticatorClientID | string | `""` |  |
+| oauth.dex.caSecret.name | string | `""` |  |
+| oauth.dex.caSecret.key | string | `"ca.crt"` |  |
+| oauth.google.clientID | string | `""` |  |
+| oauth.google.clientSecret | string | `""` |  |
+| oauth.existingSecret | string | `""` |  |
+| oauth.encryptionKey | string | `""` |  |
+| oauth.allowPublicRegistration | bool | `false` |  |
+| oauth.allowPrivateURLs | bool | `false` |  |
+| oauth.trustedAudiences | list | `[]` |  |
+| oauth.downstream.enabled | bool | `true` |  |
+| oauth.storage.type | string | `"memory"` |  |
+| oauth.storage.valkey.url | string | `""` |  |
+| oauth.storage.valkey.password | string | `""` |  |
+| oauth.storage.valkey.tls.enabled | bool | `false` |  |
+| oauth.storage.valkey.keyPrefix | string | `"mcp:"` |  |
+| oauth.storage.valkey.existingSecret | string | `""` |  |
+| oauth.storage.valkey.secretKeyPassword | string | `"valkey-password"` |  |
+| gatewayAPI.enabled | bool | `false` |  |
+| gatewayAPI.httpRoute.parentRefs | list | `[]` |  |
+| gatewayAPI.httpRoute.hostnames | list | `[]` |  |
+| gatewayAPI.httpRoute.labels | object | `{}` |  |
+| gatewayAPI.httpRoute.annotations | object | `{}` |  |
+| gatewayAPI.backendTrafficPolicy.enabled | bool | `false` |  |
+| gatewayAPI.backendTrafficPolicy.timeout | string | `"0s"` |  |
+| gatewayAPI.backendTrafficPolicy.labels | object | `{}` |  |
+| gatewayAPI.backendTrafficPolicy.annotations | object | `{}` |  |
+| ciliumNetworkPolicy.enabled | bool | `true` |  |
+| ciliumNetworkPolicy.labels | object | `{}` |  |
+| ciliumNetworkPolicy.annotations | object | `{}` |  |

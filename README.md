@@ -139,6 +139,42 @@ mcp-capi serve \
   --http-endpoint /api/mcp
 ```
 
+### Authentication and the caller's identity
+
+With `--enable-oauth` (sse and streamable-http transports) mcp-capi is an
+OAuth 2.1 resource server built on
+[mcp-oauth](https://github.com/giantswarm/mcp-oauth). Two kinds of bearer are
+accepted on the MCP endpoint:
+
+- an OIDC ID token forwarded by an aggregator such as
+  [muster](https://github.com/giantswarm/muster) (`forwardToken: true`), when
+  its audience is listed in `OAUTH_TRUSTED_AUDIENCES` — single sign-on;
+- an access token issued by mcp-capi's own authorization server after an
+  interactive login at the configured identity provider (Dex or Google).
+
+With `--downstream-oauth` mcp-capi **acts as the caller**: every Kubernetes API
+call authenticates with the person's ID token, the API server's OIDC
+authenticator resolves the person, and the person's RBAC governs every CAPI
+operation. The server holds no kubeconfig credentials and no ServiceAccount
+token; a request without an identity token is refused instead of falling back
+to a service identity.
+
+```bash
+export MCP_OAUTH_ISSUER=https://mcp-capi.example.com
+export OAUTH_REDIRECT_URL=https://mcp-capi.example.com/oauth/callback
+export DEX_ISSUER_URL=https://dex.example.com
+export DEX_CLIENT_ID=mcp-capi
+export DEX_CLIENT_SECRET=...
+export DEX_K8S_AUTHENTICATOR_CLIENT_ID=dex-k8s-authenticator   # audience the apiserver trusts
+export OAUTH_TRUSTED_AUDIENCES=muster-client,dex-k8s-authenticator
+mcp-capi serve --transport streamable-http --enable-oauth --downstream-oauth
+```
+
+All settings are environment variables; `mcp-capi serve --help` lists them.
+The Helm chart exposes them under `oauth.*` (see `helm/mcp-capi/README.md`);
+`oauth.downstream.enabled` (default on) mounts no ServiceAccount token and the
+chart renders no RBAC.
+
 ### Version Management
 
 ```bash

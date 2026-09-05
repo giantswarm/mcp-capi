@@ -16,3 +16,13 @@
 {{- end }}
 
 2. The MCP server is ready to accept connections via streamable HTTP transport.
+{{- if .Values.oauth.enabled }}
+
+3. OAuth 2.1 is enabled: the MCP endpoint requires a bearer token issued by
+   {{ include "mcp-capi.oauth.baseURL" . }} or an ID token of a trusted audience
+   forwarded by an aggregator (single sign-on).
+{{- if .Values.oauth.downstream.enabled }}
+   Every Kubernetes API call is made as the authenticated person; the pod
+   holds no ServiceAccount credentials and this chart grants no RBAC.
+{{- end }}
+{{- end }}

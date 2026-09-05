@@ -1,0 +1,27 @@
+{{- if and .Values.gatewayAPI.enabled .Values.gatewayAPI.backendTrafficPolicy.enabled -}}
+{{- $fullName := include "mcp-capi.fullname" . -}}
+# Envoy Gateway specific: without it the default 15s request timeout cuts
+# long-lived MCP streams.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mcp-capi.labels" . | nindent 4 }}
+    {{- with .Values.gatewayAPI.backendTrafficPolicy.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.gatewayAPI.backendTrafficPolicy.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ $fullName }}
+  timeout:
+    http:
+      requestTimeout: {{ .Values.gatewayAPI.backendTrafficPolicy.timeout | quote }}
+{{- end }}

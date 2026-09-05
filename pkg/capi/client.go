@@ -33,26 +33,29 @@ type Client struct {
 	config *rest.Config
 }
 
-// NewClient creates a new CAPI client
+// NewClient creates a CAPI client from a kubeconfig path (or the in-cluster
+// configuration when the path is empty and no KUBECONFIG is set).
 func NewClient(kubeconfig string) (*Client, error) {
 	config, err := loadConfig(kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
+	return NewClientFromConfig(config)
+}
 
+// NewClientFromConfig creates a CAPI client from a REST config. Callers that
+// act on behalf of a person pass a config whose BearerToken is the person's
+// OIDC ID token; see BearerClientFactory.
+func NewClientFromConfig(config *rest.Config) (*Client, error) {
 	// Create standard Kubernetes client
 	k8sClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	// Create controller-runtime client with CAPI scheme
-	scheme := runtime.NewScheme()
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add core types to scheme: %w", err)
-	}
-	if err := clusterv1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add CAPI to scheme: %w", err)
+	scheme, err := newScheme()
+	if err != nil {
+		return nil, err
 	}
 
 	ctrlClient, err := client.New(config, client.Options{
@@ -67,6 +70,21 @@ func NewClient(kubeconfig string) (*Client, error) {
 		ctrlClient: ctrlClient,
 		config:     config,
 	}, nil
+}
+
+// newScheme registers core, CAPI and KubeadmControlPlane types.
+func newScheme() (*runtime.Scheme, error) {
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add core types to scheme: %w", err)
+	}
+	if err := clusterv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add CAPI to scheme: %w", err)
+	}
+	if err := controlplanev1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add KubeadmControlPlane to scheme: %w", err)
+	}
+	return scheme, nil
 }
 
 // loadConfig loads the kubeconfig from various sources
