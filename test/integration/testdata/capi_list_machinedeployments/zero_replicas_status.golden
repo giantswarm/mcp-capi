@@ -1,6 +1,1 @@
-Found 1 machine deployments:
-
-MachineDeployment: test-clusters/md-zero
-  Cluster: test-cluster
-  Replicas: 3
-
+{"items":[{"name":"md-zero","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"readyReplicas":0,"updatedReplicas":0,"availableReplicas":0}]}

@@ -7,7 +7,12 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// testToolHandler handles the test tool
+// testToolResult is the result of the test tool.
+type testToolResult struct {
+	Echo string `json:"echo"`
+}
+
+// TestToolHandler handles the test tool: it echoes the message back as JSON.
 func TestToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	arguments := request.GetArguments()
 	message, ok := arguments["message"].(string)
@@ -15,13 +20,5 @@ func TestToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 		return nil, fmt.Errorf("message argument is required and must be a string")
 	}
 
-	response := fmt.Sprintf("Echo from CAPI MCP Server: %s", message)
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: textContentType,
-				Text: response,
-			},
-		},
-	}, nil
+	return jsonResult(testToolResult{Echo: message})
 }

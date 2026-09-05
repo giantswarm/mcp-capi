@@ -1,6 +1,1 @@
-Cluster: test-clusters/nocond-cluster
-Phase: Provisioning
-Ready: false
-Provider: azure
-Version: 
-Machines: 0/0 ready
+{"name":"nocond-cluster","namespace":"test-clusters","phase":"Provisioning","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"azure","totalMachines":0,"readyMachines":0}

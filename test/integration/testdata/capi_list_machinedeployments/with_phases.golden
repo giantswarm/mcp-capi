@@ -1,14 +1,1 @@
-Found 2 machine deployments:
-
-MachineDeployment: test-clusters/md-running
-  Cluster: test-cluster
-  Replicas: 3
-  Status: 3 ready / 0 updated / 3 available
-  Phase: Running
-
-MachineDeployment: test-clusters/md-scaling
-  Cluster: test-cluster
-  Replicas: 5
-  Status: 3 ready / 0 updated / 3 available
-  Phase: ScalingUp
-
+{"items":[{"name":"md-running","namespace":"test-clusters","clusterName":"test-cluster","phase":"Running","replicas":3,"readyReplicas":3,"updatedReplicas":0,"availableReplicas":3},{"name":"md-scaling","namespace":"test-clusters","clusterName":"test-cluster","phase":"ScalingUp","replicas":5,"readyReplicas":3,"updatedReplicas":0,"availableReplicas":3}]}

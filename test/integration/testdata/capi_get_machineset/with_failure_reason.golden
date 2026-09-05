@@ -1,12 +1,1 @@
-MachineSet: test-clusters/failure-reason-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 3
-
-Status:
-  Total Replicas: 3
-  Ready Replicas: 1
-  Available Replicas: 1
-
-Machine Template:
+{"name":"failure-reason-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":1,"availableReplicas":1,"template":{}}

@@ -1,9 +1,1 @@
-Kubeconfig for cluster test-clusters/both-keys-cluster:
-
-```yaml
-value-kubeconfig-content
-```
-
-To use this kubeconfig:
-1. Save the content between the ``` markers to a file (e.g., cluster-kubeconfig.yaml)
-2. Use it with kubectl: kubectl --kubeconfig=cluster-kubeconfig.yaml get nodes
+{"namespace":"test-clusters","name":"both-keys-cluster","kubeconfig":"value-kubeconfig-content"}

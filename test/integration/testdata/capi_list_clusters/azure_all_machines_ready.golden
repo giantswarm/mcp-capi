@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/azure-all-ready
-Phase: 
-Ready: false
-Provider: azure
-Version: 
-Machines: 3/3 ready
-
----
-
+{"items":[{"name":"azure-all-ready","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"azure","totalMachines":3,"readyMachines":3}]}

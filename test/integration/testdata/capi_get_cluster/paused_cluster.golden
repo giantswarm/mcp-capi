@@ -1,7 +1,1 @@
-Cluster: test-clusters/paused-cluster
-Phase: 
-Ready: false
-Paused: true
-Provider: aws
-Version: 
-Machines: 0/0 ready
+{"name":"paused-cluster","namespace":"test-clusters","ready":false,"paused":true,"controlPlaneReady":false,"infrastructureReady":false,"provider":"aws","totalMachines":0,"readyMachines":0}

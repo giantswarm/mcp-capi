@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/rosa-cluster
-Phase: 
-Ready: false
-Provider: aws
-Version: 
-Machines: 0/0 ready
-
----
-
+{"items":[{"name":"rosa-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"aws","totalMachines":0,"readyMachines":0}]}

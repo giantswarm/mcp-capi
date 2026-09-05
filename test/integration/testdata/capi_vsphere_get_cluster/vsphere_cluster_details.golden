@@ -1,13 +1,1 @@
-vSphere Cluster: test-clusters/my-vsphere-cluster
-
-Cluster Information:
-  Phase: 
-  Infrastructure Ready: false
-  Control Plane Ready: false
-
-Infrastructure:
-  Kind: VSphereCluster
-  Name: my-vsphere-cluster
-
-Note: For detailed vSphere infrastructure information (datacenter, datastore, etc.),
-you would need to query the VSphereCluster resource directly.
+{"name":"my-vsphere-cluster","namespace":"test-clusters","infrastructureReady":false,"controlPlaneReady":false,"infrastructure":{"kind":"VSphereCluster","name":"my-vsphere-cluster"},"network":{"podCIDRs":["192.168.0.0/16"]},"note":"Provider-specific infrastructure details (datacenter, datastore, network, resource pool) live on the VSphereCluster resource, which this tool does not read."}

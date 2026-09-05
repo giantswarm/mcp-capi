@@ -1,14 +1,1 @@
-Machine: test-clusters/nocond-machine
-
-Basic Information:
-  Cluster: nocond-cluster
-  Phase: Running
-  Kubernetes Version: v1.29.0
-
-Bootstrap:
-  Kind: KubeadmConfig
-  Name: nocond-bootstrap
-
-Infrastructure:
-  Kind: AWSMachine
-  Name: nocond-infra
+{"name":"nocond-machine","namespace":"test-clusters","clusterName":"nocond-cluster","phase":"Running","version":"v1.29.0","ready":false,"bootstrap":{"kind":"KubeadmConfig","name":"nocond-bootstrap"},"infrastructure":{"kind":"AWSMachine","name":"nocond-infra"}}

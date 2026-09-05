@@ -83,8 +83,11 @@ func updateGoldenFile(text, goldenPath string) error {
 }
 
 var (
-	uuidPattern      = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
-	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \+\d{4} [A-Z]+`)
+	uuidPattern = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+	// timestampPattern matches Go's default time.Time format
+	// ("2024-01-15 10:30:45 +0000 UTC") and RFC 3339 ("2024-01-15T10:30:45Z",
+	// with optional fraction and numeric offset), the form JSON results use.
+	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2} \+\d{4} [A-Z]+|T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))`)
 )
 
 // NormalizeUID replaces all UUID strings with a deterministic placeholder.
@@ -92,7 +95,7 @@ func NormalizeUID(text string) string {
 	return uuidPattern.ReplaceAllString(text, "<UID>")
 }
 
-// NormalizeTimestamp replaces all Go-formatted timestamps with a deterministic placeholder.
+// NormalizeTimestamp replaces Go-formatted and RFC 3339 timestamps with a deterministic placeholder.
 func NormalizeTimestamp(text string) string {
 	return timestampPattern.ReplaceAllString(text, "<TIMESTAMP>")
 }

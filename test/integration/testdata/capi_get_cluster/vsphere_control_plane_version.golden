@@ -1,6 +1,1 @@
-Cluster: test-clusters/vsphere-kcp-cluster
-Phase: 
-Ready: false
-Provider: vsphere
-Version: v1.30.0
-Machines: 0/0 ready
+{"name":"vsphere-kcp-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vsphere","version":"v1.30.0","totalMachines":0,"readyMachines":0}

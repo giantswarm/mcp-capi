@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/vcd-partial
-Phase: 
-Ready: false
-Provider: vcd
-Version: 
-Machines: 1/2 ready
-
----
-
+{"items":[{"name":"vcd-partial","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vcd","totalMachines":2,"readyMachines":1}]}

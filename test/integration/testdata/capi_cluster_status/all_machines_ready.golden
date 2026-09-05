@@ -1,6 +1,1 @@
-Cluster: test-clusters/all-ready-cluster
-Phase: 
-Ready: false
-Provider: gcp
-Version: 
-Machines: 5/5 ready
+{"name":"all-ready-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"gcp","totalMachines":5,"readyMachines":5}

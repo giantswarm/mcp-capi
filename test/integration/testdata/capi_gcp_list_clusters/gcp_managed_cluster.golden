@@ -1,8 +1,1 @@
-GCP Clusters:
-
-Cluster: test-clusters/my-managed-cluster
-  Infrastructure: GCPManagedCluster
-  Phase: 
-  Ready: false
-
-Total GCP clusters: 1
+{"items":[{"name":"my-managed-cluster","namespace":"test-clusters","infrastructureKind":"GCPManagedCluster","infrastructureReady":false}]}

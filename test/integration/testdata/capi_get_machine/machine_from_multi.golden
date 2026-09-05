@@ -1,8 +1,1 @@
-Machine: test-clusters/multi-machine-machine-0
-
-Basic Information:
-  Cluster: multi-machine
-
-Node Information:
-  Node Name: multi-machine-machine-0-node
-  Node UID: 
+{"name":"multi-machine-machine-0","namespace":"test-clusters","clusterName":"multi-machine","ready":false,"node":{"name":"multi-machine-machine-0-node"}}

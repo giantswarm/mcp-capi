@@ -1,11 +1,1 @@
-Cluster: test-clusters/mixed-cluster
-Phase: Provisioned
-Ready: true
-Provider: aws
-Version: 
-Machines: 0/0 ready
-
-Conditions:
-  Ready: True (ClusterReady)
-  ControlPlaneReady: False (CPNotReady)
-  InfrastructureReady: True (InfraReady)
+{"name":"mixed-cluster","namespace":"test-clusters","phase":"Provisioned","ready":true,"controlPlaneReady":false,"infrastructureReady":false,"provider":"aws","totalMachines":0,"readyMachines":0,"conditions":[{"type":"Ready","status":"True","reason":"ClusterReady","message":"Cluster is ready"},{"type":"ControlPlaneReady","status":"False","reason":"CPNotReady","message":"Control plane not ready"},{"type":"InfrastructureReady","status":"True","reason":"InfraReady","message":"Infrastructure is ready"}]}

@@ -1,6 +1,1 @@
-Cluster: test-clusters/gcp-kcp-cluster
-Phase: 
-Ready: false
-Provider: gcp
-Version: v1.30.0
-Machines: 0/0 ready
+{"name":"gcp-kcp-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"gcp","version":"v1.30.0","totalMachines":0,"readyMachines":0}

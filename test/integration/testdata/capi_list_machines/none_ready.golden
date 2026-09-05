@@ -1,14 +1,1 @@
-Found 3 machines:
-
-Machine: test-clusters/unhealthy-cluster-machine-0
-  Cluster: unhealthy-cluster
-  Ready: false
-
-Machine: test-clusters/unhealthy-cluster-machine-1
-  Cluster: unhealthy-cluster
-  Ready: false
-
-Machine: test-clusters/unhealthy-cluster-machine-2
-  Cluster: unhealthy-cluster
-  Ready: false
-
+{"items":[{"name":"unhealthy-cluster-machine-0","namespace":"test-clusters","clusterName":"unhealthy-cluster","ready":false},{"name":"unhealthy-cluster-machine-1","namespace":"test-clusters","clusterName":"unhealthy-cluster","ready":false},{"name":"unhealthy-cluster-machine-2","namespace":"test-clusters","clusterName":"unhealthy-cluster","ready":false}]}

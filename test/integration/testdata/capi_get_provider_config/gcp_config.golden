@@ -1,14 +1,1 @@
-Configuration for GCP Provider:
-
-GCP Provider Configuration:
-  Required Credentials:
-    - GOOGLE_APPLICATION_CREDENTIALS (path to service account key)
-    - GCP_PROJECT_ID
-    - GCP_REGION
-  Optional:
-    - GCP_NETWORK (custom network name)
-
-  Common Resources:
-    - GCPCluster: Manages VPC, subnets, firewall rules
-    - GCPMachine: Individual GCE instances
-    - GCPMachineTemplate: Template for creating machines
+{"provider":"gcp","requiredCredentials":["GOOGLE_APPLICATION_CREDENTIALS (path to service account key)","GCP_PROJECT_ID","GCP_REGION"],"optionalSettings":["GCP_NETWORK (custom network name)"],"resources":[{"kind":"GCPCluster","description":"Manages VPC, subnets, firewall rules"},{"kind":"GCPMachine","description":"Individual GCE instances"},{"kind":"GCPMachineTemplate","description":"Template for creating machines"}]}

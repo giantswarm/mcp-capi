@@ -1,11 +1,1 @@
-Found 1 clusters:
-
-Cluster: test-clusters/aws-none-ready
-Phase: 
-Ready: false
-Provider: aws
-Version: 
-Machines: 0/5 ready
-
----
-
+{"items":[{"name":"aws-none-ready","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"aws","totalMachines":5,"readyMachines":0}]}

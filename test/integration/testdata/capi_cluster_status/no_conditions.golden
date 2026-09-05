@@ -1,6 +1,1 @@
-Cluster: test-clusters/nocond-cluster
-Phase: Pending
-Ready: false
-Provider: gcp
-Version: 
-Machines: 0/0 ready
+{"name":"nocond-cluster","namespace":"test-clusters","phase":"Pending","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"gcp","totalMachines":0,"readyMachines":0}

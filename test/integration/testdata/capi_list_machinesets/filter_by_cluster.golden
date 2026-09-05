@@ -1,8 +1,1 @@
-Found 1 machine sets in cluster cluster-a:
-
-MachineSet: test-clusters/ms-a
-  Cluster: cluster-a
-  Replicas: 3
-  Ready: 3/3
-  Available: 3
-
+{"items":[{"name":"ms-a","namespace":"test-clusters","clusterName":"cluster-a","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3}]}

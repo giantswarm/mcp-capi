@@ -1,6 +1,1 @@
-Cluster: test-clusters/aws-cluster
-Phase: Provisioned
-Ready: false
-Provider: aws
-Version: 
-Machines: 0/0 ready
+{"name":"aws-cluster","namespace":"test-clusters","phase":"Provisioned","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"aws","totalMachines":0,"readyMachines":0}

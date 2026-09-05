@@ -1,7 +1,1 @@
-Found 1 machine deployments:
-
-MachineDeployment: test-clusters/md-noversion
-  Cluster: test-cluster
-  Replicas: 2
-  Status: 2 ready / 0 updated / 2 available
-
+{"items":[{"name":"md-noversion","namespace":"test-clusters","clusterName":"test-cluster","replicas":2,"readyReplicas":2,"updatedReplicas":0,"availableReplicas":2}]}

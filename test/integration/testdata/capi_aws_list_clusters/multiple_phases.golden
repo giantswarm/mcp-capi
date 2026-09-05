@@ -1,15 +1,1 @@
-AWS Clusters:
-
-Cluster: test-clusters/cluster-pending
-  Infrastructure: AWSCluster
-  Phase: Pending
-  Ready: false
-  Provider: AWS (confirmed)
-
-Cluster: test-clusters/cluster-provisioned
-  Infrastructure: AWSCluster
-  Phase: Provisioned
-  Ready: false
-  Provider: AWS (confirmed)
-
-Total AWS clusters: 2
+{"items":[{"name":"cluster-pending","namespace":"test-clusters","infrastructureKind":"AWSCluster","phase":"Pending","infrastructureReady":false},{"name":"cluster-provisioned","namespace":"test-clusters","infrastructureKind":"AWSCluster","phase":"Provisioned","infrastructureReady":false}]}

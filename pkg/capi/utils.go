@@ -3,7 +3,6 @@ package capi
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -186,50 +185,6 @@ func GetControlPlaneStatus(kcp *controlplanev1.KubeadmControlPlane) string {
 	return "Updating"
 }
 
-// FormatClusterInfo formats cluster information for display
-func FormatClusterInfo(status *ClusterStatus) string {
-	var sb strings.Builder
-
-	fmt.Fprintf(&sb, "Cluster: %s/%s\n", status.Namespace, status.Name)
-	fmt.Fprintf(&sb, "Phase: %s\n", status.Phase)
-	fmt.Fprintf(&sb, "Ready: %v\n", status.Ready)
-	if status.Paused {
-		sb.WriteString("Paused: true\n")
-	}
-	fmt.Fprintf(&sb, "Provider: %s\n", status.Provider)
-	fmt.Fprintf(&sb, "Version: %s\n", status.Version)
-	fmt.Fprintf(&sb, "Machines: %d/%d ready\n", status.ReadyMachines, status.TotalMachines)
-
-	if userLabels := filterUserLabels(status.Labels); len(userLabels) > 0 {
-		sb.WriteString("\nLabels:\n")
-		keys := sortedKeys(userLabels)
-		for _, k := range keys {
-			fmt.Fprintf(&sb, "  %s: %s\n", k, userLabels[k])
-		}
-	}
-
-	if len(status.Annotations) > 0 {
-		sb.WriteString("\nAnnotations:\n")
-		keys := sortedKeys(status.Annotations)
-		for _, k := range keys {
-			fmt.Fprintf(&sb, "  %s: %s\n", k, status.Annotations[k])
-		}
-	}
-
-	if len(status.Conditions) > 0 {
-		sb.WriteString("\nConditions:\n")
-		for _, cond := range status.Conditions {
-			fmt.Fprintf(&sb, "  %s: %s", cond.Type, cond.Status)
-			if cond.Reason != "" {
-				fmt.Fprintf(&sb, " (%s)", cond.Reason)
-			}
-			sb.WriteString("\n")
-		}
-	}
-
-	return sb.String()
-}
-
 // isConditionTrue checks if a condition with the given type has status True.
 // This is a v1beta1-compatible helper that replaces the conditions.IsTrue utility
 // which now requires v1beta2 types.
@@ -242,10 +197,10 @@ func isConditionTrue(conditions clusterv1.Conditions, conditionType clusterv1.Co
 	return false
 }
 
-// filterUserLabels returns a copy of labels with internal CAPI labels removed.
+// UserLabels returns a copy of labels with internal CAPI labels removed.
 // Internal labels (those under the cluster.x-k8s.io domain) are set by the
 // system and are not useful for user-facing display.
-func filterUserLabels(labels map[string]string) map[string]string {
+func UserLabels(labels map[string]string) map[string]string {
 	result := make(map[string]string)
 	for k, v := range labels {
 		if !strings.Contains(k, "cluster.x-k8s.io") {
@@ -253,14 +208,4 @@ func filterUserLabels(labels map[string]string) map[string]string {
 		}
 	}
 	return result
-}
-
-// sortedKeys returns the keys of a map in sorted order for deterministic output.
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

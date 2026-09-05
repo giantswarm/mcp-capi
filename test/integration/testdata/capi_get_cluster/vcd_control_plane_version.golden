@@ -1,6 +1,1 @@
-Cluster: test-clusters/vcd-kcp-cluster
-Phase: 
-Ready: false
-Provider: vcd
-Version: v1.30.0
-Machines: 0/0 ready
+{"name":"vcd-kcp-cluster","namespace":"test-clusters","ready":false,"controlPlaneReady":false,"infrastructureReady":false,"provider":"vcd","version":"v1.30.0","totalMachines":0,"readyMachines":0}

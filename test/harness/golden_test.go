@@ -86,6 +86,14 @@ func TestNormalizeTimestamp(t *testing.T) {
 			input: "created at 2024-06-15 14:30:00 +0530 IST done",
 			want:  "created at <TIMESTAMP> done",
 		},
+		"rfc3339 utc inside json": {
+			input: `{"createdAt":"2024-01-15T10:30:45Z","name":"n"}`,
+			want:  `{"createdAt":"<TIMESTAMP>","name":"n"}`,
+		},
+		"rfc3339 with fraction and offset": {
+			input: "at 2024-01-15T10:30:45.123456+02:00 done",
+			want:  "at <TIMESTAMP> done",
+		},
 	}
 
 	for name, tc := range tests {

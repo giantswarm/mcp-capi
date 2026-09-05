@@ -1,8 +1,1 @@
-Azure Clusters:
-
-Cluster: test-clusters/my-managed-cluster
-  Infrastructure: AzureManagedCluster
-  Phase: 
-  Ready: false
-
-Total Azure clusters: 1
+{"items":[{"name":"my-managed-cluster","namespace":"test-clusters","infrastructureKind":"AzureManagedCluster","infrastructureReady":false}]}

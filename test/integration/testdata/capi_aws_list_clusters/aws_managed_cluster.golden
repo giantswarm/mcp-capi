@@ -1,8 +1,1 @@
-AWS Clusters:
-
-Cluster: test-clusters/my-managed-cluster
-  Infrastructure: AWSManagedCluster
-  Phase: 
-  Ready: false
-
-Total AWS clusters: 1
+{"items":[{"name":"my-managed-cluster","namespace":"test-clusters","infrastructureKind":"AWSManagedCluster","infrastructureReady":false}]}

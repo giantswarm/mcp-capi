@@ -1,9 +1,1 @@
-Machine: test-clusters/nover-machine
-
-Basic Information:
-  Cluster: nover-cluster
-  Phase: Running
-
-Node Information:
-  Node Name: nover-node
-  Node UID: 
+{"name":"nover-machine","namespace":"test-clusters","clusterName":"nover-cluster","phase":"Running","ready":false,"node":{"name":"nover-node"}}

@@ -1,14 +1,1 @@
-Kubeconfig for cluster test-clusters/data-cluster:
-
-```yaml
-apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    server: https://data-cluster-api.example.com:6443
-  name: data-cluster
-```
-
-To use this kubeconfig:
-1. Save the content between the ``` markers to a file (e.g., cluster-kubeconfig.yaml)
-2. Use it with kubectl: kubectl --kubeconfig=cluster-kubeconfig.yaml get nodes
+{"namespace":"test-clusters","name":"data-cluster","kubeconfig":"apiVersion: v1\nkind: Config\nclusters:\n- cluster:\n    server: https://data-cluster-api.example.com:6443\n  name: data-cluster"}

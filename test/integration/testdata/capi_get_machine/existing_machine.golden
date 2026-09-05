@@ -1,8 +1,1 @@
-Machine: test-clusters/my-cluster-machine-0
-
-Basic Information:
-  Cluster: my-cluster
-
-Node Information:
-  Node Name: my-cluster-machine-0-node
-  Node UID: 
+{"name":"my-cluster-machine-0","namespace":"test-clusters","clusterName":"my-cluster","ready":false,"node":{"name":"my-cluster-machine-0-node"}}

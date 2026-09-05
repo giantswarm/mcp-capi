@@ -1,9 +1,1 @@
-Machine: test-clusters/nobootstrap-machine
-
-Basic Information:
-  Cluster: nobootstrap-cluster
-  Phase: Running
-
-Infrastructure:
-  Kind: AWSMachine
-  Name: nobootstrap-infra
+{"name":"nobootstrap-machine","namespace":"test-clusters","clusterName":"nobootstrap-cluster","phase":"Running","ready":false,"infrastructure":{"kind":"AWSMachine","name":"nobootstrap-infra"}}

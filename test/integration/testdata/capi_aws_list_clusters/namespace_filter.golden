@@ -1,9 +1,1 @@
-AWS Clusters:
-
-Cluster: test-clusters/aws-cluster-1
-  Infrastructure: AWSCluster
-  Phase: 
-  Ready: false
-  Provider: AWS (confirmed)
-
-Total AWS clusters: 1
+{"items":[{"name":"aws-cluster-1","namespace":"test-clusters","infrastructureKind":"AWSCluster","infrastructureReady":false}]}

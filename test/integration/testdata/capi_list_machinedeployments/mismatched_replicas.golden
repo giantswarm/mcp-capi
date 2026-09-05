@@ -1,8 +1,1 @@
-Found 1 machine deployments:
-
-MachineDeployment: test-clusters/md-rolling
-  Cluster: test-cluster
-  Replicas: 5
-  Status: 2 ready / 0 updated / 2 available
-  Kubernetes Version: v1.29.0
-
+{"items":[{"name":"md-rolling","namespace":"test-clusters","clusterName":"test-cluster","replicas":5,"readyReplicas":2,"updatedReplicas":0,"availableReplicas":2,"version":"v1.29.0"}]}

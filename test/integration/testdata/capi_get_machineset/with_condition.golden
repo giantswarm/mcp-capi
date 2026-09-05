@@ -1,18 +1,1 @@
-MachineSet: test-clusters/cond-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 3
-
-Status:
-  Total Replicas: 3
-  Ready Replicas: 3
-  Available Replicas: 3
-
-Machine Template:
-
-Conditions:
-  - Type: Ready
-    Status: True
-    Reason: MachinesReady
-    Message: All machines are ready
+{"name":"cond-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":3,"availableReplicas":3,"template":{},"conditions":[{"type":"Ready","status":"True","reason":"MachinesReady","message":"All machines are ready"}]}

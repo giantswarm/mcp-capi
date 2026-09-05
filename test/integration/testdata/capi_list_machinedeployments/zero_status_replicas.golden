@@ -1,7 +1,1 @@
-Found 1 machine deployments:
-
-MachineDeployment: test-clusters/md-new
-  Cluster: test-cluster
-  Replicas: 3
-  Kubernetes Version: v1.29.0
-
+{"items":[{"name":"md-new","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"readyReplicas":0,"updatedReplicas":0,"availableReplicas":0,"version":"v1.29.0"}]}

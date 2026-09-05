@@ -1,15 +1,1 @@
-MachineSet: test-clusters/owned-ms
-
-Basic Information:
-  Cluster: test-cluster
-  Desired Replicas: 3
-
-Status:
-  Total Replicas: 3
-  Ready Replicas: 2
-  Available Replicas: 2
-
-Machine Template:
-
-Owners:
-  - MachineDeployment: parent-md
+{"name":"owned-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":3,"currentReplicas":3,"readyReplicas":2,"availableReplicas":2,"template":{},"owners":[{"kind":"MachineDeployment","name":"parent-md"}]}

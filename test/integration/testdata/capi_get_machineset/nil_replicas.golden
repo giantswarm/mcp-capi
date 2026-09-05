@@ -1,11 +1,1 @@
-MachineSet: test-clusters/nil-rep-ms
-
-Basic Information:
-  Cluster: test-cluster
-
-Status:
-  Total Replicas: 2
-  Ready Replicas: 1
-  Available Replicas: 1
-
-Machine Template:
+{"name":"nil-rep-ms","namespace":"test-clusters","clusterName":"test-cluster","replicas":0,"currentReplicas":2,"readyReplicas":1,"availableReplicas":1,"template":{}}

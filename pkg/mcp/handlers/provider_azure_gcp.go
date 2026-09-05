@@ -2,135 +2,27 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-
-	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
 // Azure Provider Tools
 
-// createAzureListClustersHandler lists Azure clusters
+const azureClusterNote = "Provider-specific infrastructure details (resource group, virtual network, subnets) live on the AzureCluster resource, which this tool does not read."
+
+// CreateAzureListClustersHandler lists Azure clusters as {items: [...]}.
 func CreateAzureListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		capiClient, err := serverCtx.Client(ctx)
-		if err != nil {
-			return nil, err
-		}
-		arguments := request.GetArguments()
-		namespace, _ := arguments["namespace"].(string)
-
-		// List all clusters
-		clusters, err := capiClient.ListClusters(ctx, namespace, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list clusters: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString("Azure Clusters:\n\n")
-
-		azureClusterCount := 0
-		for _, cluster := range clusters.Items {
-			// Check if this is an Azure cluster
-			if cluster.Spec.InfrastructureRef != nil &&
-				(cluster.Spec.InfrastructureRef.Kind == "AzureCluster" ||
-					cluster.Spec.InfrastructureRef.Kind == "AzureManagedCluster") {
-				azureClusterCount++
-
-				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
-				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
-				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
-				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
-
-				// Try to get provider information
-				provider, _ := capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
-				if provider == capi.ProviderAzure {
-					content.WriteString("  Provider: Azure (confirmed)\n")
-				}
-
-				content.WriteString("\n")
-			}
-		}
-
-		if azureClusterCount == 0 {
-			content.WriteString("No Azure clusters found.\n")
-		} else {
-			fmt.Fprintf(&content, "Total Azure clusters: %d\n", azureClusterCount)
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return createProviderListClustersHandler(serverCtx, "AzureCluster", "AzureManagedCluster")
 }
 
-// createAzureGetClusterHandler gets details of an Azure cluster
+// CreateAzureGetClusterHandler gets details of an Azure cluster.
 func CreateAzureGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		capiClient, err := serverCtx.Client(ctx)
-		if err != nil {
-			return nil, err
-		}
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		name, ok := arguments["name"].(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
-		}
-
-		// Get the cluster
-		cluster, err := capiClient.GetCluster(ctx, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cluster: %w", err)
-		}
-
-		// Verify it's an Azure cluster
-		if cluster.Spec.InfrastructureRef == nil ||
-			(cluster.Spec.InfrastructureRef.Kind != "AzureCluster" &&
-				cluster.Spec.InfrastructureRef.Kind != "AzureManagedCluster") {
-			return mcp.NewToolResultError(fmt.Sprintf("Cluster %s/%s is not an Azure cluster", namespace, name)), nil
-		}
-
-		var content strings.Builder
-		fmt.Fprintf(&content, "Azure Cluster: %s/%s\n\n", namespace, name)
-
-		// Basic cluster info
-		content.WriteString("Cluster Information:\n")
-		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
-		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
-		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
-
-		// Infrastructure reference
-		content.WriteString("\nInfrastructure:\n")
-		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
-		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
-
-		content.WriteString("\nNote: For detailed Azure infrastructure information (resource group, vnet, etc.),\n")
-		content.WriteString("you would need to query the AzureCluster resource directly.\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return createProviderGetClusterHandler(serverCtx, "Azure", azureClusterNote, "AzureCluster", "AzureManagedCluster")
 }
 
-// createAzureManageResourceGroupHandler manages Azure resource groups
+// CreateAzureManageResourceGroupHandler manages Azure resource groups (placeholder, not registered)
 func CreateAzureManageResourceGroupHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
@@ -155,7 +47,7 @@ func CreateAzureManageResourceGroupHandler(serverCtx *ServerContext) server.Tool
 	}
 }
 
-// createAzureNetworkConfigHandler configures Azure networking
+// CreateAzureNetworkConfigHandler configures Azure networking (placeholder, not registered)
 func CreateAzureNetworkConfigHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
@@ -185,124 +77,19 @@ func CreateAzureNetworkConfigHandler(serverCtx *ServerContext) server.ToolHandle
 
 // GCP Provider Tools
 
-// createGCPListClustersHandler lists GCP clusters
+const gcpClusterNote = "Provider-specific infrastructure details (VPC, subnets, firewall rules) live on the GCPCluster resource, which this tool does not read."
+
+// CreateGCPListClustersHandler lists GCP clusters as {items: [...]}.
 func CreateGCPListClustersHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		capiClient, err := serverCtx.Client(ctx)
-		if err != nil {
-			return nil, err
-		}
-		arguments := request.GetArguments()
-		namespace, _ := arguments["namespace"].(string)
-
-		// List all clusters
-		clusters, err := capiClient.ListClusters(ctx, namespace, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list clusters: %w", err)
-		}
-
-		var content strings.Builder
-		content.WriteString("GCP Clusters:\n\n")
-
-		gcpClusterCount := 0
-		for _, cluster := range clusters.Items {
-			// Check if this is a GCP cluster
-			if cluster.Spec.InfrastructureRef != nil &&
-				(cluster.Spec.InfrastructureRef.Kind == "GCPCluster" ||
-					cluster.Spec.InfrastructureRef.Kind == "GCPManagedCluster") {
-				gcpClusterCount++
-
-				fmt.Fprintf(&content, "Cluster: %s/%s\n", cluster.Namespace, cluster.Name)
-				fmt.Fprintf(&content, "  Infrastructure: %s\n", cluster.Spec.InfrastructureRef.Kind)
-				fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
-				fmt.Fprintf(&content, "  Ready: %v\n", cluster.Status.InfrastructureReady)
-
-				// Try to get provider information
-				provider, _ := capiClient.GetProviderForCluster(ctx, cluster.Namespace, cluster.Name)
-				if provider == capi.ProviderGCP {
-					content.WriteString("  Provider: GCP (confirmed)\n")
-				}
-
-				content.WriteString("\n")
-			}
-		}
-
-		if gcpClusterCount == 0 {
-			content.WriteString("No GCP clusters found.\n")
-		} else {
-			fmt.Fprintf(&content, "Total GCP clusters: %d\n", gcpClusterCount)
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return createProviderListClustersHandler(serverCtx, "GCPCluster", "GCPManagedCluster")
 }
 
-// createGCPGetClusterHandler gets details of a GCP cluster
+// CreateGCPGetClusterHandler gets details of a GCP cluster.
 func CreateGCPGetClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		capiClient, err := serverCtx.Client(ctx)
-		if err != nil {
-			return nil, err
-		}
-		arguments := request.GetArguments()
-		namespace, ok := arguments["namespace"].(string)
-		if !ok || namespace == "" {
-			return nil, fmt.Errorf("namespace argument is required")
-		}
-		name, ok := arguments["name"].(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name argument is required")
-		}
-
-		// Get the cluster
-		cluster, err := capiClient.GetCluster(ctx, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cluster: %w", err)
-		}
-
-		// Verify it's a GCP cluster
-		if cluster.Spec.InfrastructureRef == nil ||
-			(cluster.Spec.InfrastructureRef.Kind != "GCPCluster" &&
-				cluster.Spec.InfrastructureRef.Kind != "GCPManagedCluster") {
-			return mcp.NewToolResultError(fmt.Sprintf("Cluster %s/%s is not a GCP cluster", namespace, name)), nil
-		}
-
-		var content strings.Builder
-		fmt.Fprintf(&content, "GCP Cluster: %s/%s\n\n", namespace, name)
-
-		// Basic cluster info
-		content.WriteString("Cluster Information:\n")
-		fmt.Fprintf(&content, "  Phase: %s\n", cluster.Status.Phase)
-		fmt.Fprintf(&content, "  Infrastructure Ready: %v\n", cluster.Status.InfrastructureReady)
-		fmt.Fprintf(&content, "  Control Plane Ready: %v\n", cluster.Status.ControlPlaneReady)
-
-		// Infrastructure reference
-		content.WriteString("\nInfrastructure:\n")
-		fmt.Fprintf(&content, "  Kind: %s\n", cluster.Spec.InfrastructureRef.Kind)
-		fmt.Fprintf(&content, "  Name: %s\n", cluster.Spec.InfrastructureRef.Name)
-
-		content.WriteString("\nNote: For detailed GCP infrastructure information (VPC, firewall rules, etc.),\n")
-		content.WriteString("you would need to query the GCPCluster resource directly.\n")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: textContentType,
-					Text: content.String(),
-				},
-			},
-		}, nil
-	}
+	return createProviderGetClusterHandler(serverCtx, "GCP", gcpClusterNote, "GCPCluster", "GCPManagedCluster")
 }
 
-// createGCPManageNetworkHandler manages GCP networks
+// CreateGCPManageNetworkHandler manages GCP networks (placeholder, not registered)
 func CreateGCPManageNetworkHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var content strings.Builder
