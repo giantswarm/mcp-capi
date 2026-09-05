@@ -1,0 +1,1 @@
+{"namespace":"test-clusters","name":"gazelle","paused":true,"message":"Reconciliation paused: CAPI controllers make no changes to the cluster (no updates, no scaling) until capi_resume_cluster is called, so manual operations are safe."}

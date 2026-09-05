@@ -193,7 +193,9 @@ test/integration/testdata/
 ### Harness Methods
 
 ```go
-harness.New(t)                           // Create new harness
+harness.New(t)                           // Create new harness (GitOps guard on, writes offered)
+    .ReadOnly()                          // Start the server read-only (no mutating tools)
+    .WithoutGitOpsGuard()                // Let writes to Flux/Argo/Helm-owned objects through
     .CreateNamespace(name)               // Create namespace
     .CreateCluster(namespace, name)      // Create single generic cluster
     .CreateClusters(namespace, names...) // Create multiple generic clusters
@@ -209,6 +211,7 @@ harness.New(t)                           // Create new harness
     .WithArg("key", value)                  // Add single argument
     .WithArgs(map[string]any{...})          // Add multiple arguments
     .AssertContent("path/to/file.golden")   // Assert and return to harness
+    .AssertError("path/to/file.golden")     // Assert a protocol or tool error instead
 ```
 
 ### Cluster Builder

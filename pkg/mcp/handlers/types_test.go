@@ -11,9 +11,14 @@ import (
 
 func TestServerContextClientCallerIdentity(t *testing.T) {
 	factory := capi.NewBearerClientFactory("https://kubernetes.example:6443", "", nil)
-	sc := NewCallerIdentityServerContext(factory)
+	policy := capi.WritePolicy{ReadOnly: true, GitOpsGuard: true}
+	factory.SetWritePolicy(policy)
+	sc := NewCallerIdentityServerContext(factory, policy)
 	if !sc.ActsAsCaller() {
 		t.Fatal("expected caller-identity mode")
+	}
+	if sc.WritePolicy() != policy {
+		t.Fatalf("WritePolicy() = %+v, want %+v", sc.WritePolicy(), policy)
 	}
 
 	if _, err := sc.Client(context.Background()); !errors.Is(err, ErrNoCallerIdentity) {
@@ -24,6 +29,9 @@ func TestServerContextClientCallerIdentity(t *testing.T) {
 	c, err := sc.Client(ctx)
 	if err != nil || c == nil {
 		t.Fatalf("Client() = %v, %v", c, err)
+	}
+	if c.WritePolicy() != policy {
+		t.Fatalf("per-caller client policy = %+v, want %+v", c.WritePolicy(), policy)
 	}
 }
 

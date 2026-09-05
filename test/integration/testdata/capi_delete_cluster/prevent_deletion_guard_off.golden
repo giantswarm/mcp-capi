@@ -1,0 +1,1 @@
+internal error: failed to delete cluster: refusing to delete Cluster test-clusters/protected: resource is protected against deletion (label giantswarm.io/prevent-deletion is set; remove it first if the deletion is intended)

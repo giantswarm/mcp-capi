@@ -33,7 +33,12 @@ func newServeCmd() *cobra.Command {
 		// Authentication options
 		enableOAuth     bool
 		downstreamOAuth bool
-		debug           bool
+
+		// Write policy
+		readOnly    bool
+		gitopsGuard bool
+
+		debug bool
 	)
 
 	cmd := &cobra.Command{
@@ -65,7 +70,16 @@ OAuth resource server. Configuration comes from the environment:
 
 With --downstream-oauth every Kubernetes API call authenticates with the
 caller's own OIDC ID token; the server holds no credentials of its own and
-the apiserver applies the person's RBAC.`,
+the apiserver applies the person's RBAC.
+
+Write policy (both on by default):
+  --read-only      only the tools that read are registered; every mutating
+                   Kubernetes call is refused. Pass --read-only=false to
+                   offer the create/scale/upgrade/pause/delete tools.
+  --gitops-guard   mutating calls on objects owned by Flux, Argo CD or a
+                   Helm release are refused: the change would be reverted
+                   on the next reconciliation and belongs in Git.
+An object labelled giantswarm.io/prevent-deletion is never deleted.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Validate input parameters before starting server
 			if err := validateServeFlags(transport, httpAddr, sseEndpoint, messageEndpoint, httpEndpoint); err != nil {
@@ -79,6 +93,8 @@ the apiserver applies the person's RBAC.`,
 				MessageEndpoint: messageEndpoint,
 				HTTPEndpoint:    httpEndpoint,
 				DownstreamOAuth: downstreamOAuth,
+				ReadOnly:        readOnly,
+				GitOpsGuard:     gitopsGuard,
 				Debug:           debug,
 			}
 			if enableOAuth {
@@ -100,6 +116,11 @@ the apiserver applies the person's RBAC.`,
 	// Authentication flags
 	cmd.Flags().BoolVar(&enableOAuth, "enable-oauth", false, "Enable OAuth 2.1 authentication (sse/streamable-http only; configured via MCP_OAUTH_* and DEX_*/GOOGLE_* environment variables)")
 	cmd.Flags().BoolVar(&downstreamOAuth, "downstream-oauth", false, "Authenticate every Kubernetes API call with the caller's own OIDC ID token; no kubeconfig or ServiceAccount credentials are used (requires --enable-oauth)")
+
+	// Write policy flags
+	cmd.Flags().BoolVar(&readOnly, "read-only", true, "Register only the tools that read and refuse every mutating Kubernetes call (default: true; pass --read-only=false to offer the mutating tools)")
+	cmd.Flags().BoolVar(&gitopsGuard, "gitops-guard", true, "Refuse mutating calls on objects owned by a GitOps controller (Flux, Argo CD) or a Helm release; the change belongs in Git (default: true)")
+
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
 
 	return cmd
@@ -200,7 +221,11 @@ type ServeConfig struct {
 	OAuth *oauth.Config
 	// DownstreamOAuth makes the server act as the caller against Kubernetes.
 	DownstreamOAuth bool
-	Debug           bool
+	// ReadOnly registers only reading tools and refuses every mutating call.
+	ReadOnly bool
+	// GitOpsGuard refuses mutating calls on GitOps- or Helm-owned objects.
+	GitOpsGuard bool
+	Debug       bool
 }
 
 // RunServe contains the main server logic with support for multiple transports
@@ -231,6 +256,8 @@ func RunServe(cfg ServeConfig) error {
 		ServerVersion:   rootCmd.Version,
 		OAuth:           cfg.OAuth,
 		CallerIdentity:  cfg.DownstreamOAuth,
+		ReadOnly:        cfg.ReadOnly,
+		GitOpsGuard:     cfg.GitOpsGuard,
 		Logger:          logger,
 	}
 

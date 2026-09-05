@@ -1,0 +1,1 @@
+internal error: failed to delete cluster: refusing to delete Cluster test-clusters/gazelle: resource is managed declaratively: it is owned by Helm release test-clusters/gazelle (annotation meta.helm.sh/release-name) and a direct change would be reverted on the next reconciliation; change the release values (the App or HelmRelease in Git)

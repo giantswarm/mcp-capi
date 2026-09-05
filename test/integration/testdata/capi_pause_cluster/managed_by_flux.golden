@@ -1,0 +1,1 @@
+internal error: failed to pause cluster: refusing to update Cluster test-clusters/flux-cluster: resource is managed declaratively: it is owned by Flux Kustomization flux-giantswarm/clusters (label kustomize.toolkit.fluxcd.io/name) and a direct change would be reverted on the next reconciliation; change the manifests in the Kustomization's Git source

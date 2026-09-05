@@ -31,22 +31,34 @@ type Client struct {
 
 	// config is the rest config used to connect
 	config *rest.Config
+
+	// policy gates every mutating call; see WritePolicy.
+	policy WritePolicy
+}
+
+// ClientOption configures a Client.
+type ClientOption func(*Client)
+
+// WithWritePolicy sets the policy applied to every mutating call. The
+// default (zero) policy permits everything.
+func WithWritePolicy(p WritePolicy) ClientOption {
+	return func(c *Client) { c.policy = p }
 }
 
 // NewClient creates a CAPI client from a kubeconfig path (or the in-cluster
 // configuration when the path is empty and no KUBECONFIG is set).
-func NewClient(kubeconfig string) (*Client, error) {
+func NewClient(kubeconfig string, opts ...ClientOption) (*Client, error) {
 	config, err := loadConfig(kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
-	return NewClientFromConfig(config)
+	return NewClientFromConfig(config, opts...)
 }
 
 // NewClientFromConfig creates a CAPI client from a REST config. Callers that
 // act on behalf of a person pass a config whose BearerToken is the person's
 // OIDC ID token; see BearerClientFactory.
-func NewClientFromConfig(config *rest.Config) (*Client, error) {
+func NewClientFromConfig(config *rest.Config, opts ...ClientOption) (*Client, error) {
 	// Create standard Kubernetes client
 	k8sClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -65,11 +77,15 @@ func NewClientFromConfig(config *rest.Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to create controller client: %w", err)
 	}
 
-	return &Client{
+	c := &Client{
 		k8sClient:  k8sClient,
 		ctrlClient: ctrlClient,
 		config:     config,
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c, nil
 }
 
 // newScheme registers core, CAPI and KubeadmControlPlane types.
@@ -130,6 +146,11 @@ func (c *Client) GetCtrlClient() client.Client {
 func (c *Client) SetClients(k8sClient kubernetes.Interface, ctrlClient client.Client) {
 	c.k8sClient = k8sClient
 	c.ctrlClient = ctrlClient
+}
+
+// WritePolicy returns the policy applied to mutating calls.
+func (c *Client) WritePolicy() WritePolicy {
+	return c.policy
 }
 
 // ListClusters lists all CAPI clusters in the given namespace
@@ -244,6 +265,9 @@ func (c *Client) DeleteMachine(ctx context.Context, opts DeleteMachineOptions) e
 	if err := c.ctrlClient.Get(ctx, key, machine); err != nil {
 		return fmt.Errorf("failed to get machine: %w", err)
 	}
+	if err := c.policy.CheckDelete("Machine", machine); err != nil {
+		return err
+	}
 
 	// If not forcing, check if machine is safe to delete
 	if !opts.Force {
@@ -285,6 +309,9 @@ func (c *Client) RemediateMachine(ctx context.Context, opts RemediateMachineOpti
 
 	if err := c.ctrlClient.Get(ctx, key, machine); err != nil {
 		return fmt.Errorf("failed to get machine: %w", err)
+	}
+	if err := c.policy.CheckUpdate("Machine", machine); err != nil {
+		return err
 	}
 
 	// Add remediation annotation
@@ -376,6 +403,9 @@ func (c *Client) PauseCluster(ctx context.Context, namespace, name string) error
 	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
+	if err := c.policy.CheckUpdate("Cluster", cluster); err != nil {
+		return err
+	}
 
 	// Add paused annotation
 	if cluster.Annotations == nil {
@@ -401,6 +431,9 @@ func (c *Client) ResumeCluster(ctx context.Context, namespace, name string) erro
 	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
+	if err := c.policy.CheckUpdate("Cluster", cluster); err != nil {
+		return err
+	}
 
 	// Remove paused annotation
 	if cluster.Annotations != nil {
@@ -425,6 +458,9 @@ func (c *Client) DeleteCluster(ctx context.Context, namespace, name string) erro
 	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
+	if err := c.policy.CheckDelete("Cluster", cluster); err != nil {
+		return err
+	}
 
 	// Delete the cluster
 	if err := c.ctrlClient.Delete(ctx, cluster); err != nil {
@@ -448,6 +484,10 @@ type CreateClusterOptions struct {
 
 // CreateCluster creates a new CAPI cluster with basic configuration
 func (c *Client) CreateCluster(ctx context.Context, opts CreateClusterOptions) (*clusterv1.Cluster, error) {
+	if err := c.policy.CheckCreate("Cluster", opts.Namespace, opts.Name); err != nil {
+		return nil, err
+	}
+
 	// For now, we'll create a basic cluster object
 	// In a real implementation, this would create all the necessary resources
 	// (Cluster, KubeadmControlPlane, MachineDeployment, etc.)
@@ -509,6 +549,9 @@ func (c *Client) UpgradeCluster(ctx context.Context, opts UpgradeClusterOptions)
 	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
+	if err := c.policy.CheckUpdate("Cluster", cluster); err != nil {
+		return err
+	}
 
 	// Update the control plane version
 	if cluster.Spec.ControlPlaneRef != nil {
@@ -521,6 +564,9 @@ func (c *Client) UpgradeCluster(ctx context.Context, opts UpgradeClusterOptions)
 			}
 			if err := c.ctrlClient.Get(ctx, cpKey, kcp); err != nil {
 				return fmt.Errorf("failed to get control plane: %w", err)
+			}
+			if err := c.policy.CheckUpdate("KubeadmControlPlane", kcp); err != nil {
+				return err
 			}
 
 			// Update version
@@ -543,6 +589,9 @@ func (c *Client) UpgradeCluster(ctx context.Context, opts UpgradeClusterOptions)
 		for i := range mdList.Items {
 			md := &mdList.Items[i]
 			if md.Spec.Template.Spec.Version != nil {
+				if err := c.policy.CheckUpdate("MachineDeployment", md); err != nil {
+					return err
+				}
 				*md.Spec.Template.Spec.Version = opts.TargetVersion
 				if err := c.ctrlClient.Update(ctx, md); err != nil {
 					return fmt.Errorf("failed to update machine deployment %s: %w", md.Name, err)
@@ -572,6 +621,9 @@ func (c *Client) UpdateCluster(ctx context.Context, opts UpdateClusterOptions) (
 
 	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
 		return nil, fmt.Errorf("failed to get cluster: %w", err)
+	}
+	if err := c.policy.CheckUpdate("Cluster", cluster); err != nil {
+		return nil, err
 	}
 
 	// Update labels
@@ -632,6 +684,9 @@ func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (stri
 
 	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
 		return "", fmt.Errorf("failed to get cluster: %w", err)
+	}
+	if err := c.policy.CheckUpdate("Cluster", cluster); err != nil {
+		return "", err
 	}
 
 	// Prepare target namespace
@@ -831,6 +886,10 @@ type CreateMachineDeploymentOptions struct {
 
 // CreateMachineDeployment creates a new CAPI MachineDeployment
 func (c *Client) CreateMachineDeployment(ctx context.Context, opts CreateMachineDeploymentOptions) (*clusterv1.MachineDeployment, error) {
+	if err := c.policy.CheckCreate("MachineDeployment", opts.Namespace, opts.Name); err != nil {
+		return nil, err
+	}
+
 	// Create the machine deployment
 	md := &clusterv1.MachineDeployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -900,6 +959,9 @@ func (c *Client) UpdateMachineDeployment(ctx context.Context, opts UpdateMachine
 	if err != nil {
 		return nil, fmt.Errorf("failed to get machine deployment: %w", err)
 	}
+	if err := c.policy.CheckUpdate("MachineDeployment", md); err != nil {
+		return nil, err
+	}
 
 	// Update version if specified
 	if opts.Version != nil {
@@ -968,6 +1030,9 @@ func (c *Client) RolloutMachineDeployment(ctx context.Context, opts RolloutMachi
 	md, err := c.GetMachineDeployment(ctx, opts.Namespace, opts.Name)
 	if err != nil {
 		return fmt.Errorf("failed to get machine deployment: %w", err)
+	}
+	if err := c.policy.CheckUpdate("MachineDeployment", md); err != nil {
+		return err
 	}
 
 	// Trigger rollout by updating an annotation
@@ -1063,6 +1128,9 @@ func (c *Client) DrainNode(ctx context.Context, opts NodeOperationOptions) error
 	if err != nil {
 		return fmt.Errorf("failed to get node %s: %w", nodeName, err)
 	}
+	if err := c.policy.CheckUpdate("Node", node); err != nil {
+		return err
+	}
 
 	// Mark as unschedulable
 	node.Spec.Unschedulable = true
@@ -1104,6 +1172,9 @@ func (c *Client) CordonNode(ctx context.Context, opts NodeOperationOptions) erro
 	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get node %s: %w", nodeName, err)
+	}
+	if err := c.policy.CheckUpdate("Node", node); err != nil {
+		return err
 	}
 
 	// Update schedulable status
