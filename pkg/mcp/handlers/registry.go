@@ -17,6 +17,9 @@ import (
 //   - credentialTools (capi_get_kubeconfig) only when ExposeKubeconfig is
 //     set, whatever ReadOnly says;
 //   - readOnlyTools always.
+//
+// Every offered tool carries the MCP annotations of its class
+// (annotationsFor), so clients can tell the reads from the writes.
 func BuildAllTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
 	tools, err := buildTools(serverCtx)
 	if err != nil {
@@ -36,6 +39,7 @@ func BuildAllTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
 				continue
 			}
 		}
+		reg.Tool.Annotations = annotationsFor(name)
 		filtered = append(filtered, reg)
 	}
 	return filtered, nil

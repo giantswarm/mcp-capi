@@ -187,7 +187,12 @@ is **off**, in the CLI and in the Helm chart (`readOnly`, `gitopsGuard`,
   pause, resume, update, move, delete, remediate, rollout, drain and cordon
   tools are not offered at all, and every mutating Kubernetes call is refused
   should one be reached anyway. Pass `--read-only=false` to offer them; the
-  person's RBAC still applies to each call.
+  person's RBAC still applies to each call. Every tool carries the MCP
+  annotations of its class: the reads (and `capi_get_kubeconfig`) are
+  `readOnlyHint: true`, the writes `readOnlyHint: false` with
+  `destructiveHint: true` unless they only create (`capi_create_cluster`,
+  `capi_create_machinedeployment`), so an aggregator's read-only toolset
+  (muster's `preset:read-only`) selects exactly the reads.
 - `--gitops-guard` refuses a write to an object that a GitOps controller or a
   Helm release owns. Such an object is recognised by its markers:
   `kustomize.toolkit.fluxcd.io/name` and `helm.toolkit.fluxcd.io/name` (Flux),

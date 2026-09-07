@@ -1,5 +1,7 @@
 package handlers
 
+import "github.com/mark3labs/mcp-go/mcp"
+
 // readOnlyTools are the tools that never change anything and hand out no
 // credentials: they list, get, inspect or export resources. These are always
 // registered, read-only server or not. Every tool must appear in exactly one
@@ -78,6 +80,49 @@ var mutatingTools = map[string]struct{}{
 // independent of ReadOnly. The client refuses the export as well.
 var credentialTools = map[string]struct{}{
 	"capi_get_kubeconfig": {},
+}
+
+// additiveTools are the mutating tools that only create: they never change
+// or remove what exists, so their destructiveHint is false. Every other
+// mutating tool scales, updates, pauses, drains or deletes something that is
+// already there and is annotated destructive.
+var additiveTools = map[string]struct{}{
+	"capi_create_cluster":           {},
+	"capi_create_machinedeployment": {},
+}
+
+// idempotentWrites are the mutating tools whose repeated call with the same
+// arguments leaves the cluster as the first call did (set a size, pause,
+// resume, cordon, apply the same update). Creates, deletes, drains,
+// remediations, moves, upgrades and rollouts are not.
+var idempotentWrites = map[string]struct{}{
+	"capi_scale_cluster":            {},
+	"capi_pause_cluster":            {},
+	"capi_resume_cluster":           {},
+	"capi_update_cluster":           {},
+	"capi_scale_machinedeployment":  {},
+	"capi_update_machinedeployment": {},
+	"capi_cordon_node":              {},
+}
+
+// annotationsFor derives a tool's MCP annotations from its classification, so
+// a client (or an aggregator's read-only toolset) can tell the reads from the
+// writes: read-only and credential tools change nothing (readOnlyHint true,
+// destructiveHint false, idempotentHint true); mutating tools are writes whose
+// destructiveHint is false only for the additive creates. Every tool talks to
+// the management cluster only (openWorldHint false). Without this, mcp-go's
+// NewTool defaults (readOnlyHint false, destructiveHint true) would present
+// capi_list_clusters as a destructive write.
+func annotationsFor(name string) mcp.ToolAnnotation {
+	f := false
+	t := true
+	if IsReadOnlyTool(name) || IsCredentialTool(name) {
+		return mcp.ToolAnnotation{ReadOnlyHint: &t, DestructiveHint: &f, IdempotentHint: &t, OpenWorldHint: &f}
+	}
+	_, additive := additiveTools[name]
+	_, idempotent := idempotentWrites[name]
+	destructive := !additive
+	return mcp.ToolAnnotation{ReadOnlyHint: &f, DestructiveHint: &destructive, IdempotentHint: &idempotent, OpenWorldHint: &f}
 }
 
 // IsReadOnlyTool reports whether the named tool reads without handing out

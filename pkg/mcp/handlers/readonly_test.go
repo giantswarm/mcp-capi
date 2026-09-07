@@ -139,3 +139,67 @@ func TestBuildAllToolsExposeKubeconfig(t *testing.T) {
 		t.Errorf("fully open server offers %d tools, want %d", len(everything), len(readOnlyTools)+len(mutatingTools)+len(credentialTools))
 	}
 }
+
+// TestEveryToolIsAnnotated pins the MCP annotations to the classification:
+// a read-only or credential tool is readOnlyHint true and never destructive;
+// a mutating tool is readOnlyHint false, destructive unless it only creates.
+// mcp-go's NewTool defaults (readOnlyHint false, destructiveHint true) must
+// not survive on a read, or an aggregator's read-only toolset drops the whole
+// server.
+func TestEveryToolIsAnnotated(t *testing.T) {
+	ctx := NewCallerIdentityServerContext(capi.NewBearerClientFactory("https://kubernetes.default.svc", "", nil), capi.WritePolicy{ExposeKubeconfig: true})
+	tools, err := BuildAllTools(ctx)
+	if err != nil {
+		t.Fatalf("BuildAllTools() error = %v", err)
+	}
+	if len(tools) != len(readOnlyTools)+len(mutatingTools)+len(credentialTools) {
+		t.Fatalf("permissive server with ExposeKubeconfig offers %d tools, want every classified tool (%d)", len(tools), len(readOnlyTools)+len(mutatingTools)+len(credentialTools))
+	}
+	for _, reg := range tools {
+		name := reg.Tool.Name
+		a := reg.Tool.Annotations
+		if a.ReadOnlyHint == nil || a.DestructiveHint == nil || a.IdempotentHint == nil || a.OpenWorldHint == nil {
+			t.Errorf("tool %q leaves an annotation hint unset: %+v", name, a)
+			continue
+		}
+		if *a.OpenWorldHint {
+			t.Errorf("tool %q is openWorldHint true; every tool talks to the management cluster only", name)
+		}
+		switch {
+		case IsReadOnlyTool(name), IsCredentialTool(name):
+			if !*a.ReadOnlyHint || *a.DestructiveHint || !*a.IdempotentHint {
+				t.Errorf("read %q must be readOnlyHint true, destructiveHint false, idempotentHint true; got readOnly=%v destructive=%v idempotent=%v", name, *a.ReadOnlyHint, *a.DestructiveHint, *a.IdempotentHint)
+			}
+		case IsMutatingTool(name):
+			if *a.ReadOnlyHint {
+				t.Errorf("write %q claims readOnlyHint true", name)
+			}
+			_, additive := additiveTools[name]
+			if *a.DestructiveHint == additive {
+				t.Errorf("write %q: destructiveHint=%v, want %v (additive=%v)", name, *a.DestructiveHint, !additive, additive)
+			}
+			_, idempotent := idempotentWrites[name]
+			if *a.IdempotentHint != idempotent {
+				t.Errorf("write %q: idempotentHint=%v, want %v", name, *a.IdempotentHint, idempotent)
+			}
+		}
+	}
+	for listName, list := range map[string]map[string]struct{}{"additiveTools": additiveTools, "idempotentWrites": idempotentWrites} {
+		for name := range list {
+			if !IsMutatingTool(name) {
+				t.Errorf("%s lists %q, which is not a mutating tool", listName, name)
+			}
+		}
+	}
+	for _, name := range []string{"capi_list_clusters", "capi_cluster_health", "capi_get_cluster", backupTool, "test"} {
+		if a := annotationsFor(name); a.ReadOnlyHint == nil || !*a.ReadOnlyHint {
+			t.Errorf("%s must be annotated read-only", name)
+		}
+	}
+	if a := annotationsFor("capi_delete_cluster"); a.DestructiveHint == nil || !*a.DestructiveHint || *a.IdempotentHint {
+		t.Errorf("capi_delete_cluster must be destructive and not idempotent: %+v", a)
+	}
+	if a := annotationsFor("capi_create_cluster"); a.DestructiveHint == nil || *a.DestructiveHint {
+		t.Errorf("capi_create_cluster only adds: destructiveHint must be false: %+v", a)
+	}
+}
