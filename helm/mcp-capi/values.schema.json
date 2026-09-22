@@ -207,6 +207,9 @@
                 "existingSecret": {
                     "type": "string"
                 },
+                "existingSecretChecksum": {
+                    "type": "string"
+                },
                 "google": {
                     "type": "object",
                     "additionalProperties": false,
@@ -234,6 +237,9 @@
                             "additionalProperties": false,
                             "properties": {
                                 "existingSecret": {
+                                    "type": "string"
+                                },
+                                "existingSecretChecksum": {
                                     "type": "string"
                                 },
                                 "keyPrefix": {

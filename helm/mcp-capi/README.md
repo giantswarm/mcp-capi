@@ -14,6 +14,28 @@ A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 
 * <https://github.com/giantswarm/mcp-capi>
 
+## Rolling on credential rotation
+
+The server reads its OAuth credentials (the Dex or Google client secret, the
+token encryption key, the Valkey password) from a Secret at start and never
+again. The pod template carries a `checksum/oauth-secret` annotation so a
+changed credential restarts the server:
+
+- With `oauth.existingSecret` (and `global.identity.existingSecret`) empty the
+  chart renders the Secret from `oauth.dex.clientSecret` (or
+  `oauth.google.clientSecret`), `oauth.encryptionKey` and
+  `oauth.storage.valkey.password`; the annotation is the SHA-256 of that
+  Secret's data and follows every change of those values.
+- With an existing Secret the chart cannot read it; the annotation is
+  `oauth.existingSecretChecksum` verbatim. Change it in the same change that
+  rotates the Secret (a hash over the new data, a counter, a date). A Flux
+  `HelmRelease` can instead feed the Secret's keys into the values above through
+  `valuesFrom` entries with `targetPath`, so the chart renders the Secret itself
+  and the checksum follows the rotation on its own.
+- A Valkey password in its own Secret (`oauth.storage.valkey.existingSecret`)
+  is marked the same way by `oauth.storage.valkey.existingSecretChecksum`,
+  rendered as `checksum/valkey-secret`.
+
 ## Values
 
 | Key | Type | Default | Description |
@@ -70,6 +92,7 @@ A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 | oauth.google.clientID | string | `""` |  |
 | oauth.google.clientSecret | string | `""` |  |
 | oauth.existingSecret | string | `""` |  |
+| oauth.existingSecretChecksum | string | `""` |  |
 | oauth.encryptionKey | string | `""` |  |
 | oauth.allowPublicRegistration | bool | `false` |  |
 | oauth.allowPrivateURLs | bool | `false` |  |
@@ -81,6 +104,7 @@ A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 | oauth.storage.valkey.tls.enabled | bool | `false` |  |
 | oauth.storage.valkey.keyPrefix | string | `"mcp:"` |  |
 | oauth.storage.valkey.existingSecret | string | `""` |  |
+| oauth.storage.valkey.existingSecretChecksum | string | `""` |  |
 | oauth.storage.valkey.secretKeyPassword | string | `"valkey-password"` |  |
 | gatewayAPI.enabled | bool | `false` |  |
 | gatewayAPI.httpRoute.parentRefs | list | `[]` |  |

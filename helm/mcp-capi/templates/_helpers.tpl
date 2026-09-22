@@ -138,3 +138,72 @@ platform's identity provider once and a standalone install behaves as before.
 {{- define "mcp-capi.oauth.downstream" -}}
 {{- if and .Values.oauth.enabled .Values.oauth.downstream.enabled -}}true{{- end -}}
 {{- end }}
+
+{{/*
+Data of the OAuth credentials Secret the chart renders (templates/oauth-secret.yaml).
+Its SHA-256 is the pod template's checksum/oauth-secret annotation, so the
+server rolls when a credential changes.
+*/}}
+{{- define "mcp-capi.oauthSecretData" -}}
+{{- $data := dict -}}
+{{- if eq (include "mcp-capi.oauth.provider" .) "dex" -}}
+{{- $_ := set $data "dex-client-secret" (.Values.oauth.dex.clientSecret | b64enc) -}}
+{{- else -}}
+{{- $_ := set $data "google-client-secret" (.Values.oauth.google.clientSecret | b64enc) -}}
+{{- end -}}
+{{- with .Values.oauth.encryptionKey -}}
+{{- $_ := set $data "oauth-encryption-key" (. | b64enc) -}}
+{{- end -}}
+{{- with .Values.oauth.storage.valkey.password -}}
+{{- $_ := set $data "valkey-password" (. | b64enc) -}}
+{{- end -}}
+{{- toYaml $data -}}
+{{- end }}
+
+{{/*
+Value of the pod template's checksum/oauth-secret annotation: the SHA-256 of
+the chart-rendered Secret's data, or oauth.existingSecretChecksum verbatim when
+the credentials come from an existing Secret the chart cannot read. Empty while
+OAuth is off, or while nothing marks the existing Secret's revision.
+*/}}
+{{- define "mcp-capi.oauthSecretChecksum" -}}
+{{- if .Values.oauth.enabled -}}
+{{- if include "mcp-capi.oauth.existingSecret" . -}}
+{{- .Values.oauth.existingSecretChecksum -}}
+{{- else -}}
+{{- include "mcp-capi.oauthSecretData" . | sha256sum -}}
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Value of the pod template's checksum/valkey-secret annotation:
+oauth.storage.valkey.existingSecretChecksum verbatim while the Valkey password
+comes from its own existing Secret. Empty otherwise: a password in the OAuth
+Secret is covered by checksum/oauth-secret.
+*/}}
+{{- define "mcp-capi.valkeySecretChecksum" -}}
+{{- if and .Values.oauth.enabled (eq .Values.oauth.storage.type "valkey") .Values.oauth.storage.valkey.existingSecret -}}
+{{- .Values.oauth.storage.valkey.existingSecretChecksum -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Pod template annotations: podAnnotations plus the credentials checksums. Empty
+when there is nothing to annotate.
+*/}}
+{{- define "mcp-capi.podAnnotations" -}}
+{{- $annotations := dict -}}
+{{- range $key, $value := .Values.podAnnotations -}}
+{{- $_ := set $annotations $key $value -}}
+{{- end -}}
+{{- with include "mcp-capi.oauthSecretChecksum" . -}}
+{{- $_ := set $annotations "checksum/oauth-secret" . -}}
+{{- end -}}
+{{- with include "mcp-capi.valkeySecretChecksum" . -}}
+{{- $_ := set $annotations "checksum/valkey-secret" . -}}
+{{- end -}}
+{{- with $annotations -}}
+{{- toYaml . -}}
+{{- end -}}
+{{- end }}
