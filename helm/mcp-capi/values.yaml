@@ -128,8 +128,18 @@ oauth:
   # Existing Secret with the credentials. Keys: dex-client-secret or
   # google-client-secret, oauth-encryption-key (optional), valkey-password
   # (optional). Falls back to global.identity.existingSecret. When empty the
-  # chart renders <fullname>-oauth from the values above.
+  # chart renders <fullname>-oauth from the values above. The server reads the
+  # Secret at start and never again; see existingSecretChecksum for how a
+  # rotation reaches it.
   existingSecret: ""
+  # Revision mark of the existing Secret, a string. The pod template carries a
+  # checksum/oauth-secret annotation so the server rolls when its credentials
+  # change: for a chart-rendered Secret the SHA-256 of the Secret's data, for
+  # an existing Secret, which the chart cannot read, this value verbatim.
+  # Whoever rotates the Secret changes this value in the same change (a hash
+  # over the new data, a counter, a date). While it is empty, a rotation of the
+  # existing Secret alone leaves the running server on the old values.
+  existingSecretChecksum: ""
   # AES-256-GCM key for tokens at rest (32 bytes, base64 or hex; generate
   # with: openssl rand -base64 32). Used only when the chart renders the
   # Secret itself. Empty stores tokens unencrypted.
@@ -165,6 +175,11 @@ oauth:
       # Existing Secret holding the password (key: secretKeyPassword). Falls
       # back to the OAuth Secret's valkey-password key.
       existingSecret: ""
+      # Revision mark of that Secret, a string, rendered verbatim as the pod
+      # template's checksum/valkey-secret annotation so the server rolls when
+      # the password rotates; change it in the same change as the Secret. A
+      # password in the OAuth Secret needs no separate mark.
+      existingSecretChecksum: ""
       secretKeyPassword: "valkey-password"
 
 # Gateway API HTTPRoute for the public hostname (Envoy Gateway).

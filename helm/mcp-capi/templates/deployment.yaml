@@ -15,9 +15,9 @@ spec:
       {{- include "mcp-capi.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with include "mcp-capi.podAnnotations" . }}
       annotations:
-        {{- toYaml . | nindent 8 }}
+        {{- . | nindent 8 }}
       {{- end }}
       labels:
         {{- include "mcp-capi.labels" . | nindent 8 }}
