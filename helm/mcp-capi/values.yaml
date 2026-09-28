@@ -53,6 +53,14 @@ service:
   type: ClusterIP
   port: 8080
 
+# Holds the liveness and readiness probes off until the server listens. With
+# Valkey token storage the server waits up to 60 s for Valkey before it
+# listens; the default window (periodSeconds x failureThreshold) is 90 s.
+startupProbe:
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 18
+
 resources:
   limits:
     memory: 256Mi

@@ -69,6 +69,9 @@ changed credential restarts the server:
 | securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | service.type | string | `"ClusterIP"` |  |
 | service.port | int | `8080` |  |
+| startupProbe.periodSeconds | int | `5` |  |
+| startupProbe.timeoutSeconds | int | `5` |  |
+| startupProbe.failureThreshold | int | `18` |  |
 | resources.limits.memory | string | `"256Mi"` |  |
 | resources.requests.cpu | string | `"100m"` |  |
 | resources.requests.memory | string | `"128Mi"` |  |

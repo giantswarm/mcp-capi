@@ -68,6 +68,12 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
           livenessProbe:
             tcpSocket:
               port: http
