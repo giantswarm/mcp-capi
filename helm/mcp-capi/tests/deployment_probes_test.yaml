@@ -1,0 +1,30 @@
+suite: Deployment probes
+templates:
+  - templates/deployment.yaml
+tests:
+  - it: should hold liveness off for the Valkey startup wait with a 90 s startup probe
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 18
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 3
+
+  - it: should take the startup probe window from values
+    set:
+      startupProbe:
+        periodSeconds: 10
+        failureThreshold: 30
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.periodSeconds
+          value: 10
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 30

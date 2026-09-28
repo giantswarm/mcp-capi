@@ -417,6 +417,21 @@
                 }
             }
         },
+        "startupProbe": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "failureThreshold": {
+                    "type": "integer"
+                },
+                "periodSeconds": {
+                    "type": "integer"
+                },
+                "timeoutSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
         "subscriptionID": {
             "type": "string"
         },
