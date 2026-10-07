@@ -1,4 +1,24 @@
+{{- /*
+The server's network policy. Egress: the API server (the caller's token
+authenticates every call), the cluster and, with OAuth, the world (the
+identity provider's discovery, token endpoint and JWKS). Ingress: muster is
+the only client. A direct call would skip muster's sign-in, audit trail and
+per-user authorization, and Cilium policies are additive, so an open rule here
+(the cluster entity) could not be narrowed by any other policy. The policy
+admits on the server port:
+
+  - muster (ciliumNetworkPolicy.ingress.muster: its pods in its namespace);
+  - the gateway's proxies (ciliumNetworkPolicy.ingress.gatewayPeers) while the
+    chart renders its HTTPRoute (gatewayAPI.enabled): the public hostname's
+    traffic, the OAuth endpoints included, reaches the server through them;
+  - ciliumNetworkPolicy.ingress.additionalPeers;
+
+and on every port the kubelet's startup, liveness and readiness probes, which
+arrive from the host entity. The server serves no metrics port.
+*/ -}}
 {{- if .Values.ciliumNetworkPolicy.enabled }}
+{{- $ingress := .Values.ciliumNetworkPolicy.ingress }}
+{{- $peers := concat (ternary $ingress.gatewayPeers list .Values.gatewayAPI.enabled) $ingress.additionalPeers }}
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -26,8 +46,22 @@ spec:
         - world
     {{- end }}
   ingress:
+    - fromEndpoints:
+        - matchLabels:
+            {{- toYaml $ingress.muster.matchLabels | nindent 12 }}
+            io.kubernetes.pod.namespace: {{ $ingress.muster.namespace }}
+        {{- range $peers }}
+        - matchLabels:
+            {{- toYaml .matchLabels | nindent 12 }}
+            io.kubernetes.pod.namespace: {{ .namespace }}
+        {{- end }}
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # The kubelet's probes arrive from the host entity.
     - fromEntities:
-        - cluster
+        - host
   endpointSelector:
     matchLabels:
       {{- include "mcp-capi.selectorLabels" . | nindent 6 }}

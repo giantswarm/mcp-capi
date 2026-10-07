@@ -121,3 +121,8 @@ changed credential restarts the server:
 | ciliumNetworkPolicy.enabled | bool | `true` |  |
 | ciliumNetworkPolicy.labels | object | `{}` |  |
 | ciliumNetworkPolicy.annotations | object | `{}` |  |
+| ciliumNetworkPolicy.ingress.muster.namespace | string | `"agent-platform"` |  |
+| ciliumNetworkPolicy.ingress.muster.matchLabels."app.kubernetes.io/name" | string | `"muster"` |  |
+| ciliumNetworkPolicy.ingress.gatewayPeers[0].namespace | string | `"envoy-gateway-system"` |  |
+| ciliumNetworkPolicy.ingress.gatewayPeers[0].matchLabels."app.kubernetes.io/name" | string | `"envoy"` |  |
+| ciliumNetworkPolicy.ingress.additionalPeers | list | `[]` |  |
