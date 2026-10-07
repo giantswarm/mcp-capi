@@ -123,6 +123,8 @@ changed credential restarts the server:
 | ciliumNetworkPolicy.annotations | object | `{}` |  |
 | ciliumNetworkPolicy.ingress.muster.namespace | string | `"agent-platform"` |  |
 | ciliumNetworkPolicy.ingress.muster.matchLabels."app.kubernetes.io/name" | string | `"muster"` |  |
+| ciliumNetworkPolicy.ingress.teleportPeers[0].namespace | string | `"kube-system"` |  |
+| ciliumNetworkPolicy.ingress.teleportPeers[0].matchLabels.app | string | `"teleport-kube-agent"` |  |
 | ciliumNetworkPolicy.ingress.gatewayPeers[0].namespace | string | `"envoy-gateway-system"` |  |
 | ciliumNetworkPolicy.ingress.gatewayPeers[0].matchLabels."app.kubernetes.io/name" | string | `"envoy"` |  |
 | ciliumNetworkPolicy.ingress.additionalPeers | list | `[]` |  |

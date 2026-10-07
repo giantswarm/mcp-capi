@@ -8,6 +8,9 @@ per-user authorization, and Cilium policies are additive, so an open rule here
 admits on the server port:
 
   - muster (ciliumNetworkPolicy.ingress.muster: its pods in its namespace);
+  - Teleport's Kubernetes agent (ciliumNetworkPolicy.ingress.teleportPeers): a
+    muster on another cluster reaches this server through Teleport app
+    access, and on this cluster the caller is the agent;
   - the gateway's proxies (ciliumNetworkPolicy.ingress.gatewayPeers) while the
     chart renders its HTTPRoute (gatewayAPI.enabled): the public hostname's
     traffic, the OAuth endpoints included, reaches the server through them;
@@ -18,7 +21,7 @@ arrive from the host entity. The server serves no metrics port.
 */ -}}
 {{- if .Values.ciliumNetworkPolicy.enabled }}
 {{- $ingress := .Values.ciliumNetworkPolicy.ingress }}
-{{- $peers := concat (ternary $ingress.gatewayPeers list .Values.gatewayAPI.enabled) $ingress.additionalPeers }}
+{{- $peers := concat $ingress.teleportPeers (ternary $ingress.gatewayPeers list .Values.gatewayAPI.enabled) $ingress.additionalPeers }}
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
