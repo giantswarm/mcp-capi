@@ -213,3 +213,28 @@ ciliumNetworkPolicy:
   enabled: true
   labels: {}  # @schema additionalProperties: true
   annotations: {}  # @schema additionalProperties: true
+  # Ingress to the server. Muster is the only client: a direct call would skip
+  # its sign-in, audit trail and per-user authorization, and Cilium policies
+  # are additive, so an open rule here could not be narrowed by another policy.
+  # The policy admits `muster`, `gatewayPeers` (while gatewayAPI.enabled) and
+  # `additionalPeers` on the server port, and the kubelet's probes (the host
+  # entity) on every port. Each peer is a namespace and the labels of its pods.
+  ingress:
+    # The muster this server is registered with.
+    muster:
+      namespace: agent-platform  # @schema minLength: 1
+      matchLabels:  # @schema type: object; minProperties: 1; additionalProperties: {"type": "string"}; skipProperties: true
+        app.kubernetes.io/name: muster
+    # The Gateway's proxies, admitted while the chart renders its HTTPRoute
+    # (gatewayAPI.enabled): the public hostname's traffic, the OAuth endpoints
+    # included, reaches the server through them. Envoy Gateway's by default.
+    gatewayPeers:  # @schema item: object; itemRequired: [namespace, matchLabels]; itemProperties: {"namespace": {"type": "string", "minLength": 1}, "matchLabels": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string"}}}
+      - namespace: envoy-gateway-system
+        matchLabels:
+          app.kubernetes.io/name: envoy
+    # Further clients admitted on the server port. Example:
+    #   additionalPeers:
+    #     - namespace: ingress-nginx
+    #       matchLabels:
+    #         app.kubernetes.io/name: ingress-nginx
+    additionalPeers: []  # @schema item: object; itemRequired: [namespace, matchLabels]; itemProperties: {"namespace": {"type": "string", "minLength": 1}, "matchLabels": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string"}}}
