@@ -216,15 +216,23 @@ ciliumNetworkPolicy:
   # Ingress to the server. Muster is the only client: a direct call would skip
   # its sign-in, audit trail and per-user authorization, and Cilium policies
   # are additive, so an open rule here could not be narrowed by another policy.
-  # The policy admits `muster`, `gatewayPeers` (while gatewayAPI.enabled) and
-  # `additionalPeers` on the server port, and the kubelet's probes (the host
-  # entity) on every port. Each peer is a namespace and the labels of its pods.
+  # The policy admits `muster`, `teleportPeers`, `gatewayPeers` (while
+  # gatewayAPI.enabled) and `additionalPeers` on the server port, and the
+  # kubelet's probes (the host entity) on every port. Each peer is a namespace
+  # and the labels of its pods.
   ingress:
     # The muster this server is registered with.
     muster:
       namespace: agent-platform  # @schema minLength: 1
       matchLabels:  # @schema type: object; minProperties: 1; additionalProperties: {"type": "string"}; skipProperties: true
         app.kubernetes.io/name: muster
+    # Teleport's Kubernetes agent on this cluster: a muster on another cluster
+    # reaches this server through Teleport app access, and on this cluster the
+    # caller is the agent. Admitted always; an empty list admits none.
+    teleportPeers:  # @schema item: object; itemRequired: [namespace, matchLabels]; itemProperties: {"namespace": {"type": "string", "minLength": 1}, "matchLabels": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string"}}}
+      - namespace: kube-system
+        matchLabels:
+          app: teleport-kube-agent
     # The Gateway's proxies, admitted while the chart renders its HTTPRoute
     # (gatewayAPI.enabled): the public hostname's traffic, the OAuth endpoints
     # included, reaches the server through them. Envoy Gateway's by default.

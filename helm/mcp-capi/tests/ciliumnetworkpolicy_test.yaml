@@ -1,8 +1,8 @@
-# The CiliumNetworkPolicy admits muster's pods from muster's namespace on the
-# server port, nothing else from the cluster: an open ingress (the cluster
-# entity) would let any pod skip muster, and Cilium policies are additive, so
-# no other policy could narrow it. The gateway's proxies are admitted only
-# while the chart renders its HTTPRoute.
+# The CiliumNetworkPolicy admits muster's pods from muster's namespace and
+# Teleport's Kubernetes agent on the server port, nothing else from the
+# cluster: an open ingress (the cluster entity) would let any pod skip muster,
+# and Cilium policies are additive, so no other policy could narrow it. The
+# gateway's proxies are admitted only while the chart renders its HTTPRoute.
 suite: CiliumNetworkPolicy
 templates:
   - templates/ciliumnetworkpolicy.yaml
@@ -14,7 +14,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: admits muster from the agent-platform namespace on the server port by default
+  - it: admits muster from the agent-platform namespace and the Teleport agent on the server port by default
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -25,6 +25,9 @@ tests:
               - matchLabels:
                   app.kubernetes.io/name: muster
                   io.kubernetes.pod.namespace: agent-platform
+              - matchLabels:
+                  app: teleport-kube-agent
+                  io.kubernetes.pod.namespace: kube-system
             toPorts:
               - ports:
                   - port: "8080"
@@ -51,11 +54,39 @@ tests:
       ciliumNetworkPolicy.ingress.muster.namespace: muster
     asserts:
       - equal:
+          path: spec.ingress[0].fromEndpoints[0]
+          value:
+            matchLabels:
+              app.kubernetes.io/name: muster
+              io.kubernetes.pod.namespace: muster
+
+  - it: follows the configured Teleport peers
+    set:
+      ciliumNetworkPolicy.ingress.teleportPeers:
+        - namespace: teleport
+          matchLabels:
+            app.kubernetes.io/name: teleport-kube-agent
+    asserts:
+      - equal:
+          path: spec.ingress[0].fromEndpoints[1]
+          value:
+            matchLabels:
+              app.kubernetes.io/name: teleport-kube-agent
+              io.kubernetes.pod.namespace: teleport
+      - lengthEqual:
+          path: spec.ingress[0].fromEndpoints
+          count: 2
+
+  - it: admits no Teleport agent with an empty list
+    set:
+      ciliumNetworkPolicy.ingress.teleportPeers: []
+    asserts:
+      - equal:
           path: spec.ingress[0].fromEndpoints
           value:
             - matchLabels:
                 app.kubernetes.io/name: muster
-                io.kubernetes.pod.namespace: muster
+                io.kubernetes.pod.namespace: agent-platform
 
   - it: admits the gateway's proxies on the server port while the HTTPRoute renders
     set:
@@ -71,6 +102,9 @@ tests:
                 app.kubernetes.io/name: muster
                 io.kubernetes.pod.namespace: agent-platform
             - matchLabels:
+                app: teleport-kube-agent
+                io.kubernetes.pod.namespace: kube-system
+            - matchLabels:
                 app.kubernetes.io/name: envoy
                 io.kubernetes.pod.namespace: envoy-gateway-system
       - lengthEqual:
@@ -81,7 +115,7 @@ tests:
     asserts:
       - lengthEqual:
           path: spec.ingress[0].fromEndpoints
-          count: 1
+          count: 2
       - notContains:
           path: spec.ingress[0].fromEndpoints
           content:
@@ -101,14 +135,14 @@ tests:
             gateway.envoyproxy.io/owning-gateway-name: public
     asserts:
       - equal:
-          path: spec.ingress[0].fromEndpoints[1]
+          path: spec.ingress[0].fromEndpoints[2]
           value:
             matchLabels:
               gateway.envoyproxy.io/owning-gateway-name: public
               io.kubernetes.pod.namespace: gateways
       - lengthEqual:
           path: spec.ingress[0].fromEndpoints
-          count: 2
+          count: 3
 
   - it: admits additional peers on the server port only
     set:
@@ -118,14 +152,14 @@ tests:
             app.kubernetes.io/name: ingress-nginx
     asserts:
       - equal:
-          path: spec.ingress[0].fromEndpoints[1]
+          path: spec.ingress[0].fromEndpoints[2]
           value:
             matchLabels:
               app.kubernetes.io/name: ingress-nginx
               io.kubernetes.pod.namespace: ingress-nginx
       - lengthEqual:
           path: spec.ingress[0].fromEndpoints
-          count: 2
+          count: 3
       - equal:
           path: spec.ingress[1]
           value:
