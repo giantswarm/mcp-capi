@@ -1,0 +1,87 @@
+# Every caller the README's "Ingress callers" table lists, one test each, on
+# the chart's defaults: a caller whose rule or default is dropped fails its own
+# test by name. Cilium policies are additive, so a caller this policy does not
+# admit cannot reach the server at all and its calls time out.
+suite: Ingress callers
+templates:
+  - templates/ciliumnetworkpolicy.yaml
+tests:
+  - it: admits muster on the server port
+    asserts:
+      - contains:
+          path: spec.ingress[0].fromEndpoints
+          content:
+            matchLabels:
+              app.kubernetes.io/name: muster
+              io.kubernetes.pod.namespace: agent-platform
+      - equal:
+          path: spec.ingress[0].toPorts[0].ports[0].port
+          value: "8080"
+
+  - it: admits the Teleport agent on the server port
+    asserts:
+      - contains:
+          path: spec.ingress[0].fromEndpoints
+          content:
+            matchLabels:
+              app: teleport-kube-agent
+              io.kubernetes.pod.namespace: kube-system
+      - equal:
+          path: spec.ingress[0].toPorts[0].ports[0].port
+          value: "8080"
+
+  - it: admits the gateway's proxies on the server port while the HTTPRoute renders
+    set:
+      gatewayAPI.enabled: true
+      gatewayAPI.httpRoute.parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+    asserts:
+      - contains:
+          path: spec.ingress[0].fromEndpoints
+          content:
+            matchLabels:
+              app.kubernetes.io/name: envoy
+              io.kubernetes.pod.namespace: envoy-gateway-system
+      - equal:
+          path: spec.ingress[0].toPorts[0].ports[0].port
+          value: "8080"
+
+  - it: admits the kubelet's probes from the host entity
+    asserts:
+      - contains:
+          path: spec.ingress
+          content:
+            fromEntities:
+              - host
+
+  - it: admits an additional peer on the server port
+    set:
+      ciliumNetworkPolicy.ingress.additionalPeers:
+        - namespace: ingress-nginx
+          matchLabels:
+            app.kubernetes.io/name: ingress-nginx
+    asserts:
+      - contains:
+          path: spec.ingress[0].fromEndpoints
+          content:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+              io.kubernetes.pod.namespace: ingress-nginx
+      - equal:
+          path: spec.ingress[0].toPorts[0].ports[0].port
+          value: "8080"
+
+  - it: admits no caller the table does not list
+    set:
+      gatewayAPI.enabled: true
+      gatewayAPI.httpRoute.parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+    asserts:
+      - lengthEqual:
+          path: spec.ingress
+          count: 2
+      - lengthEqual:
+          path: spec.ingress[0].fromEndpoints
+          count: 3
