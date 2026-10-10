@@ -97,8 +97,10 @@ listed caller is no longer admitted.
 | startupProbe.timeoutSeconds | int | `5` |  |
 | startupProbe.failureThreshold | int | `18` |  |
 | resources.limits.memory | string | `"256Mi"` |  |
+| resources.limits.ephemeral-storage | string | `"100Mi"` |  |
 | resources.requests.cpu | string | `"100m"` |  |
 | resources.requests.memory | string | `"128Mi"` |  |
+| resources.requests.ephemeral-storage | string | `"50Mi"` |  |
 | volumes | list | `[]` |  |
 | volumeMounts | list | `[]` |  |
 | nodeSelector | object | `{}` |  |

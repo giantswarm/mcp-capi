@@ -1,0 +1,57 @@
+# The container mounts an emptyDir at /tmp, the only writable path with
+# readOnlyRootFilesystem, so Kyverno's require-emptydir-requests-and-limits
+# policy demands ephemeral-storage requests and limits on it. The defaults
+# carry both; a values override that drops them is a deliberate choice, not a
+# regression.
+#
+# Run with: make helm-test (helm unittest helm/mcp-capi)
+suite: Deployment resources
+templates:
+  - templates/deployment.yaml
+tests:
+  - it: should request and limit ephemeral-storage for the emptyDir at /tmp by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.ephemeral-storage
+          value: 50Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.ephemeral-storage
+          value: 100Mi
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
+
+  - it: should keep the cpu and memory defaults next to the ephemeral-storage entries
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            limits:
+              memory: 256Mi
+              ephemeral-storage: 100Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 50Mi
+
+  - it: should take the ephemeral-storage sizes from values
+    set:
+      resources:
+        requests:
+          ephemeral-storage: 200Mi
+        limits:
+          ephemeral-storage: 1Gi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.ephemeral-storage
+          value: 200Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.ephemeral-storage
+          value: 1Gi
