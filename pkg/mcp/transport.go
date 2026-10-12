@@ -79,34 +79,10 @@ func RunSSEServer(mcpSrv *mcpserver.MCPServer, addr, sseEndpoint, messageEndpoin
 		return serveWithShutdown(ctx, addr, mux, "SSE")
 	}
 
-	// Start server in goroutine
-	serverDone := make(chan error, 1)
-	go func() {
-		defer close(serverDone)
-		if err := sseServer.Start(addr); err != nil {
-			serverDone <- err
-		}
-	}()
-
-	// Wait for either shutdown signal or server completion
-	select {
-	case <-ctx.Done():
-		fmt.Println("Shutdown signal received, stopping SSE server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := sseServer.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("error shutting down SSE server: %w", err)
-		}
-	case err := <-serverDone:
-		if err != nil {
-			return fmt.Errorf("SSE server stopped with error: %w", err)
-		} else {
-			fmt.Println("SSE server stopped normally")
-		}
-	}
-
-	fmt.Println("SSE server gracefully stopped")
-	return nil
+	mux := http.NewServeMux()
+	mux.Handle(sseEndpoint, sseServer.SSEHandler())
+	mux.Handle(messageEndpoint, sseServer.MessageHandler())
+	return serveWithShutdown(ctx, addr, mux, "SSE")
 }
 
 // RunStreamableHTTPServer runs the server with Streamable HTTP transport.
@@ -133,45 +109,25 @@ func RunStreamableHTTPServer(mcpSrv *mcpserver.MCPServer, addr, endpoint string,
 		return serveWithShutdown(ctx, addr, mux, "HTTP")
 	}
 
-	// Start server in goroutine
-	serverDone := make(chan error, 1)
-	go func() {
-		defer close(serverDone)
-		if err := httpServer.Start(addr); err != nil {
-			serverDone <- err
-		}
-	}()
-
-	// Wait for either shutdown signal or server completion
-	select {
-	case <-ctx.Done():
-		fmt.Println("Shutdown signal received, stopping HTTP server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("error shutting down HTTP server: %w", err)
-		}
-	case err := <-serverDone:
-		if err != nil {
-			return fmt.Errorf("HTTP server stopped with error: %w", err)
-		} else {
-			fmt.Println("HTTP server stopped normally")
-		}
-	}
-
-	fmt.Println("HTTP server gracefully stopped")
-	return nil
+	mux := http.NewServeMux()
+	mux.Handle(endpoint, httpServer)
+	return serveWithShutdown(ctx, addr, mux, "HTTP")
 }
 
-// serveWithShutdown serves handler on addr until ctx is done, then drains
-// connections for up to 30 seconds.
+// maxBodyBytes bounds a request body. mcp-go reads a POST body whole before
+// validating it (CVE-2026-108859); the bound keeps that read small.
+const maxBodyBytes = 1 << 20
+
+// serveWithShutdown serves handler on addr, every request body bounded at
+// maxBodyBytes, until ctx is done, then drains connections for up to 30
+// seconds.
 func serveWithShutdown(ctx context.Context, addr string, handler http.Handler, name string) error {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", addr, err)
 	}
 	srv := &http.Server{
-		Handler:           handler,
+		Handler:           http.MaxBytesHandler(handler, maxBodyBytes),
 		ReadHeaderTimeout: 30 * time.Second,
 	}
 	serverDone := make(chan error, 1)
