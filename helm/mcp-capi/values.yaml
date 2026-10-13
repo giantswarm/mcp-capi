@@ -4,10 +4,6 @@
 # oauth.* values below fall back to it when they are empty.
 global: {}  # @schema additionalProperties: true
 
-# The owning team's label value, set as application.giantswarm.io/team on
-# every resource the chart renders.
-team: bumblebee  # @schema minLength: 1
-
 replicaCount: 1
 
 image:

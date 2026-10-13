@@ -65,7 +65,6 @@ listed caller is no longer admitted.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | global | object | `{}` |  |
-| team | string | `"bumblebee"` |  |
 | replicaCount | int | `1` |  |
 | image.registry | string | `"gsoci.azurecr.io"` |  |
 | image.repository | string | `"giantswarm/mcp-capi"` |  |
