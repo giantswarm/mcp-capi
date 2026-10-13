@@ -8,7 +8,7 @@ A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 
 | Name | Email | Url |
 | ---- | ------ | --- |
-| Giant Swarm | <team-planeteers@giantswarm.io> |  |
+| Giant Swarm | <team-bumblebee@giantswarm.io> |  |
 
 ## Source Code
 
