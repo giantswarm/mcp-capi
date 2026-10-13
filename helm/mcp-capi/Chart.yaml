@@ -15,8 +15,8 @@ keywords:
   - model-context-protocol
 maintainers:
   - name: Giant Swarm
-    email: team-planeteers@giantswarm.io
+    email: team-bumblebee@giantswarm.io
 annotations:
-  io.giantswarm.application.team: team-planeteers
+  io.giantswarm.application.team: team-bumblebee
   io.giantswarm.application.audience: customers
   io.giantswarm.application.managed: "true"

@@ -1,0 +1,28 @@
+# Team label tests for the mcp-capi Helm chart
+#
+# Every resource the chart renders carries application.giantswarm.io/team from
+# the single team value.
+suite: team label
+templates:
+  - deployment.yaml
+  - service.yaml
+  - serviceaccount.yaml
+tests:
+  - it: labels every workload with the default team
+    asserts:
+      - equal:
+          path: metadata.labels["application.giantswarm.io/team"]
+          value: bumblebee
+  - it: labels the pod template with the default team
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["application.giantswarm.io/team"]
+          value: bumblebee
+  - it: follows the team value
+    set:
+      team: other
+    asserts:
+      - equal:
+          path: metadata.labels["application.giantswarm.io/team"]
+          value: other

@@ -536,6 +536,10 @@
         "subscriptionID": {
             "type": "string"
         },
+        "team": {
+            "type": "string",
+            "minLength": 1
+        },
         "tolerations": {
             "type": "array"
         },
