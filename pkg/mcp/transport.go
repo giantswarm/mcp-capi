@@ -46,9 +46,9 @@ func RunStdioServer(mcpSrv *mcpserver.MCPServer, stdin io.Reader, stdout io.Writ
 	if err := <-serverDone; err != nil {
 		return fmt.Errorf("server stopped with error: %w", err)
 	}
-	fmt.Println("Server stopped normally")
+	fmt.Fprintln(os.Stderr, "Server stopped normally")
 
-	fmt.Println("Server gracefully stopped")
+	fmt.Fprintln(os.Stderr, "Server gracefully stopped")
 	return nil
 }
 
@@ -66,16 +66,16 @@ func RunSSEServer(mcpSrv *mcpserver.MCPServer, addr, sseEndpoint, messageEndpoin
 	}
 	sseServer := mcpserver.NewSSEServer(mcpSrv, sseOpts...)
 
-	fmt.Printf("SSE server starting on %s\n", addr)
-	fmt.Printf("  SSE endpoint: %s\n", sseEndpoint)
-	fmt.Printf("  Message endpoint: %s\n", messageEndpoint)
+	fmt.Fprintf(os.Stderr, "SSE server starting on %s\n", addr)
+	fmt.Fprintf(os.Stderr, "  SSE endpoint: %s\n", sseEndpoint)
+	fmt.Fprintf(os.Stderr, "  Message endpoint: %s\n", messageEndpoint)
 
 	if oauthSrv != nil {
 		mux := http.NewServeMux()
 		oauthSrv.RegisterRoutes(mux, sseEndpoint)
 		mux.Handle(sseEndpoint, oauthSrv.Protect(sseServer.SSEHandler()))
 		mux.Handle(messageEndpoint, oauthSrv.Protect(sseServer.MessageHandler()))
-		fmt.Println("  OAuth 2.1 endpoints: /oauth/*")
+		fmt.Fprintln(os.Stderr, "  OAuth 2.1 endpoints: /oauth/*")
 		return serveWithShutdown(ctx, addr, mux, "SSE")
 	}
 
@@ -98,14 +98,14 @@ func RunStreamableHTTPServer(mcpSrv *mcpserver.MCPServer, addr, endpoint string,
 	}
 	httpServer := mcpserver.NewStreamableHTTPServer(mcpSrv, httpOpts...)
 
-	fmt.Printf("Streamable HTTP server starting on %s\n", addr)
-	fmt.Printf("  HTTP endpoint: %s\n", endpoint)
+	fmt.Fprintf(os.Stderr, "Streamable HTTP server starting on %s\n", addr)
+	fmt.Fprintf(os.Stderr, "  HTTP endpoint: %s\n", endpoint)
 
 	if oauthSrv != nil {
 		mux := http.NewServeMux()
 		oauthSrv.RegisterRoutes(mux, endpoint)
 		mux.Handle(endpoint, oauthSrv.Protect(httpServer))
-		fmt.Println("  OAuth 2.1 endpoints: /oauth/*")
+		fmt.Fprintln(os.Stderr, "  OAuth 2.1 endpoints: /oauth/*")
 		return serveWithShutdown(ctx, addr, mux, "HTTP")
 	}
 
@@ -140,7 +140,7 @@ func serveWithShutdown(ctx context.Context, addr string, handler http.Handler, n
 
 	select {
 	case <-ctx.Done():
-		fmt.Printf("Shutdown signal received, stopping %s server...\n", name)
+		fmt.Fprintf(os.Stderr, "Shutdown signal received, stopping %s server...\n", name)
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -150,9 +150,9 @@ func serveWithShutdown(ctx context.Context, addr string, handler http.Handler, n
 		if err != nil {
 			return fmt.Errorf("%s server stopped with error: %w", name, err)
 		}
-		fmt.Printf("%s server stopped normally\n", name)
+		fmt.Fprintf(os.Stderr, "%s server stopped normally\n", name)
 	}
 
-	fmt.Printf("%s server gracefully stopped\n", name)
+	fmt.Fprintf(os.Stderr, "%s server gracefully stopped\n", name)
 	return nil
 }
