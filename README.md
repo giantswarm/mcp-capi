@@ -347,7 +347,7 @@ says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 - `capi_get_machineset` - Get machine set details
 
 ### Node Operations
-- `capi_drain_node` **(write)** - Safely drain a node
+- `capi_drain_node` **(write)** - Cordon a node and evict its pods, respecting PodDisruptionBudgets
 - `capi_cordon_node` **(write)** - Cordon/uncordon nodes
 - `capi_node_status` - Get node status from workload cluster
 

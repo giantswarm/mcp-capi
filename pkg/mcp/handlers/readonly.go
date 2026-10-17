@@ -13,8 +13,6 @@ import "github.com/mark3labs/mcp-go/mcp"
 // Secret data; its include_secrets argument is a credential export and the
 // client refuses it unless the policy's ExposeKubeconfig is set.
 var readOnlyTools = map[string]struct{}{
-	"test": {},
-
 	// Clusters
 	"capi_list_clusters":    {},
 	"capi_get_cluster":      {},

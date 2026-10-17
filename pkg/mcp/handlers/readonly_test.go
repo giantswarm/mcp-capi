@@ -79,6 +79,20 @@ func offers(names []string, name string) bool {
 	return idx < len(names) && names[idx] == name
 }
 
+// TestNoTestTool: no server offers the former echo tool, whatever its
+// policy; it had no production use and only widened the tool surface.
+func TestNoTestTool(t *testing.T) {
+	for name, policy := range map[string]capi.WritePolicy{
+		"default":    {},
+		"read-only":  {ReadOnly: true, GitOpsGuard: true},
+		"everything": {ExposeKubeconfig: true},
+	} {
+		if offers(offeredNames(t, policy), "test") {
+			t.Errorf("%s server offers the test tool", name)
+		}
+	}
+}
+
 func TestBuildAllToolsReadOnly(t *testing.T) {
 	all := offeredNames(t, capi.WritePolicy{})
 	filtered := offeredNames(t, capi.WritePolicy{ReadOnly: true, GitOpsGuard: true})
@@ -191,7 +205,7 @@ func TestEveryToolIsAnnotated(t *testing.T) {
 			}
 		}
 	}
-	for _, name := range []string{"capi_list_clusters", "capi_cluster_health", "capi_get_cluster", backupTool, "test"} {
+	for _, name := range []string{"capi_list_clusters", "capi_cluster_health", "capi_get_cluster", backupTool} {
 		if a := annotationsFor(name); a.ReadOnlyHint == nil || !*a.ReadOnlyHint {
 			t.Errorf("%s must be annotated read-only", name)
 		}

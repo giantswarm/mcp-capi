@@ -50,23 +50,6 @@ func BuildAllTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
 func buildTools(serverCtx *ServerContext) ([]ToolRegistration, error) {
 	var tools []ToolRegistration
 
-	// Test tool
-	testTool := mcp.NewTool(
-		"test",
-		tooldesc.Describe(
-			"Echo a message back, to check that the server answers.",
-			"Changes nothing.",
-		),
-		mcp.WithString("message",
-			mcp.Required(),
-			mcp.Description("Message to echo back"),
-		),
-	)
-	tools = append(tools, ToolRegistration{
-		Tool:    testTool,
-		Handler: TestToolHandler,
-	})
-
 	// Cluster tools
 	tools = append(tools, buildClusterTools(serverCtx)...)
 
@@ -483,16 +466,17 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 		Tool: mcp.NewTool(
 			"capi_drain_node",
 			tooldesc.Describe(
-				"Drain a node, by its name or its CAPI Machine's.",
-				"Pod eviction is not implemented yet: the node is only cordoned. Cordon alone: capi_cordon_node.",
+				"Drain a node, by its name or its CAPI Machine's: cordon it and evict its pods, respecting PodDisruptionBudgets.",
+				"Refuses before evicting anything when a DaemonSet pod, an unmanaged pod or emptyDir data would need ignore_daemonsets, force or delete_local_data. Waits until the evicted pods are gone; the node stays cordoned. Cordon alone: capi_cordon_node.",
 			),
 			mcp.WithString("namespace", mcp.Description("Namespace of the machine")),
 			mcp.WithString("machine_name", mcp.Description("Name of the machine")),
 			mcp.WithString("node_name", mcp.Description("Name of the node (alternative to machine)")),
-			mcp.WithBoolean("ignore_daemonsets", mcp.Description("Ignore DaemonSet pods")),
-			mcp.WithBoolean("delete_local_data", mcp.Description("Delete pods with local storage")),
-			mcp.WithBoolean("force", mcp.Description("Force drain")),
-			mcp.WithNumber("grace_period_seconds", mcp.Description("Grace period in seconds")),
+			mcp.WithBoolean("ignore_daemonsets", mcp.Description("Leave DaemonSet pods on the node instead of refusing the drain")),
+			mcp.WithBoolean("delete_local_data", mcp.Description("Evict pods with emptyDir volumes, losing that data")),
+			mcp.WithBoolean("force", mcp.Description("Evict pods no controller manages; they are not recreated")),
+			mcp.WithNumber("grace_period_seconds", mcp.Description("Termination grace period of the evicted pods (default: each pod's own)")),
+			mcp.WithNumber("timeout_seconds", mcp.Description("Give up after this many seconds, waiting for PodDisruptionBudgets and terminating pods (default: 120)")),
 		),
 		Handler: CreateDrainNodeHandler(serverCtx),
 	})
