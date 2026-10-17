@@ -37,6 +37,12 @@ func NewServer(opts ServerOptions) (*Server, error) {
 	if err := validateOptions(opts); err != nil {
 		return nil, err
 	}
+	if opts.StdioInput == nil {
+		opts.StdioInput = os.Stdin
+	}
+	if opts.StdioOutput == nil {
+		opts.StdioOutput = os.Stdout
+	}
 
 	// Create context that cancels on interrupt
 	ctx, cancel := context.WithCancel(context.Background())
@@ -162,7 +168,7 @@ func (s *Server) Run() error {
 		s.cancel()
 	}()
 
-	fmt.Printf("Starting MCP CAPI server with %s transport...\n", s.options.Transport)
+	fmt.Fprintf(os.Stderr, "Starting MCP CAPI server with %s transport...\n", s.options.Transport)
 
 	// Start the appropriate server based on transport type
 	switch s.options.Transport {
