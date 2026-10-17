@@ -758,13 +758,14 @@ func CreateGetMachineSetHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 
 // drainNodeResult is the result of capi_drain_node.
 type drainNodeResult struct {
-	NodeName      string `json:"nodeName,omitempty"`
-	Namespace     string `json:"namespace,omitempty"`
-	MachineName   string `json:"machineName,omitempty"`
-	Cordoned      bool   `json:"cordoned"`
-	Drained       bool   `json:"drained"`
-	Message       string `json:"message"`
-	ManualCommand string `json:"manualCommand,omitempty"`
+	NodeName    string   `json:"nodeName"`
+	Namespace   string   `json:"namespace,omitempty"`
+	MachineName string   `json:"machineName,omitempty"`
+	Cordoned    bool     `json:"cordoned"`
+	Drained     bool     `json:"drained"`
+	Evicted     []string `json:"evicted,omitempty"`
+	Skipped     []string `json:"skipped,omitempty"`
+	Message     string   `json:"message"`
 }
 
 // CreateDrainNodeHandler creates a handler for draining nodes
@@ -796,30 +797,36 @@ func CreateDrainNodeHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		opts.Force, _ = arguments["force"].(bool)
 
 		if gracePeriodFloat, ok := arguments["grace_period_seconds"].(float64); ok {
-			gracePeriod := int32(gracePeriodFloat)
+			gracePeriod := int64(gracePeriodFloat)
 			opts.GracePeriodSeconds = &gracePeriod
 		}
-
-		// DrainNode currently only cordons the node; pod eviction is not
-		// implemented yet, so report the partial result.
-		if err := capiClient.DrainNode(ctx, opts); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to drain node: %v", err)), nil
+		if timeoutFloat, ok := arguments["timeout_seconds"].(float64); ok {
+			opts.Timeout = time.Duration(timeoutFloat * float64(time.Second))
 		}
 
+		// DrainNode returns no result only when the node was not cordoned.
+		drained, err := capiClient.DrainNode(ctx, opts)
+		if drained == nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to drain node: %v", err)), nil
+		}
 		result := drainNodeResult{
-			NodeName:    nodeName,
+			NodeName:    drained.NodeName,
 			Namespace:   namespace,
 			MachineName: machineName,
 			Cordoned:    true,
-			Drained:     false,
-			Message: "Drain is partially implemented: the node was cordoned (marked unschedulable) but pods were " +
-				"not evicted. Evict them with kubectl drain, respecting PodDisruptionBudgets.",
+			Drained:     err == nil,
+			Evicted:     drained.Evicted,
+			Skipped:     drained.Skipped,
+			Message:     "Node drained: it is cordoned and every evicted pod is gone. Uncordon it with capi_cordon_node to schedule pods on it again.",
 		}
-		if nodeName != "" {
-			result.ManualCommand = fmt.Sprintf("kubectl drain %s --ignore-daemonsets --delete-emptydir-data", nodeName)
+		if err != nil {
+			result.Message = fmt.Sprintf("Drain incomplete, the node stays cordoned: %v", err)
 		}
-
-		return jsonResult(result)
+		res, jsonErr := jsonResult(result)
+		if res != nil {
+			res.IsError = err != nil
+		}
+		return res, jsonErr
 	}
 }
 

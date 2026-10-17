@@ -173,16 +173,19 @@ capi_get_machineset --namespace default --name worker-pool-1-abc123
 ## Node Operations
 
 ### capi_drain_node
-Safely drain a Kubernetes node, evicting all pods except DaemonSets if requested.
+Cordon a Kubernetes node, then evict its pods through the Eviction API, so PodDisruptionBudgets are respected: an eviction a budget refuses is retried until the budget allows it or the timeout runs out. The tool returns once the evicted pods are gone; the node stays cordoned whatever the outcome.
+
+Like `kubectl drain`, it evicts nothing when a pod would be lost without the option that accepts the loss: DaemonSet pods need `ignore_daemonsets` (they are then left on the node), unmanaged pods need `force`, pods with `emptyDir` volumes need `delete_local_data`. Mirror (static) pods are always left.
 
 **Parameters:**
 - `namespace` (optional): Machine namespace (required if using machine_name)
 - `machine_name` (optional): Machine name to get node from
 - `node_name` (optional): Node name to drain directly
-- `ignore_daemonsets` (optional): Ignore DaemonSet-managed pods
-- `delete_local_data` (optional): Delete pods with local storage
-- `force` (optional): Force deletion of pods
-- `grace_period_seconds` (optional): Grace period for pod termination
+- `ignore_daemonsets` (optional): Leave DaemonSet pods on the node instead of refusing the drain
+- `delete_local_data` (optional): Evict pods with `emptyDir` volumes, losing that data
+- `force` (optional): Evict pods no controller manages; they are not recreated
+- `grace_period_seconds` (optional): Termination grace period of the evicted pods (default: each pod's own)
+- `timeout_seconds` (optional): Give up after this many seconds (default: 120)
 
 **Note:** Either `node_name` or both `namespace` and `machine_name` must be provided.
 
@@ -274,6 +277,6 @@ capi_cordon_node --node_name worker-node-1 --uncordon
 
 3. **Rolling Updates**: Updates respect the MachineDeployment's update strategy and will maintain availability during the rollout.
 
-4. **Node Draining**: The current implementation only cordons nodes. Full pod eviction is not yet implemented - use kubectl drain for complete functionality.
+4. **Node Draining**: `capi_drain_node` evicts through the Eviction API and never deletes a pod a PodDisruptionBudget protects; a drain that times out reports the pods still refused or terminating and leaves the node cordoned.
 
 5. **Management vs Workload Cluster**: Most operations work on the management cluster. Node operations that require workload cluster access are limited.

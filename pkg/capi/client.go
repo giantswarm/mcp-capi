@@ -1113,34 +1113,37 @@ type NodeOperationOptions struct {
 	MachineName string
 	NodeName    string
 	// For drain operations
-	GracePeriodSeconds *int32
+	GracePeriodSeconds *int64
 	IgnoreDaemonSets   bool
 	DeleteLocalData    bool
 	Force              bool
+	// Timeout bounds the whole drain; zero means DefaultDrainTimeout.
+	Timeout time.Duration
 	// For cordon operations
 	Uncordon bool
 }
 
-// DrainNode safely drains a node
-func (c *Client) DrainNode(ctx context.Context, opts NodeOperationOptions) error {
-	// Get the node name from machine if not provided
-	nodeName := opts.NodeName
-	if nodeName == "" && opts.MachineName != "" {
-		machine, err := c.GetMachine(ctx, opts.Namespace, opts.MachineName)
-		if err != nil {
-			return fmt.Errorf("failed to get machine: %w", err)
-		}
-		if machine.Status.NodeRef == nil {
-			return fmt.Errorf("machine %s has no associated node", opts.MachineName)
-		}
-		nodeName = machine.Status.NodeRef.Name
+// resolveNodeName returns opts.NodeName, or the node of the CAPI Machine
+// opts.Namespace/opts.MachineName when no node name is given.
+func (c *Client) resolveNodeName(ctx context.Context, opts NodeOperationOptions) (string, error) {
+	if opts.NodeName != "" {
+		return opts.NodeName, nil
 	}
-
-	if nodeName == "" {
-		return fmt.Errorf("either nodeName or machineName must be provided")
+	if opts.MachineName == "" {
+		return "", fmt.Errorf("either nodeName or machineName must be provided")
 	}
+	machine, err := c.GetMachine(ctx, opts.Namespace, opts.MachineName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get machine: %w", err)
+	}
+	if machine.Status.NodeRef == nil {
+		return "", fmt.Errorf("machine %s has no associated node", opts.MachineName)
+	}
+	return machine.Status.NodeRef.Name, nil
+}
 
-	// First cordon the node
+// setUnschedulable cordons (true) or uncordons (false) node nodeName.
+func (c *Client) setUnschedulable(ctx context.Context, nodeName string, unschedulable bool) error {
 	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get node %s: %w", nodeName, err)
@@ -1148,79 +1151,27 @@ func (c *Client) DrainNode(ctx context.Context, opts NodeOperationOptions) error
 	if err := c.policy.CheckUpdate("Node", node); err != nil {
 		return err
 	}
-
-	// Mark as unschedulable
-	node.Spec.Unschedulable = true
+	node.Spec.Unschedulable = unschedulable
 	if _, err := c.k8sClient.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("failed to cordon node %s: %w", nodeName, err)
+		return fmt.Errorf("failed to update node %s: %w", nodeName, err)
 	}
-
-	// TODO: Implement actual pod eviction logic
-	// This would involve:
-	// 1. List all pods on the node
-	// 2. Filter out daemonsets if IgnoreDaemonSets is true
-	// 3. Create eviction objects for each pod
-	// 4. Wait for pods to be evicted
-
-	// Pod eviction is not implemented yet, so a successful "drain" currently
-	// means the node has been cordoned only. Callers surface this caveat.
 	return nil
 }
 
 // CordonNode cordons or uncordons a node
 func (c *Client) CordonNode(ctx context.Context, opts NodeOperationOptions) error {
-	// Get the node name from machine if not provided
-	nodeName := opts.NodeName
-	if nodeName == "" && opts.MachineName != "" {
-		machine, err := c.GetMachine(ctx, opts.Namespace, opts.MachineName)
-		if err != nil {
-			return fmt.Errorf("failed to get machine: %w", err)
-		}
-		if machine.Status.NodeRef == nil {
-			return fmt.Errorf("machine %s has no associated node", opts.MachineName)
-		}
-		nodeName = machine.Status.NodeRef.Name
-	}
-
-	if nodeName == "" {
-		return fmt.Errorf("either nodeName or machineName must be provided")
-	}
-
-	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	nodeName, err := c.resolveNodeName(ctx, opts)
 	if err != nil {
-		return fmt.Errorf("failed to get node %s: %w", nodeName, err)
-	}
-	if err := c.policy.CheckUpdate("Node", node); err != nil {
 		return err
 	}
-
-	// Update schedulable status
-	node.Spec.Unschedulable = !opts.Uncordon
-
-	if _, err := c.k8sClient.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("failed to update node %s: %w", nodeName, err)
-	}
-
-	return nil
+	return c.setUnschedulable(ctx, nodeName, !opts.Uncordon)
 }
 
 // GetNodeStatus gets the status of a node in the workload cluster
 func (c *Client) GetNodeStatus(ctx context.Context, opts NodeOperationOptions) (*corev1.Node, error) {
-	// Get the node name from machine if not provided
-	nodeName := opts.NodeName
-	if nodeName == "" && opts.MachineName != "" {
-		machine, err := c.GetMachine(ctx, opts.Namespace, opts.MachineName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get machine: %w", err)
-		}
-		if machine.Status.NodeRef == nil {
-			return nil, fmt.Errorf("machine %s has no associated node", opts.MachineName)
-		}
-		nodeName = machine.Status.NodeRef.Name
-	}
-
-	if nodeName == "" {
-		return nil, fmt.Errorf("either nodeName or machineName must be provided")
+	nodeName, err := c.resolveNodeName(ctx, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// Get node from workload cluster
