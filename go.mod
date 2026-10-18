@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/giantswarm/go-selfupdate v1.6.4
 	github.com/giantswarm/k8senv v0.3.0
-	github.com/giantswarm/mcp-oauth v1.7.2
+	github.com/giantswarm/mcp-oauth v1.7.3
 	github.com/giantswarm/mcp-toolkit v0.4.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
@@ -76,7 +76,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/giantswarm/selfupdate-cosign v0.3.4
 	github.com/go-fed/httpsig v1.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v1.0.1 // indirect
@@ -121,7 +121,7 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
-	github.com/valkey-io/valkey-go v1.0.78 // indirect
+	github.com/valkey-io/valkey-go v1.0.79 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	gitlab.com/gitlab-org/api/client-go v1.46.0 // indirect
