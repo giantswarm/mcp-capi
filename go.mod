@@ -3,7 +3,7 @@ module github.com/giantswarm/mcp-capi
 go 1.26.0
 
 require (
-	github.com/giantswarm/go-selfupdate v1.6.3
+	github.com/giantswarm/go-selfupdate v1.6.4
 	github.com/giantswarm/k8senv v0.3.0
 	github.com/giantswarm/mcp-oauth v1.7.2
 	github.com/giantswarm/mcp-toolkit v0.4.0
