@@ -2,6 +2,9 @@ package handlers
 
 import "github.com/mark3labs/mcp-go/mcp"
 
+// moveTool is listed in three of the classifications below.
+const moveTool = "capi_move_cluster"
+
 // readOnlyTools are the tools that never change anything and hand out no
 // credentials: they list, get, inspect or export resources. These are always
 // registered, read-only server or not. Every tool must appear in exactly one
@@ -54,7 +57,7 @@ var mutatingTools = map[string]struct{}{
 	"capi_delete_cluster":  {},
 	"capi_upgrade_cluster": {},
 	"capi_update_cluster":  {},
-	"capi_move_cluster":    {},
+	moveTool:               {},
 
 	// Machines
 	"capi_delete_machine":    {},
@@ -88,7 +91,7 @@ var credentialTools = map[string]struct{}{
 var nonDestructiveWrites = map[string]struct{}{
 	"capi_create_cluster":           {},
 	"capi_create_machinedeployment": {},
-	"capi_move_cluster":             {},
+	moveTool:                        {},
 }
 
 // idempotentWrites are the mutating tools whose repeated call with the same
@@ -103,7 +106,7 @@ var idempotentWrites = map[string]struct{}{
 	"capi_scale_machinedeployment":  {},
 	"capi_update_machinedeployment": {},
 	"capi_cordon_node":              {},
-	"capi_move_cluster":             {},
+	moveTool:                        {},
 }
 
 // annotationsFor derives a tool's MCP annotations from its classification, so
