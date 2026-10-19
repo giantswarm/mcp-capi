@@ -36,3 +36,7 @@ helm-unittest: helm-plugin-unittest ## Run the helm-unittest suites in helm/mcp-
 .PHONY: helm-plugin-unittest
 helm-plugin-unittest:
 	@helm plugin list | grep -q '^unittest' || helm plugin install https://github.com/helm-unittest/helm-unittest --version $(HELM_UNITTEST_VERSION)
+
+.PHONY: tools-doc
+tools-doc: ## Regenerate docs/tools.md from the registered tools.
+	TOOLS_DOC_UPDATE=1 CGO_ENABLED=0 go test ./pkg/mcp/handlers/ -run TestToolsDocIsCurrent -count=1

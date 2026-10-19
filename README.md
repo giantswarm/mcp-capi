@@ -320,7 +320,7 @@ says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 - `capi_cluster_status` - Detailed cluster status
 - `capi_cluster_health` - Cluster health summary
 - `capi_get_kubeconfig` **(credentials)** - Retrieve the cluster's admin kubeconfig
-- `capi_backup_cluster` - Export the cluster resources as YAML or JSON; `include_secrets` needs `--expose-kubeconfig`
+- `capi_backup_cluster` - Backup instructions (velero); a placeholder that exports no resources yet ([#303](https://github.com/giantswarm/mcp-capi/issues/303))
 - `capi_delete_cluster` **(write)** - Delete a cluster
 - `capi_scale_cluster` **(write)** - Scale cluster nodes
 - `capi_upgrade_cluster` **(write)** - Upgrade the Kubernetes version
@@ -340,7 +340,7 @@ says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 - `capi_list_machinedeployments` - List machine deployments
 - `capi_scale_machinedeployment` **(write)** - Scale worker nodes
 - `capi_update_machinedeployment` **(write)** - Update MachineDeployment configuration
-- `capi_rollout_machinedeployment` **(write)** - Trigger rolling update
+- `capi_rollout_machinedeployment` **(write)** - Annotate the machine template with a rollout reason; on CAPI v1.4+ no machine is replaced ([#304](https://github.com/giantswarm/mcp-capi/issues/304))
 
 ### MachineSet Operations
 - `capi_list_machinesets` - List machine sets
@@ -349,7 +349,9 @@ says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 ### Node Operations
 - `capi_drain_node` **(write)** - Cordon a node and evict its pods, respecting PodDisruptionBudgets
 - `capi_cordon_node` **(write)** - Cordon/uncordon nodes
-- `capi_node_status` - Get node status from workload cluster
+- `capi_node_status` - Get a node's status
+
+The node tools reach only the management cluster's API: a workload cluster Machine's node is looked up there by name ([#302](https://github.com/giantswarm/mcp-capi/issues/302)).
 
 ### Infrastructure Provider Tools
 #### Generic
@@ -362,7 +364,7 @@ says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 - `capi_aws_create_cluster` - Create AWS cluster (placeholder)
 - `capi_aws_update_vpc` - Update VPC configuration (placeholder)
 - `capi_aws_manage_security_groups` - Manage security groups (placeholder)
-- `capi_aws_get_machine_template` - Get/list AWS machine templates
+- `capi_aws_get_machine_template` - List the AWS machine templates MachineDeployments reference; reading one is not implemented
 
 #### Azure
 - `capi_azure_list_clusters` - List Azure clusters

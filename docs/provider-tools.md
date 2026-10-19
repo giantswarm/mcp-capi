@@ -81,11 +81,11 @@ Manage security groups for AWS clusters (placeholder implementation).
 - `operation` (required): Operation to perform
 
 ### capi_aws_get_machine_template
-Get or list AWS machine templates.
+List the AWS machine templates that a namespace's MachineDeployments reference. Reading one template is not implemented: a `name` returns only a note.
 
 **Parameters:**
 - `namespace` (required): Namespace to search in
-- `name` (optional): Template name (lists all if not provided)
+- `name` (optional): Template name; returns only a note
 
 **Example:**
 ```

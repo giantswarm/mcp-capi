@@ -608,9 +608,8 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 			Namespace: namespace,
 			Name:      name,
 			Reason:    reason,
-			Message: "Rollout triggered. New machines are created with the updated configuration and old machines " +
-				"are replaced according to the deployment's update strategy, with health checks between steps. " +
-				"Monitor with capi_list_machines and capi_list_machinedeployments.",
+			Message: "Rollout annotation set on the machine template. On CAPI v1.4+ template annotations reach the existing " +
+				"machines in place and no machine is replaced (giantswarm/mcp-capi#304); check with capi_list_machines.",
 		})
 	}
 }

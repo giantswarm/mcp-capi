@@ -573,7 +573,7 @@ func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			result.Deleted = false
 			result.Message = "Safety check failed: the cluster is Ready and appears operational. Pass force=true to delete it anyway."
 			result.Recommendations = []string{
-				"Back up important data",
+				"Back up important data with velero; capi_backup_cluster exports none of the cluster's resources yet",
 				"Migrate workloads to another cluster",
 				"Confirm this is the intended cluster",
 			}
@@ -868,12 +868,11 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		notes := []string{
-			"The backup covers CAPI resources only; workload data is not included",
-			"Infrastructure provider resources may need a separate backup",
-			"Store the backup in a secure location and test the restore procedure outside production",
+			"A placeholder: no resources are exported, only these instructions (giantswarm/mcp-capi#303)",
+			"Back up the cluster's resources and workload data with velero",
 		}
 		if includeSecrets {
-			notes = append(notes, "Secrets are included: handle and encrypt the backup with care")
+			notes = append(notes, "include_secrets passed the credential-export check, but no Secret is exported either")
 		}
 
 		return jsonResult(backupClusterResult{
