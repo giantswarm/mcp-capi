@@ -489,6 +489,12 @@ type CreateClusterOptions struct {
 	InstanceType      string
 }
 
+// The pod and service CIDRs CreateCluster gives every new Cluster.
+const (
+	DefaultPodCIDR     = "192.168.0.0/16"
+	DefaultServiceCIDR = "10.96.0.0/12"
+)
+
 // CreateCluster creates a new CAPI cluster with basic configuration
 func (c *Client) CreateCluster(ctx context.Context, opts CreateClusterOptions) (*clusterv1.Cluster, error) {
 	if err := c.policy.CheckCreate("Cluster", opts.Namespace, opts.Name); err != nil {
@@ -510,10 +516,10 @@ func (c *Client) CreateCluster(ctx context.Context, opts CreateClusterOptions) (
 		Spec: clusterv1.ClusterSpec{
 			ClusterNetwork: &clusterv1.ClusterNetwork{
 				Pods: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"192.168.0.0/16"},
+					CIDRBlocks: []string{DefaultPodCIDR},
 				},
 				Services: &clusterv1.NetworkRanges{
-					CIDRBlocks: []string{"10.96.0.0/12"},
+					CIDRBlocks: []string{DefaultServiceCIDR},
 				},
 			},
 			ControlPlaneRef: &corev1.ObjectReference{
@@ -679,8 +685,8 @@ type MoveClusterOptions struct {
 	DryRun           bool
 }
 
-// MoveCluster prepares a cluster for migration to another management cluster
-// Note: This is a simplified implementation that exports the cluster resources
+// MoveCluster returns a placeholder manifest for moving a cluster to another
+// management cluster. It reads the Cluster, exports nothing and writes nothing.
 func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (string, error) {
 	// Get the cluster
 	cluster := &clusterv1.Cluster{}
@@ -691,9 +697,6 @@ func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (stri
 
 	if err := c.ctrlClient.Get(ctx, key, cluster); err != nil {
 		return "", fmt.Errorf("failed to get cluster: %w", err)
-	}
-	if err := c.policy.CheckUpdate("Cluster", cluster); err != nil {
-		return "", err
 	}
 
 	// Prepare target namespace
@@ -1042,7 +1045,12 @@ type RolloutMachineDeploymentOptions struct {
 	Reason    string
 }
 
-// RolloutMachineDeployment triggers a rolling update of a MachineDeployment
+// RolloutReasonAnnotation records the reason of the last rollout on the
+// MachineDeployment's own metadata, which CAPI does not roll out on.
+const RolloutReasonAnnotation = "mcp-capi.giantswarm.io/rollout-reason"
+
+// RolloutMachineDeployment replaces a MachineDeployment's machines by setting
+// spec.rolloutAfter to now, as clusterctl alpha rollout restart does.
 func (c *Client) RolloutMachineDeployment(ctx context.Context, opts RolloutMachineDeploymentOptions) error {
 	md, err := c.GetMachineDeployment(ctx, opts.Namespace, opts.Name)
 	if err != nil {
@@ -1052,15 +1060,12 @@ func (c *Client) RolloutMachineDeployment(ctx context.Context, opts RolloutMachi
 		return err
 	}
 
-	// Trigger rollout by updating an annotation
-	if md.Spec.Template.Annotations == nil {
-		md.Spec.Template.Annotations = make(map[string]string)
-	}
-
-	// Add rollout annotation with timestamp
-	md.Spec.Template.Annotations["cluster.x-k8s.io/rollout-triggered"] = fmt.Sprintf("%v", metav1.Now().Unix())
+	md.Spec.RolloutAfter = &metav1.Time{Time: time.Now()}
 	if opts.Reason != "" {
-		md.Spec.Template.Annotations["cluster.x-k8s.io/rollout-reason"] = opts.Reason
+		if md.Annotations == nil {
+			md.Annotations = make(map[string]string)
+		}
+		md.Annotations[RolloutReasonAnnotation] = opts.Reason
 	}
 
 	if err := c.ctrlClient.Update(ctx, md); err != nil {

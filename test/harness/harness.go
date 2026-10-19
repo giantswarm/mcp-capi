@@ -140,9 +140,9 @@ func (h *Harness) ReadOnly() *Harness {
 }
 
 // ExposeKubeconfig starts the server under test with the credential export
-// on: capi_get_kubeconfig is registered and capi_backup_cluster may include
-// Secrets. Off by default, like the serve command. Must be called before
-// Execute().
+// on: capi_get_kubeconfig is registered and capi_backup_cluster accepts
+// include_secrets. Off by default, like the serve command. Must be called
+// before Execute().
 func (h *Harness) ExposeKubeconfig() *Harness {
 	h.t.Helper()
 	h.policy.ExposeKubeconfig = true

@@ -13,14 +13,15 @@ import (
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
-// createClusterResult is the result of capi_create_cluster.
+// createClusterResult is the result of capi_create_cluster. The sizing
+// fields echo only what the caller passed; none of them is applied.
 type createClusterResult struct {
 	Name              string `json:"name"`
 	Namespace         string `json:"namespace"`
 	Provider          string `json:"provider"`
-	KubernetesVersion string `json:"kubernetesVersion"`
-	ControlPlaneCount int32  `json:"controlPlaneCount"`
-	WorkerCount       int32  `json:"workerCount"`
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+	ControlPlaneCount int32  `json:"controlPlaneCount,omitempty"`
+	WorkerCount       int32  `json:"workerCount,omitempty"`
 	Region            string `json:"region,omitempty"`
 	InstanceType      string `json:"instanceType,omitempty"`
 	Message           string `json:"message"`
@@ -62,18 +63,11 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("invalid provider %s. Must be one of: %s", provider, strings.Join(validProviders, ", "))
 		}
 
-		// Optional parameters with defaults
 		kubernetesVersion, _ := arguments["kubernetes_version"].(string)
-		if kubernetesVersion == "" {
-			kubernetesVersion = "v1.29.0"
-		}
-
-		controlPlaneCount := int32(3)
+		var controlPlaneCount, workerCount int32
 		if cpCount, ok := arguments["control_plane_count"].(float64); ok {
 			controlPlaneCount = int32(cpCount)
 		}
-
-		workerCount := int32(3)
 		if wCount, ok := arguments["worker_count"].(float64); ok {
 			workerCount = int32(wCount)
 		}
@@ -120,7 +114,7 @@ func createClusterMessage(cluster *clusterv1.Cluster) string {
 			refs = append(refs, ref.Kind+" "+ref.Name)
 		}
 	}
-	return fmt.Sprintf("Only the Cluster object was created. kubernetesVersion, controlPlaneCount, workerCount, region and "+
+	return fmt.Sprintf("Only the Cluster object was created. Any kubernetesVersion, controlPlaneCount, workerCount, region and "+
 		"instanceType are echoed, not applied (giantswarm/mcp-capi#306). Create %s in namespace %s, and the worker "+
 		"MachineDeployments (capi_create_machinedeployment). Monitor with capi_cluster_status.",
 		strings.Join(refs, " and "), cluster.Namespace)
@@ -810,7 +804,7 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 			"Provider versions must match on both management clusters",
 		}
 		if dryRun {
-			notes = append([]string{"dry_run changes nothing: this tool never moves anything"}, notes...)
+			notes = append([]string{"dry_run changes nothing: this tool never moves anything, with or without it"}, notes...)
 		}
 
 		return jsonResult(moveClusterResult{
@@ -823,12 +817,9 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 				"Ensure the target management cluster is ready",
 				"Install the required providers on the target management cluster",
 				"Create the target namespace if needed",
-				"Pause the cluster, then run clusterctl move (see commands)",
+				"Run clusterctl move (see commands); it pauses the source cluster itself",
 			},
-			Commands: []string{
-				fmt.Sprintf("kubectl patch cluster %s -n %s --type merge -p '{\"spec\":{\"paused\":true}}'", name, namespace),
-				moveCommand,
-			},
+			Commands: []string{moveCommand},
 			Manifest: manifest,
 			Notes:    notes,
 		})
@@ -837,13 +828,11 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 
 // backupClusterResult is the result of capi_backup_cluster.
 type backupClusterResult struct {
-	Namespace         string   `json:"namespace"`
-	Name              string   `json:"name"`
-	Format            string   `json:"format"`
-	IncludeSecrets    bool     `json:"includeSecrets"`
-	Backup            string   `json:"backup"`
-	SuggestedFilename string   `json:"suggestedFilename"`
-	Notes             []string `json:"notes"`
+	Namespace      string   `json:"namespace"`
+	Name           string   `json:"name"`
+	IncludeSecrets bool     `json:"includeSecrets"`
+	Backup         string   `json:"backup"`
+	Notes          []string `json:"notes"`
 }
 
 // CreateBackupClusterHandler creates a handler for backing up cluster configurations
@@ -890,13 +879,11 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		return jsonResult(backupClusterResult{
-			Namespace:         namespace,
-			Name:              name,
-			Format:            outputFormat,
-			IncludeSecrets:    includeSecrets,
-			Backup:            backup,
-			SuggestedFilename: fmt.Sprintf("cluster-%s-%s-backup.%s", namespace, name, outputFormat),
-			Notes:             notes,
+			Namespace:      namespace,
+			Name:           name,
+			IncludeSecrets: includeSecrets,
+			Backup:         backup,
+			Notes:          notes,
 		})
 	}
 }

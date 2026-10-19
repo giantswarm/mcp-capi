@@ -183,8 +183,8 @@ is **off**, in the CLI and in the Helm chart (`readOnly`, `gitopsGuard`,
 `exposeKubeconfig`).
 
 - `--read-only` registers only the tools that read (list, get, status,
-  health, backup, provider lookups). The create, scale, upgrade,
-  pause, resume, update, move, delete, remediate, rollout, drain and cordon
+  health, backup, move plan, provider lookups). The create, scale, upgrade,
+  pause, resume, update, delete, remediate, rollout, drain and cordon
   tools are not offered at all, and every mutating Kubernetes call is refused
   should one be reached anyway. Pass `--read-only=false` to offer them; the
   person's RBAC still applies to each call. Every tool carries the MCP
@@ -328,7 +328,7 @@ says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 - `capi_update_cluster` **(write)** - Update labels and annotations
 - `capi_pause_cluster` **(write)** - Pause reconciliation
 - `capi_resume_cluster` **(write)** - Resume reconciliation
-- `capi_move_cluster` **(write)** - Prepare a move to another management cluster
+- `capi_move_cluster` - Plan a move to another management cluster: the steps and `clusterctl move` command; it moves nothing
 
 ### Machine Management
 - `capi_list_machines` - List machines
@@ -341,7 +341,7 @@ says. See [Write policy](#write-policy-read-only-and-the-gitops-guard).
 - `capi_list_machinedeployments` - List machine deployments
 - `capi_scale_machinedeployment` **(write)** - Scale worker nodes
 - `capi_update_machinedeployment` **(write)** - Update MachineDeployment configuration
-- `capi_rollout_machinedeployment` **(write)** - Annotate the machine template with a rollout reason; on CAPI v1.4+ no machine is replaced ([#304](https://github.com/giantswarm/mcp-capi/issues/304))
+- `capi_rollout_machinedeployment` **(write)** - Roll out again (`spec.rolloutAfter`), replacing every machine
 
 ### MachineSet Operations
 - `capi_list_machinesets` - List machine sets

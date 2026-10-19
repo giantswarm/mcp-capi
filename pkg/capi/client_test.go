@@ -62,8 +62,8 @@ func TestGetKubeconfigWithExposeKubeconfig(t *testing.T) {
 	}
 }
 
-// TestBackupClusterIncludeSecretsRefusedByDefault: a backup never carries
-// Secret data unless the export is allowed. The refusal comes before the
+// TestBackupClusterIncludeSecretsRefusedByDefault: include_secrets is refused
+// unless the credential export is allowed. The refusal comes before the
 // cluster is fetched, so no client is needed.
 func TestBackupClusterIncludeSecretsRefusedByDefault(t *testing.T) {
 	for name, policy := range map[string]WritePolicy{

@@ -49,7 +49,7 @@ var ErrManagedResource = errors.New("resource is managed declaratively")
 var ErrDeletionPrevented = errors.New("resource is protected against deletion")
 
 // ErrCredentialExport is returned when a call would hand out a workload
-// cluster's credentials (its kubeconfig Secret, or Secret data in a backup)
+// cluster's credentials (its kubeconfig Secret), or asks a backup for Secrets,
 // and ExposeKubeconfig is off.
 var ErrCredentialExport = errors.New("workload cluster credentials are not exported")
 
@@ -66,10 +66,11 @@ type WritePolicy struct {
 	// is no object to inspect.
 	GitOpsGuard bool
 	// ExposeKubeconfig allows a workload cluster's credentials to leave the
-	// server: the admin kubeconfig Secret through GetKubeconfig, and Secret
-	// data in BackupCluster. Off by default and independent of ReadOnly:
-	// reading a kubeconfig is not a write, but handing it out is the power to
-	// do anything to the workload cluster, so it takes an explicit opt-in.
+	// server: the admin kubeconfig Secret through GetKubeconfig. BackupCluster
+	// checks IncludeSecrets against it, though it exports no Secret yet. Off
+	// by default and independent of ReadOnly: reading a kubeconfig is not a
+	// write, but handing it out is the power to do anything to the workload
+	// cluster, so it takes an explicit opt-in.
 	ExposeKubeconfig bool
 }
 

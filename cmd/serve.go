@@ -234,7 +234,7 @@ type ServeConfig struct {
 	ReadOnly bool
 	// GitOpsGuard refuses mutating calls on GitOps- or Helm-owned objects.
 	GitOpsGuard bool
-	// ExposeKubeconfig offers capi_get_kubeconfig and Secret-carrying backups.
+	// ExposeKubeconfig offers capi_get_kubeconfig.
 	ExposeKubeconfig bool
 	Debug            bool
 }

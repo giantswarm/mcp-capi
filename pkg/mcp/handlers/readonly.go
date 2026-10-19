@@ -2,9 +2,6 @@ package handlers
 
 import "github.com/mark3labs/mcp-go/mcp"
 
-// moveTool is listed in three of the classifications below.
-const moveTool = "capi_move_cluster"
-
 // readOnlyTools are the tools that never change anything and hand out no
 // credentials: they list, get, inspect or export resources. These are always
 // registered, read-only server or not. Every tool must appear in exactly one
@@ -14,7 +11,8 @@ const moveTool = "capi_move_cluster"
 //
 // capi_backup_cluster is read-only: it exports nothing yet. Its
 // include_secrets argument is checked as a credential export, so the client
-// refuses it unless the policy's ExposeKubeconfig is set.
+// refuses it unless the policy's ExposeKubeconfig is set. capi_move_cluster
+// only returns the steps and command of a move: it moves nothing.
 var readOnlyTools = map[string]struct{}{
 	// Clusters
 	"capi_list_clusters":    {},
@@ -22,6 +20,7 @@ var readOnlyTools = map[string]struct{}{
 	"capi_cluster_status":   {},
 	"capi_cluster_health":   {},
 	"capi_backup_cluster":   {},
+	"capi_move_cluster":     {},
 	"capi_list_machines":    {},
 	"capi_get_machine":      {},
 	"capi_list_machinesets": {},
@@ -57,7 +56,6 @@ var mutatingTools = map[string]struct{}{
 	"capi_delete_cluster":  {},
 	"capi_upgrade_cluster": {},
 	"capi_update_cluster":  {},
-	moveTool:               {},
 
 	// Machines
 	"capi_delete_machine":    {},
@@ -83,21 +81,19 @@ var credentialTools = map[string]struct{}{
 	"capi_get_kubeconfig": {},
 }
 
-// nonDestructiveWrites are the mutating tools that never change or remove
-// what exists, so their destructiveHint is false: the creates, and
-// capi_move_cluster, which writes nothing yet (giantswarm/mcp-capi#308). Every
-// other mutating tool scales, updates, pauses, drains or deletes something
-// that is already there and is annotated destructive.
-var nonDestructiveWrites = map[string]struct{}{
+// additiveTools are the mutating tools that only create: they never change
+// or remove what exists, so their destructiveHint is false. Every other
+// mutating tool scales, updates, pauses, drains or deletes something that is
+// already there and is annotated destructive.
+var additiveTools = map[string]struct{}{
 	"capi_create_cluster":           {},
 	"capi_create_machinedeployment": {},
-	moveTool:                        {},
 }
 
 // idempotentWrites are the mutating tools whose repeated call with the same
 // arguments leaves the cluster as the first call did (set a size, pause,
-// resume, cordon, apply the same update, plan a move). Creates, deletes,
-// drains, remediations, upgrades and rollouts are not.
+// resume, cordon, apply the same update). Creates, deletes, drains,
+// remediations, upgrades and rollouts are not.
 var idempotentWrites = map[string]struct{}{
 	"capi_scale_cluster":            {},
 	"capi_pause_cluster":            {},
@@ -106,14 +102,13 @@ var idempotentWrites = map[string]struct{}{
 	"capi_scale_machinedeployment":  {},
 	"capi_update_machinedeployment": {},
 	"capi_cordon_node":              {},
-	moveTool:                        {},
 }
 
 // annotationsFor derives a tool's MCP annotations from its classification, so
 // a client (or an aggregator's read-only toolset) can tell the reads from the
 // writes: read-only and credential tools change nothing (readOnlyHint true,
 // destructiveHint false, idempotentHint true); mutating tools are writes whose
-// destructiveHint is false only for nonDestructiveWrites. Every tool talks to
+// destructiveHint is false only for the additive creates. Every tool talks to
 // the management cluster only (openWorldHint false). Without this, mcp-go's
 // NewTool defaults (readOnlyHint false, destructiveHint true) would present
 // capi_list_clusters as a destructive write.
@@ -123,9 +118,9 @@ func annotationsFor(name string) mcp.ToolAnnotation {
 	if IsReadOnlyTool(name) || IsCredentialTool(name) {
 		return mcp.ToolAnnotation{ReadOnlyHint: &t, DestructiveHint: &f, IdempotentHint: &t, OpenWorldHint: &f}
 	}
-	_, nonDestructive := nonDestructiveWrites[name]
+	_, additive := additiveTools[name]
 	_, idempotent := idempotentWrites[name]
-	destructive := !nonDestructive
+	destructive := !additive
 	return mcp.ToolAnnotation{ReadOnlyHint: &f, DestructiveHint: &destructive, IdempotentHint: &idempotent, OpenWorldHint: &f}
 }
 
