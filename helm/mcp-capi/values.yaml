@@ -99,11 +99,10 @@ readOnly: true
 # readOnly is false. An object labelled giantswarm.io/prevent-deletion is
 # never deleted, whatever the policy.
 gitopsGuard: true
-# -- Offer capi_get_kubeconfig and let capi_backup_cluster include Secrets:
-# the workload cluster's admin kubeconfig leaves the server. Off by default
-# and independent of readOnly; without it the tool is not registered and the
-# server refuses the export. Never enable this on a Giant Swarm management
-# cluster.
+# -- Offer capi_get_kubeconfig: the workload cluster's admin kubeconfig
+# leaves the server. Off by default and independent of readOnly; without it
+# the tool is not registered and the server refuses the export. Never enable
+# this on a Giant Swarm management cluster.
 exposeKubeconfig: false
 
 # OAuth 2.1: the server validates bearers against the identity provider and

@@ -82,9 +82,8 @@ Write policy (--read-only and --gitops-guard on by default):
                        a Helm release are refused: the change would be
                        reverted on the next reconciliation and belongs in
                        Git.
-  --expose-kubeconfig  offer capi_get_kubeconfig and let capi_backup_cluster
-                       include Secrets: the workload cluster's admin
-                       credentials leave the server. Off by default,
+  --expose-kubeconfig  offer capi_get_kubeconfig: the workload cluster's
+                       admin credentials leave the server. Off by default,
                        independent of --read-only; without it the tool is
                        not registered and the export is refused.
 An object labelled giantswarm.io/prevent-deletion is never deleted.`,
@@ -129,7 +128,7 @@ An object labelled giantswarm.io/prevent-deletion is never deleted.`,
 	// Write policy flags
 	cmd.Flags().BoolVar(&readOnly, "read-only", true, "Register only the tools that read and refuse every mutating Kubernetes call (default: true; pass --read-only=false to offer the mutating tools)")
 	cmd.Flags().BoolVar(&gitopsGuard, "gitops-guard", true, "Refuse mutating calls on objects owned by a GitOps controller (Flux, Argo CD) or a Helm release; the change belongs in Git (default: true)")
-	cmd.Flags().BoolVar(&exposeKubeconfig, "expose-kubeconfig", false, "Offer capi_get_kubeconfig and let capi_backup_cluster include Secrets, handing out workload cluster admin credentials (default: false; independent of --read-only)")
+	cmd.Flags().BoolVar(&exposeKubeconfig, "expose-kubeconfig", false, "Offer capi_get_kubeconfig, handing out workload cluster admin credentials (default: false; independent of --read-only)")
 
 	cmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
 
@@ -235,7 +234,7 @@ type ServeConfig struct {
 	ReadOnly bool
 	// GitOpsGuard refuses mutating calls on GitOps- or Helm-owned objects.
 	GitOpsGuard bool
-	// ExposeKubeconfig offers capi_get_kubeconfig and Secret-carrying backups.
+	// ExposeKubeconfig offers capi_get_kubeconfig.
 	ExposeKubeconfig bool
 	Debug            bool
 }

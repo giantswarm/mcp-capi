@@ -131,12 +131,12 @@ capi_update_machinedeployment --namespace default --name worker-pool-1 \
 ```
 
 ### capi_rollout_machinedeployment
-Trigger a rolling update of a MachineDeployment.
+Roll out a MachineDeployment again: set `spec.rolloutAfter` to now, as `clusterctl alpha rollout restart` does, so CAPI replaces every machine as the deployment's rollout strategy says.
 
 **Parameters:**
 - `namespace` (required): MachineDeployment namespace
 - `name` (required): MachineDeployment name
-- `reason` (optional): Reason for the rollout
+- `reason` (optional): Reason for the rollout, recorded in the MachineDeployment's `mcp-capi.giantswarm.io/rollout-reason` annotation
 
 **Example:**
 ```
@@ -172,6 +172,8 @@ capi_get_machineset --namespace default --name worker-pool-1-abc123
 
 ## Node Operations
 
+These tools reach only the management cluster's API: a workload cluster Machine's node is looked up there by name ([#302](https://github.com/giantswarm/mcp-capi/issues/302)).
+
 ### capi_drain_node
 Cordon a Kubernetes node, then evict its pods through the Eviction API, so PodDisruptionBudgets are respected: an eviction a budget refuses is retried until the budget allows it or the timeout runs out. The tool returns once the evicted pods are gone; the node stays cordoned whatever the outcome.
 
@@ -187,15 +189,18 @@ Like `kubectl drain`, it evicts nothing when a pod would be lost without the opt
 - `grace_period_seconds` (optional): Termination grace period of the evicted pods (default: each pod's own)
 - `timeout_seconds` (optional): Give up after this many seconds (default: 120)
 
+The drain cordons the node first, so a refused drain leaves it cordoned too.
+
 **Note:** Either `node_name` or both `namespace` and `machine_name` must be provided.
 
 **Example:**
 ```
-# Drain by node name
-capi_drain_node --node_name worker-node-1 --ignore_daemonsets --delete_local_data
+# Drain a management cluster node by name
+capi_drain_node --node_name mc-worker-node-1 --ignore_daemonsets --delete_local_data
 
-# Drain by machine reference
-capi_drain_node --namespace default --machine_name my-cluster-worker-abc123
+# Drain by a Machine of the management cluster's own Cluster
+# (a workload cluster Machine's node is not reached, #302)
+capi_drain_node --namespace org-giantswarm --machine_name mc-worker-abc123
 ```
 
 ### capi_cordon_node
@@ -209,15 +214,15 @@ Cordon (make unschedulable) or uncordon a Kubernetes node.
 
 **Example:**
 ```
-# Cordon a node
-capi_cordon_node --node_name worker-node-1
+# Cordon a management cluster node
+capi_cordon_node --node_name mc-worker-node-1
 
-# Uncordon a node
-capi_cordon_node --node_name worker-node-1 --uncordon
+# Uncordon it
+capi_cordon_node --node_name mc-worker-node-1 --uncordon
 ```
 
 ### capi_node_status
-Get detailed status information about a node in the workload cluster.
+Get detailed status information about a node.
 
 **Parameters:**
 - `namespace` (optional): Machine namespace (required if using machine_name)
@@ -226,7 +231,7 @@ Get detailed status information about a node in the workload cluster.
 
 **Example:**
 ```
-capi_node_status --namespace default --machine_name my-cluster-worker-abc123
+capi_node_status --node_name mc-worker-node-1
 ```
 
 ## Workflow Examples
@@ -255,18 +260,18 @@ capi_rollout_machinedeployment --namespace default --name worker-pool-1 --reason
 capi_list_machinesets --namespace default
 ```
 
-### Node Maintenance
+### Node Maintenance (management cluster nodes)
 ```bash
 # Cordon node to prevent new workloads
-capi_cordon_node --node_name worker-node-1
+capi_cordon_node --node_name mc-worker-node-1
 
 # Drain node to move workloads
-capi_drain_node --node_name worker-node-1 --ignore_daemonsets --delete_local_data
+capi_drain_node --node_name mc-worker-node-1 --ignore_daemonsets --delete_local_data
 
 # Perform maintenance...
 
 # Uncordon node when ready
-capi_cordon_node --node_name worker-node-1 --uncordon
+capi_cordon_node --node_name mc-worker-node-1 --uncordon
 ```
 
 ## Important Notes
@@ -279,4 +284,4 @@ capi_cordon_node --node_name worker-node-1 --uncordon
 
 4. **Node Draining**: `capi_drain_node` evicts through the Eviction API and never deletes a pod a PodDisruptionBudget protects; a drain that times out reports the pods still refused or terminating and leaves the node cordoned.
 
-5. **Management vs Workload Cluster**: Most operations work on the management cluster. Node operations that require workload cluster access are limited.
+5. **Management vs Workload Cluster**: Every operation works on the management cluster's API, the node tools included: a workload cluster Machine's node is looked up on the management cluster by name, so they don't reach workload cluster nodes ([#302](https://github.com/giantswarm/mcp-capi/issues/302)).

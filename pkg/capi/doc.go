@@ -61,8 +61,8 @@
 //   - Drain nodes (partial implementation)
 //   - Get node status and information
 //
-// Note: Full node operations require access to the workload cluster,
-// which may not always be available from the management cluster context.
+// The node operations use the management cluster's API only: a workload
+// cluster Machine's node is looked up there by name.
 //
 // # Write Policy
 //

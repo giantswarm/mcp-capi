@@ -608,9 +608,8 @@ func CreateRolloutMachineDeploymentHandler(serverCtx *ServerContext) server.Tool
 			Namespace: namespace,
 			Name:      name,
 			Reason:    reason,
-			Message: "Rollout triggered. New machines are created with the updated configuration and old machines " +
-				"are replaced according to the deployment's update strategy, with health checks between steps. " +
-				"Monitor with capi_list_machines and capi_list_machinedeployments.",
+			Message: "Rollout requested: spec.rolloutAfter is set to now, so CAPI replaces every machine as the deployment's " +
+				"rollout strategy says. Monitor with capi_list_machines and capi_list_machinedeployments.",
 		})
 	}
 }

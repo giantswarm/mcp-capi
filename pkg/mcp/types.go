@@ -76,9 +76,9 @@ type ServerOptions struct {
 	// only when ReadOnly is false.
 	GitOpsGuard bool
 
-	// ExposeKubeconfig registers capi_get_kubeconfig and lets
-	// capi_backup_cluster include Secrets: a workload cluster's admin
-	// credentials leave the server. Off by default and independent of
+	// ExposeKubeconfig registers capi_get_kubeconfig: a workload cluster's
+	// admin credentials leave the server. capi_backup_cluster checks its
+	// include_secrets against it too. Off by default and independent of
 	// ReadOnly; without it the tool is not offered and the client refuses
 	// the export.
 	ExposeKubeconfig bool

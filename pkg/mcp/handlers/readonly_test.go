@@ -55,7 +55,7 @@ func TestEveryToolIsClassified(t *testing.T) {
 		t.Errorf("%s must be a credential tool: it hands out the workload cluster's admin kubeconfig", kubeconfigTool)
 	}
 	if !IsReadOnlyTool(backupTool) {
-		t.Errorf("%s is read-only (its default export carries no Secret data); the client refuses include_secrets", backupTool)
+		t.Errorf("%s is read-only (it exports nothing yet); the client refuses include_secrets", backupTool)
 	}
 }
 

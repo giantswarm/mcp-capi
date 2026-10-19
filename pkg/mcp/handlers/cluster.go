@@ -7,19 +7,21 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
 )
 
-// createClusterResult is the result of capi_create_cluster.
+// createClusterResult is the result of capi_create_cluster. The sizing
+// fields echo only what the caller passed; none of them is applied.
 type createClusterResult struct {
 	Name              string `json:"name"`
 	Namespace         string `json:"namespace"`
 	Provider          string `json:"provider"`
-	KubernetesVersion string `json:"kubernetesVersion"`
-	ControlPlaneCount int32  `json:"controlPlaneCount"`
-	WorkerCount       int32  `json:"workerCount"`
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+	ControlPlaneCount int32  `json:"controlPlaneCount,omitempty"`
+	WorkerCount       int32  `json:"workerCount,omitempty"`
 	Region            string `json:"region,omitempty"`
 	InstanceType      string `json:"instanceType,omitempty"`
 	Message           string `json:"message"`
@@ -61,18 +63,11 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			return nil, fmt.Errorf("invalid provider %s. Must be one of: %s", provider, strings.Join(validProviders, ", "))
 		}
 
-		// Optional parameters with defaults
 		kubernetesVersion, _ := arguments["kubernetes_version"].(string)
-		if kubernetesVersion == "" {
-			kubernetesVersion = "v1.29.0"
-		}
-
-		controlPlaneCount := int32(3)
+		var controlPlaneCount, workerCount int32
 		if cpCount, ok := arguments["control_plane_count"].(float64); ok {
 			controlPlaneCount = int32(cpCount)
 		}
-
-		workerCount := int32(3)
 		if wCount, ok := arguments["worker_count"].(float64); ok {
 			workerCount = int32(wCount)
 		}
@@ -105,11 +100,24 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			WorkerCount:       workerCount,
 			Region:            region,
 			InstanceType:      instanceType,
-			Message: "Cluster resource created. This basic implementation creates only the Cluster object; " +
-				"the infrastructure cluster (e.g. AWSCluster), the control plane (e.g. KubeadmControlPlane) and " +
-				"MachineDeployments for workers must be created separately. Monitor with capi_cluster_status.",
+			Message:           createClusterMessage(cluster),
 		})
 	}
+}
+
+// createClusterMessage says what capi_create_cluster did: it created the
+// Cluster object only and applied none of the sizing arguments it echoes.
+func createClusterMessage(cluster *clusterv1.Cluster) string {
+	var refs []string
+	for _, ref := range []*corev1.ObjectReference{cluster.Spec.InfrastructureRef, cluster.Spec.ControlPlaneRef} {
+		if ref != nil {
+			refs = append(refs, ref.Kind+" "+ref.Name)
+		}
+	}
+	return fmt.Sprintf("Only the Cluster object was created. Any kubernetesVersion, controlPlaneCount, workerCount, region and "+
+		"instanceType are echoed, not applied (giantswarm/mcp-capi#306). Create %s in namespace %s, and the worker "+
+		"MachineDeployments (capi_create_machinedeployment). Monitor with capi_cluster_status.",
+		strings.Join(refs, " and "), cluster.Namespace)
 }
 
 // CreateListClustersHandler creates a handler for listing CAPI clusters as
@@ -573,7 +581,7 @@ func CreateDeleteClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			result.Deleted = false
 			result.Message = "Safety check failed: the cluster is Ready and appears operational. Pass force=true to delete it anyway."
 			result.Recommendations = []string{
-				"Back up important data",
+				"Back up important data with velero; capi_backup_cluster exports none of the cluster's resources yet",
 				"Migrate workloads to another cluster",
 				"Confirm this is the intended cluster",
 			}
@@ -790,13 +798,13 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		notes := []string{
-			"The source cluster is paused during the move",
-			"All cluster resources are migrated",
+			"Nothing was moved: run the move command yourself",
+			"clusterctl move pauses the source cluster and migrates its CAPI resources",
 			"Ensure network connectivity between the management clusters",
 			"Provider versions must match on both management clusters",
 		}
 		if dryRun {
-			notes = append([]string{"Dry run: no changes are made"}, notes...)
+			notes = append([]string{"dry_run changes nothing: this tool never moves anything, with or without it"}, notes...)
 		}
 
 		return jsonResult(moveClusterResult{
@@ -809,12 +817,9 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 				"Ensure the target management cluster is ready",
 				"Install the required providers on the target management cluster",
 				"Create the target namespace if needed",
-				"Pause the cluster, then run clusterctl move (see commands)",
+				"Run clusterctl move (see commands); it pauses the source cluster itself",
 			},
-			Commands: []string{
-				fmt.Sprintf("kubectl patch cluster %s -n %s --type merge -p '{\"spec\":{\"paused\":true}}'", name, namespace),
-				moveCommand,
-			},
+			Commands: []string{moveCommand},
 			Manifest: manifest,
 			Notes:    notes,
 		})
@@ -823,13 +828,11 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 
 // backupClusterResult is the result of capi_backup_cluster.
 type backupClusterResult struct {
-	Namespace         string   `json:"namespace"`
-	Name              string   `json:"name"`
-	Format            string   `json:"format"`
-	IncludeSecrets    bool     `json:"includeSecrets"`
-	Backup            string   `json:"backup"`
-	SuggestedFilename string   `json:"suggestedFilename"`
-	Notes             []string `json:"notes"`
+	Namespace      string   `json:"namespace"`
+	Name           string   `json:"name"`
+	IncludeSecrets bool     `json:"includeSecrets"`
+	Backup         string   `json:"backup"`
+	Notes          []string `json:"notes"`
 }
 
 // CreateBackupClusterHandler creates a handler for backing up cluster configurations
@@ -868,22 +871,19 @@ func CreateBackupClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 		}
 
 		notes := []string{
-			"The backup covers CAPI resources only; workload data is not included",
-			"Infrastructure provider resources may need a separate backup",
-			"Store the backup in a secure location and test the restore procedure outside production",
+			"A placeholder: no resources are exported, only these instructions (giantswarm/mcp-capi#303)",
+			"Back up the cluster's resources and workload data with velero",
 		}
 		if includeSecrets {
-			notes = append(notes, "Secrets are included: handle and encrypt the backup with care")
+			notes = append(notes, "include_secrets passed the credential-export check, but no Secret is exported either")
 		}
 
 		return jsonResult(backupClusterResult{
-			Namespace:         namespace,
-			Name:              name,
-			Format:            outputFormat,
-			IncludeSecrets:    includeSecrets,
-			Backup:            backup,
-			SuggestedFilename: fmt.Sprintf("cluster-%s-%s-backup.%s", namespace, name, outputFormat),
-			Notes:             notes,
+			Namespace:      namespace,
+			Name:           name,
+			IncludeSecrets: includeSecrets,
+			Backup:         backup,
+			Notes:          notes,
 		})
 	}
 }

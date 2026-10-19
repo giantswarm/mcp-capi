@@ -18,6 +18,10 @@ install-test-binaries: ## Install kine and kube-apiserver needed by integration 
 		-o "$(shell go env GOPATH)/bin/kube-apiserver"
 	chmod +x "$(shell go env GOPATH)/bin/kube-apiserver"
 
+.PHONY: tools-doc
+tools-doc: ## Regenerate docs/tools.md from the registered tools.
+	TOOLS_DOC_UPDATE=1 CGO_ENABLED=0 go test ./pkg/mcp/handlers/ -run TestToolsDocIsCurrent -count=1
+
 ##@ Helm
 
 HELM_UNITTEST_VERSION := 1.0.3

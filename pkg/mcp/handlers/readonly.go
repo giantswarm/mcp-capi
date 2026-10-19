@@ -9,9 +9,10 @@ import "github.com/mark3labs/mcp-go/mcp"
 // deliberate and a test enforces it, so a new tool has to be placed here
 // before it ships.
 //
-// capi_backup_cluster is read-only because its default export carries no
-// Secret data; its include_secrets argument is a credential export and the
-// client refuses it unless the policy's ExposeKubeconfig is set.
+// capi_backup_cluster is read-only: it exports nothing yet. Its
+// include_secrets argument is checked as a credential export, so the client
+// refuses it unless the policy's ExposeKubeconfig is set. capi_move_cluster
+// only returns the steps and command of a move: it moves nothing.
 var readOnlyTools = map[string]struct{}{
 	// Clusters
 	"capi_list_clusters":    {},
@@ -19,6 +20,7 @@ var readOnlyTools = map[string]struct{}{
 	"capi_cluster_status":   {},
 	"capi_cluster_health":   {},
 	"capi_backup_cluster":   {},
+	"capi_move_cluster":     {},
 	"capi_list_machines":    {},
 	"capi_get_machine":      {},
 	"capi_list_machinesets": {},
@@ -54,7 +56,6 @@ var mutatingTools = map[string]struct{}{
 	"capi_delete_cluster":  {},
 	"capi_upgrade_cluster": {},
 	"capi_update_cluster":  {},
-	"capi_move_cluster":    {},
 
 	// Machines
 	"capi_delete_machine":    {},
@@ -92,7 +93,7 @@ var additiveTools = map[string]struct{}{
 // idempotentWrites are the mutating tools whose repeated call with the same
 // arguments leaves the cluster as the first call did (set a size, pause,
 // resume, cordon, apply the same update). Creates, deletes, drains,
-// remediations, moves, upgrades and rollouts are not.
+// remediations, upgrades and rollouts are not.
 var idempotentWrites = map[string]struct{}{
 	"capi_scale_cluster":            {},
 	"capi_pause_cluster":            {},
