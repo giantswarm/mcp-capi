@@ -188,9 +188,9 @@ func TestEveryToolIsAnnotated(t *testing.T) {
 			if *a.ReadOnlyHint {
 				t.Errorf("write %q claims readOnlyHint true", name)
 			}
-			_, additive := additiveTools[name]
-			if *a.DestructiveHint == additive {
-				t.Errorf("write %q: destructiveHint=%v, want %v (additive=%v)", name, *a.DestructiveHint, !additive, additive)
+			_, nonDestructive := nonDestructiveWrites[name]
+			if *a.DestructiveHint == nonDestructive {
+				t.Errorf("write %q: destructiveHint=%v, want %v (nonDestructive=%v)", name, *a.DestructiveHint, !nonDestructive, nonDestructive)
 			}
 			_, idempotent := idempotentWrites[name]
 			if *a.IdempotentHint != idempotent {
@@ -198,7 +198,7 @@ func TestEveryToolIsAnnotated(t *testing.T) {
 			}
 		}
 	}
-	for listName, list := range map[string]map[string]struct{}{"additiveTools": additiveTools, "idempotentWrites": idempotentWrites} {
+	for listName, list := range map[string]map[string]struct{}{"nonDestructiveWrites": nonDestructiveWrites, "idempotentWrites": idempotentWrites} {
 		for name := range list {
 			if !IsMutatingTool(name) {
 				t.Errorf("%s lists %q, which is not a mutating tool", listName, name)

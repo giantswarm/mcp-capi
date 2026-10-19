@@ -9,9 +9,9 @@ import "github.com/mark3labs/mcp-go/mcp"
 // deliberate and a test enforces it, so a new tool has to be placed here
 // before it ships.
 //
-// capi_backup_cluster is read-only because its default export carries no
-// Secret data; its include_secrets argument is a credential export and the
-// client refuses it unless the policy's ExposeKubeconfig is set.
+// capi_backup_cluster is read-only: it exports nothing yet. Its
+// include_secrets argument is checked as a credential export, so the client
+// refuses it unless the policy's ExposeKubeconfig is set.
 var readOnlyTools = map[string]struct{}{
 	// Clusters
 	"capi_list_clusters":    {},
@@ -80,19 +80,21 @@ var credentialTools = map[string]struct{}{
 	"capi_get_kubeconfig": {},
 }
 
-// additiveTools are the mutating tools that only create: they never change
-// or remove what exists, so their destructiveHint is false. Every other
-// mutating tool scales, updates, pauses, drains or deletes something that is
-// already there and is annotated destructive.
-var additiveTools = map[string]struct{}{
+// nonDestructiveWrites are the mutating tools that never change or remove
+// what exists, so their destructiveHint is false: the creates, and
+// capi_move_cluster, which writes nothing yet (giantswarm/mcp-capi#308). Every
+// other mutating tool scales, updates, pauses, drains or deletes something
+// that is already there and is annotated destructive.
+var nonDestructiveWrites = map[string]struct{}{
 	"capi_create_cluster":           {},
 	"capi_create_machinedeployment": {},
+	"capi_move_cluster":             {},
 }
 
 // idempotentWrites are the mutating tools whose repeated call with the same
 // arguments leaves the cluster as the first call did (set a size, pause,
-// resume, cordon, apply the same update). Creates, deletes, drains,
-// remediations, moves, upgrades and rollouts are not.
+// resume, cordon, apply the same update, plan a move). Creates, deletes,
+// drains, remediations, upgrades and rollouts are not.
 var idempotentWrites = map[string]struct{}{
 	"capi_scale_cluster":            {},
 	"capi_pause_cluster":            {},
@@ -101,13 +103,14 @@ var idempotentWrites = map[string]struct{}{
 	"capi_scale_machinedeployment":  {},
 	"capi_update_machinedeployment": {},
 	"capi_cordon_node":              {},
+	"capi_move_cluster":             {},
 }
 
 // annotationsFor derives a tool's MCP annotations from its classification, so
 // a client (or an aggregator's read-only toolset) can tell the reads from the
 // writes: read-only and credential tools change nothing (readOnlyHint true,
 // destructiveHint false, idempotentHint true); mutating tools are writes whose
-// destructiveHint is false only for the additive creates. Every tool talks to
+// destructiveHint is false only for nonDestructiveWrites. Every tool talks to
 // the management cluster only (openWorldHint false). Without this, mcp-go's
 // NewTool defaults (readOnlyHint false, destructiveHint true) would present
 // capi_list_clusters as a destructive write.
@@ -117,9 +120,9 @@ func annotationsFor(name string) mcp.ToolAnnotation {
 	if IsReadOnlyTool(name) || IsCredentialTool(name) {
 		return mcp.ToolAnnotation{ReadOnlyHint: &t, DestructiveHint: &f, IdempotentHint: &t, OpenWorldHint: &f}
 	}
-	_, additive := additiveTools[name]
+	_, nonDestructive := nonDestructiveWrites[name]
 	_, idempotent := idempotentWrites[name]
-	destructive := !additive
+	destructive := !nonDestructive
 	return mcp.ToolAnnotation{ReadOnlyHint: &f, DestructiveHint: &destructive, IdempotentHint: &idempotent, OpenWorldHint: &f}
 }
 

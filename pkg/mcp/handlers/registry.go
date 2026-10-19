@@ -11,7 +11,8 @@ import (
 
 // nodeReach is what the node tools reach: the server holds one client, to the
 // management cluster.
-const nodeReach = "Reaches only the management cluster's API: a workload cluster Machine's node is looked up there by name (giantswarm/mcp-capi#302)."
+const nodeReach = "Reaches only the management cluster's API: a workload cluster Machine's node is looked up there by name, " +
+	"so it fails, or acts on a management cluster node of the same name (giantswarm/mcp-capi#302)."
 
 // BuildAllTools constructs and returns the complete MCP tool registry.
 // It builds all available tools including cluster management operations,
@@ -89,11 +90,11 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace for the cluster")),
 			mcp.WithString("provider", mcp.Required(), mcp.Description("Infrastructure provider (aws, azure, gcp, vsphere)")),
-			mcp.WithString("kubernetes_version", mcp.Description("Kubernetes version; not applied yet")),
-			mcp.WithNumber("control_plane_count", mcp.Description("Number of control plane nodes; not applied yet")),
-			mcp.WithNumber("worker_count", mcp.Description("Number of worker nodes; not applied yet")),
-			mcp.WithString("region", mcp.Description("Cloud provider region; not applied yet")),
-			mcp.WithString("instance_type", mcp.Description("Instance type for nodes; not applied yet")),
+			mcp.WithString("kubernetes_version", mcp.Description("Kubernetes version")),
+			mcp.WithNumber("control_plane_count", mcp.Description("Number of control plane nodes")),
+			mcp.WithNumber("worker_count", mcp.Description("Number of worker nodes")),
+			mcp.WithString("region", mcp.Description("Cloud provider region")),
+			mcp.WithString("instance_type", mcp.Description("Instance type for nodes")),
 		),
 		Handler: CreateCreateClusterHandler(serverCtx),
 	})
@@ -273,7 +274,7 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
 			mcp.WithString("target_kubeconfig", mcp.Description("Target management cluster kubeconfig path")),
 			mcp.WithString("target_namespace", mcp.Description("Target namespace (defaults to source namespace)")),
-			mcp.WithBoolean("dry_run", mcp.Description("Perform dry run")),
+			mcp.WithBoolean("dry_run", mcp.Description("Perform dry run; changes nothing, as the tool never moves anything")),
 		),
 		Handler: CreateMoveClusterHandler(serverCtx),
 	})
@@ -288,7 +289,7 @@ func buildClusterTools(serverCtx *ServerContext) []ToolRegistration {
 			),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
 			mcp.WithString("name", mcp.Required(), mcp.Description("Name of the cluster")),
-			mcp.WithBoolean("include_secrets", mcp.Description("Include the cluster's Secrets (kubeconfig, certificates). Refused unless the server allows credential export.")),
+			mcp.WithBoolean("include_secrets", mcp.Description("Include the cluster's Secrets: only checked against --expose-kubeconfig, no Secret is exported yet")),
 			mcp.WithString("output_format", mcp.Description("Output format (yaml or json, default: yaml)")),
 		),
 		Handler: CreateBackupClusterHandler(serverCtx),
@@ -433,7 +434,7 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 		Tool: mcp.NewTool(
 			"capi_rollout_machinedeployment",
 			tooldesc.Describe(
-				"Annotate a CAPI MachineDeployment's machine template with a rollout reason; on CAPI v1.4+ no machine is replaced.",
+				"Set rollout annotations on a CAPI MachineDeployment's machine template; on CAPI v1.4+ no machine is replaced.",
 				"Template annotations reach the existing machines in place, so no new MachineSet is created (giantswarm/mcp-capi#304). Replacing machines: capi_update_machinedeployment with a new version.",
 			),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace")),
@@ -480,7 +481,7 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 					"Waits until evicted pods are gone; the node stays cordoned either way. Cordon alone: capi_cordon_node.",
 			),
 			mcp.WithString("namespace", mcp.Description("Namespace of the machine")),
-			mcp.WithString("machine_name", mcp.Description("Name of the machine")),
+			mcp.WithString("machine_name", mcp.Description("Name of a Machine; a workload cluster Machine's node name is looked up on the management cluster")),
 			mcp.WithString("node_name", mcp.Description("Name of the node (alternative to machine)")),
 			mcp.WithBoolean("ignore_daemonsets", mcp.Description("Leave DaemonSet pods on the node instead of refusing the drain")),
 			mcp.WithBoolean("delete_local_data", mcp.Description("Evict pods with emptyDir volumes, losing that data")),
@@ -499,7 +500,7 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 				nodeReach+" Draining: capi_drain_node.",
 			),
 			mcp.WithString("namespace", mcp.Description("Namespace of the machine")),
-			mcp.WithString("machine_name", mcp.Description("Name of the machine")),
+			mcp.WithString("machine_name", mcp.Description("Name of a Machine; a workload cluster Machine's node name is looked up on the management cluster")),
 			mcp.WithString("node_name", mcp.Description("Name of the node (alternative to machine)")),
 			mcp.WithBoolean("uncordon", mcp.Description("Uncordon instead of cordon")),
 		),
@@ -510,11 +511,11 @@ func buildMachineTools(serverCtx *ServerContext) []ToolRegistration {
 		Tool: mcp.NewTool(
 			"capi_node_status",
 			tooldesc.Describe(
-				"Get a management cluster node's status and conditions, by its name or its Machine's.",
+				"Get a management cluster node's status and conditions, by name.",
 				nodeReach+" The Machine itself: capi_get_machine.",
 			),
 			mcp.WithString("namespace", mcp.Description("Namespace of the machine")),
-			mcp.WithString("machine_name", mcp.Description("Name of the machine")),
+			mcp.WithString("machine_name", mcp.Description("Name of a Machine; a workload cluster Machine's node name is looked up on the management cluster")),
 			mcp.WithString("node_name", mcp.Description("Name of the node (alternative to machine)")),
 		),
 		Handler: CreateNodeStatusHandler(serverCtx),
@@ -577,7 +578,7 @@ func buildProviderTools(serverCtx *ServerContext) []ToolRegistration {
 		Tool: mcp.NewTool(
 			"capi_aws_get_cluster",
 			tooldesc.Describe(
-				"Get an AWS CAPI cluster's readiness, pod and service CIDRs and conditions.",
+				"Get an AWS CAPI cluster's readiness, network (pod and service CIDRs) and conditions.",
 				"Any provider: capi_get_cluster.",
 			),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
@@ -620,7 +621,7 @@ func buildProviderTools(serverCtx *ServerContext) []ToolRegistration {
 		Tool: mcp.NewTool(
 			"capi_azure_get_cluster",
 			tooldesc.Describe(
-				"Get an Azure CAPI cluster's readiness, pod and service CIDRs and conditions.",
+				"Get an Azure CAPI cluster's readiness, network (pod and service CIDRs) and conditions.",
 				"Any provider: capi_get_cluster.",
 			),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
@@ -649,7 +650,7 @@ func buildProviderTools(serverCtx *ServerContext) []ToolRegistration {
 		Tool: mcp.NewTool(
 			"capi_gcp_get_cluster",
 			tooldesc.Describe(
-				"Get a GCP CAPI cluster's readiness, pod and service CIDRs and conditions.",
+				"Get a GCP CAPI cluster's readiness, network (pod and service CIDRs) and conditions.",
 				"Any provider: capi_get_cluster.",
 			),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),
@@ -678,7 +679,7 @@ func buildProviderTools(serverCtx *ServerContext) []ToolRegistration {
 		Tool: mcp.NewTool(
 			"capi_vsphere_get_cluster",
 			tooldesc.Describe(
-				"Get a vSphere CAPI cluster's readiness, pod and service CIDRs and conditions.",
+				"Get a vSphere CAPI cluster's readiness, network (pod and service CIDRs) and conditions.",
 				"Any provider: capi_get_cluster.",
 			),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Namespace of the cluster")),

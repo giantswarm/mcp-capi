@@ -204,14 +204,15 @@ is **off**, in the CLI and in the Helm chart (`readOnly`, `gitopsGuard`,
   reconciliation; the error names the owner and where the change belongs.
   Creating new objects is not guarded (there is nothing to inspect); with the
   guard off, writes go through. Only meaningful with `--read-only=false`.
-- `--expose-kubeconfig` offers `capi_get_kubeconfig` and lets
-  `capi_backup_cluster` honour `include_secrets`. Both hand out the workload
-  cluster's admin credentials from its kubeconfig Secret: reading a Secret is
-  not a write, but the kubeconfig is the power to do anything to that cluster,
-  so the export is a class of its own. Without the switch the tool is not
-  registered, whatever `--read-only` says, and the client refuses the export
-  (`ErrCredentialExport`) should it be reached anyway; a backup never carries
-  Secret data. On a Giant Swarm management cluster this stays off.
+- `--expose-kubeconfig` offers `capi_get_kubeconfig`, which hands out the
+  workload cluster's admin credentials from its kubeconfig Secret: reading a
+  Secret is not a write, but the kubeconfig is the power to do anything to
+  that cluster, so the export is a class of its own. Without the switch the
+  tool is not registered, whatever `--read-only` says, and the client refuses
+  the export (`ErrCredentialExport`) should it be reached anyway.
+  `capi_backup_cluster` checks `include_secrets` against the same switch, but
+  exports no Secret yet (#303). On a Giant Swarm management cluster this stays
+  off.
 
 Independently of all three switches, an object labelled
 `giantswarm.io/prevent-deletion` is never deleted.

@@ -7,6 +7,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1" //nolint:staticcheck // CAPI v1beta1 required until v1beta2 migration
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
@@ -105,11 +106,24 @@ func CreateCreateClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc
 			WorkerCount:       workerCount,
 			Region:            region,
 			InstanceType:      instanceType,
-			Message: "Cluster resource created. This basic implementation creates only the Cluster object; " +
-				"the infrastructure cluster (e.g. AWSCluster), the control plane (e.g. KubeadmControlPlane) and " +
-				"MachineDeployments for workers must be created separately. Monitor with capi_cluster_status.",
+			Message:           createClusterMessage(cluster),
 		})
 	}
+}
+
+// createClusterMessage says what capi_create_cluster did: it created the
+// Cluster object only and applied none of the sizing arguments it echoes.
+func createClusterMessage(cluster *clusterv1.Cluster) string {
+	var refs []string
+	for _, ref := range []*corev1.ObjectReference{cluster.Spec.InfrastructureRef, cluster.Spec.ControlPlaneRef} {
+		if ref != nil {
+			refs = append(refs, ref.Kind+" "+ref.Name)
+		}
+	}
+	return fmt.Sprintf("Only the Cluster object was created. kubernetesVersion, controlPlaneCount, workerCount, region and "+
+		"instanceType are echoed, not applied (giantswarm/mcp-capi#306). Create %s in namespace %s, and the worker "+
+		"MachineDeployments (capi_create_machinedeployment). Monitor with capi_cluster_status.",
+		strings.Join(refs, " and "), cluster.Namespace)
 }
 
 // CreateListClustersHandler creates a handler for listing CAPI clusters as
@@ -790,13 +804,13 @@ func CreateMoveClusterHandler(serverCtx *ServerContext) server.ToolHandlerFunc {
 		}
 
 		notes := []string{
-			"The source cluster is paused during the move",
-			"All cluster resources are migrated",
+			"Nothing was moved: run the move command yourself",
+			"clusterctl move pauses the source cluster and migrates its CAPI resources",
 			"Ensure network connectivity between the management clusters",
 			"Provider versions must match on both management clusters",
 		}
 		if dryRun {
-			notes = append([]string{"Dry run: no changes are made"}, notes...)
+			notes = append([]string{"dry_run changes nothing: this tool never moves anything"}, notes...)
 		}
 
 		return jsonResult(moveClusterResult{

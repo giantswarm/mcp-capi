@@ -728,15 +728,15 @@ func (c *Client) MoveCluster(ctx context.Context, opts MoveClusterOptions) (stri
 type BackupClusterOptions struct {
 	Namespace string
 	Name      string
-	// IncludeSecrets adds the cluster's Secrets (kubeconfig, certificates) to
-	// the backup. Requires the policy's ExposeKubeconfig; refused otherwise.
+	// IncludeSecrets lists the cluster's Secrets among the resources to back
+	// up. Requires the policy's ExposeKubeconfig; refused otherwise.
 	IncludeSecrets bool
 	OutputFormat   string // yaml or json
 }
 
-// BackupCluster creates a backup of cluster resources. A backup never carries
-// Secret data unless opts.IncludeSecrets is set and the policy allows the
-// credential export (ExposeKubeconfig).
+// BackupCluster returns backup instructions for a cluster: a placeholder that
+// exports none of its resources and no Secret. opts.IncludeSecrets is still
+// checked against the policy's credential export (ExposeKubeconfig).
 func (c *Client) BackupCluster(ctx context.Context, opts BackupClusterOptions) (string, error) {
 	if opts.IncludeSecrets {
 		if err := c.policy.CheckCredentialExport("Secrets in the backup", opts.Namespace, opts.Name); err != nil {
@@ -760,7 +760,7 @@ func (c *Client) BackupCluster(ctx context.Context, opts BackupClusterOptions) (
 	backup.WriteString("# Cluster Backup\n")
 	fmt.Fprintf(&backup, "# Cluster: %s/%s\n", opts.Namespace, opts.Name)
 	fmt.Fprintf(&backup, "# Date: %v\n", cluster.CreationTimestamp)
-	backup.WriteString("# Resources included:\n")
+	backup.WriteString("# Resources a backup should include:\n")
 	backup.WriteString("# - Cluster\n")
 	backup.WriteString("# - Control Plane\n")
 	backup.WriteString("# - MachineDeployments\n")
@@ -1167,16 +1167,13 @@ func (c *Client) CordonNode(ctx context.Context, opts NodeOperationOptions) erro
 	return c.setUnschedulable(ctx, nodeName, !opts.Uncordon)
 }
 
-// GetNodeStatus gets the status of a node in the workload cluster
+// GetNodeStatus gets the status of a node through the management cluster's API.
 func (c *Client) GetNodeStatus(ctx context.Context, opts NodeOperationOptions) (*corev1.Node, error) {
 	nodeName, err := c.resolveNodeName(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get node from workload cluster
-	// Note: This uses the management cluster client. In a real implementation,
-	// you would need to get the workload cluster kubeconfig and create a client for it
 	node, err := c.k8sClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node %s: %w", nodeName, err)
