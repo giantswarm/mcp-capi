@@ -3,10 +3,10 @@ module github.com/giantswarm/mcp-capi
 go 1.26.0
 
 require (
-	github.com/giantswarm/go-selfupdate v1.6.5
+	github.com/giantswarm/go-selfupdate v1.6.6
 	github.com/giantswarm/k8senv v0.3.0
-	github.com/giantswarm/mcp-oauth v1.7.6
-	github.com/giantswarm/mcp-toolkit v0.4.2
+	github.com/giantswarm/mcp-oauth v1.7.8
+	github.com/giantswarm/mcp-toolkit v0.4.4
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/mark3labs/mcp-go v1.3.0
@@ -74,7 +74,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
-	github.com/giantswarm/selfupdate-cosign v0.3.8
+	github.com/giantswarm/selfupdate-cosign v0.3.13
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
