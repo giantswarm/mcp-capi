@@ -6,10 +6,10 @@ require (
 	github.com/giantswarm/go-selfupdate v1.6.7
 	github.com/giantswarm/k8senv v0.3.0
 	github.com/giantswarm/mcp-oauth v1.7.10
-	github.com/giantswarm/mcp-toolkit v0.4.5
+	github.com/giantswarm/mcp-toolkit v0.4.6
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
-	github.com/mark3labs/mcp-go v1.3.0
+	github.com/mark3labs/mcp-go v1.4.0
 	github.com/spf13/cobra v1.10.2
 	k8s.io/api v0.37.1
 	k8s.io/apimachinery v0.37.1
