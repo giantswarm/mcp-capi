@@ -3,7 +3,7 @@ module github.com/giantswarm/mcp-capi
 go 1.26.0
 
 require (
-	github.com/giantswarm/go-selfupdate v1.6.7
+	github.com/giantswarm/go-selfupdate v1.6.8
 	github.com/giantswarm/k8senv v0.3.0
 	github.com/giantswarm/mcp-oauth v1.9.1
 	github.com/giantswarm/mcp-toolkit v0.4.6
@@ -38,6 +38,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/certificate-transparency-go v1.3.3 // indirect
 	github.com/google/go-containerregistry v0.21.7 // indirect
+	github.com/google/go-github/v93 v93.0.0 // indirect
 	github.com/in-toto/attestation v1.2.0 // indirect
 	github.com/in-toto/in-toto-golang v0.11.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
@@ -95,7 +96,6 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.29.2 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
-	github.com/google/go-github/v86 v86.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0 // indirect
