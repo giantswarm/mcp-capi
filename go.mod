@@ -3,7 +3,7 @@ module github.com/giantswarm/mcp-capi
 go 1.26.0
 
 require (
-	github.com/giantswarm/go-selfupdate v1.6.8
+	github.com/giantswarm/go-selfupdate v1.7.1
 	github.com/giantswarm/k8senv v0.3.0
 	github.com/giantswarm/mcp-oauth v1.9.1
 	github.com/giantswarm/mcp-toolkit v0.4.7
@@ -20,7 +20,7 @@ require (
 )
 
 require (
-	github.com/ProtonMail/go-crypto v1.4.1 // indirect
+	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
@@ -62,7 +62,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	code.gitea.io/sdk/gitea v0.23.2 // indirect
+	code.gitea.io/sdk/gitea v0.25.1 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -120,7 +120,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/ulikunitz/xz v0.5.15 // indirect
+	github.com/ulikunitz/xz v0.5.17 // indirect
 	github.com/valkey-io/valkey-go v1.0.79 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
@@ -153,7 +153,6 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.37.0 // indirect
 	k8s.io/cluster-bootstrap v0.36.3 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
