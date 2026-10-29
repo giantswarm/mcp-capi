@@ -150,6 +150,9 @@
             "type": "boolean",
             "description": "Offer capi_get_kubeconfig: the workload cluster's admin kubeconfig leaves the server. Off by default and independent of readOnly; without it the tool is not registered and the server refuses the export. Never enable this on a Giant Swarm management cluster."
         },
+        "externalDNSIP": {
+            "type": "string"
+        },
         "fullnameOverride": {
             "type": "string"
         },
@@ -211,6 +214,17 @@
         },
         "global": {
             "type": "object",
+            "description": "Global values shared between all subcharts and the platform.",
+            "additionalProperties": true,
+            "properties": {
+                "podSecurityStandards": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "helm": {
+            "type": "object",
             "additionalProperties": true
         },
         "image": {
@@ -233,6 +247,9 @@
         },
         "imagePullSecrets": {
             "type": "array"
+        },
+        "managementCluster": {
+            "type": "string"
         },
         "nameOverride": {
             "type": "string"
