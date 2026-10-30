@@ -3,7 +3,7 @@ module github.com/giantswarm/mcp-capi
 go 1.26.0
 
 require (
-	github.com/giantswarm/go-selfupdate v1.6.8
+	github.com/giantswarm/go-selfupdate v1.7.1
 	github.com/giantswarm/k8senv v0.3.0
 	github.com/giantswarm/mcp-oauth v1.9.4
 	github.com/giantswarm/mcp-toolkit v0.4.8
@@ -20,14 +20,13 @@ require (
 )
 
 require (
-	github.com/ProtonMail/go-crypto v1.4.1 // indirect
+	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
-	github.com/go-chi/chi/v5 v5.5.0 // indirect
 	github.com/go-openapi/analysis v1.0.0 // indirect
 	github.com/go-openapi/errors v0.22.9 // indirect
 	github.com/go-openapi/loads v0.25.2 // indirect
@@ -54,7 +53,6 @@ require (
 	github.com/sigstore/sigstore-go v1.3.0 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.1.3 // indirect
 	github.com/theupdateframework/go-tuf/v2 v2.4.2 // indirect
-	github.com/tink-crypto/tink-go/v2 v2.9.0 // indirect
 	github.com/transparency-dev/formats v0.1.1 // indirect
 	github.com/transparency-dev/merkle v0.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
@@ -64,7 +62,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	code.gitea.io/sdk/gitea v0.23.2 // indirect
+	code.gitea.io/sdk/gitea v0.25.1 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -77,7 +75,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
-	github.com/giantswarm/selfupdate-cosign v0.3.15
+	github.com/giantswarm/selfupdate-cosign v0.3.18
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
@@ -122,7 +120,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/ulikunitz/xz v0.5.15 // indirect
+	github.com/ulikunitz/xz v0.5.17 // indirect
 	github.com/valkey-io/valkey-go v1.0.79 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
@@ -155,7 +153,6 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.37.0 // indirect
 	k8s.io/cluster-bootstrap v0.36.3 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
