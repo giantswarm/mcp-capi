@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/giantswarm/mcp-toolkit/brand"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
@@ -71,6 +72,7 @@ func NewServer(opts ServerOptions) (*Server, error) {
 		server.WithResourceCapabilities(true, true), // subscribe, list
 		server.WithPromptCapabilities(true),
 		server.WithLogging(),
+		brand.WithIcon(clusterAPILogo),
 	)
 
 	s := &Server{
