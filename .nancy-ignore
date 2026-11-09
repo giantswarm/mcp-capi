@@ -11,3 +11,6 @@ CVE-2026-59818 until=2026-11-27 # go.etcd.io/etcd/v3@v3.6.8 since=2026-10-28
 CVE-2026-73500 until=2026-11-27 # go.etcd.io/etcd/v3@v3.6.8 since=2026-10-28
 CVE-2026-33343 until=2026-11-27 # go.etcd.io/etcd/v3@v3.6.8 since=2026-10-28
 CVE-2026-33413 until=2026-11-27 # go.etcd.io/etcd/v3@v3.6.8 since=2026-10-28
+# CVE-2026-119591 (SQLite before 3.54.0): OSS Index lists it on every modernc.org/sqlite version; v1.62.0 embeds SQLite 3.54.1, which carries the fix, so the finding is the scanner's stale range.
+# Tracked in https://github.com/giantswarm/mcp-capi/issues/371; remove by 2026-12-07, or once OSS Index no longer lists v1.62.0.
+CVE-2026-119591 until=2026-12-07 # modernc.org/sqlite@v1.62.0 since=2026-11-09
