@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/giantswarm/mcp-toolkit/brand"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/giantswarm/mcp-capi/pkg/capi"
@@ -64,14 +65,7 @@ func NewServer(opts ServerOptions) (*Server, error) {
 	}
 
 	// Create MCP server
-	mcpServer := server.NewMCPServer(
-		opts.ServerName,
-		opts.ServerVersion,
-		server.WithToolCapabilities(true),
-		server.WithResourceCapabilities(true, true), // subscribe, list
-		server.WithPromptCapabilities(true),
-		server.WithLogging(),
-	)
+	mcpServer := newMCPServer(opts.ServerName, opts.ServerVersion)
 
 	s := &Server{
 		options:       opts,
@@ -104,6 +98,19 @@ func validateOptions(opts ServerOptions) error {
 
 // newServerContext builds the handler context: a per-caller client factory
 // when acting as the caller, else one static client.
+// newMCPServer creates the MCP server with its capabilities and icon.
+func newMCPServer(name, version string) *server.MCPServer {
+	return server.NewMCPServer(
+		name,
+		version,
+		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(true, true), // subscribe, list
+		server.WithPromptCapabilities(true),
+		server.WithLogging(),
+		brand.WithIcon(clusterAPILogo),
+	)
+}
+
 func newServerContext(opts ServerOptions, logger *slog.Logger) (*handlers.ServerContext, error) {
 	policy := opts.WritePolicy()
 	logger.Info("Write policy", "readOnly", policy.ReadOnly, "gitopsGuard", policy.GitOpsGuard, "exposeKubeconfig", policy.ExposeKubeconfig)
