@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/giantswarm/go-selfupdate v1.7.4
 	github.com/giantswarm/k8senv v0.3.0
-	github.com/giantswarm/mcp-oauth v1.12.1
+	github.com/giantswarm/mcp-oauth v1.13.0
 	github.com/giantswarm/mcp-toolkit v0.4.12
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
