@@ -262,8 +262,14 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
+                "allowPrivateIPJWKS": {
+                    "type": "boolean",
+                    "description": "Permit the JWKS fetch that validates forwarded ID tokens to reach the Dex issuer host on a private address. HTTPS and TLS verification remain required. Dex discovery and token calls already reach private addresses and follow HTTP_PROXY, HTTPS_PROXY and NO_PROXY without this setting."
+                },
                 "allowPrivateURLs": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "Deprecated: read as allowPrivateIPJWKS; set that instead. Refused from v0.8.0 (planned for 2027-02-17). See docs/private-jwks-migration.md.",
+                    "deprecated": true
                 },
                 "allowPublicRegistration": {
                     "type": "boolean"

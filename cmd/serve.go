@@ -63,7 +63,7 @@ OAuth resource server. Configuration comes from the environment:
   DEX_CA_FILE                       CA of a private Dex
   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
   OAUTH_TRUSTED_AUDIENCES           comma-separated client IDs whose ID tokens are accepted (SSO)
-  MCP_OAUTH_ALLOW_PRIVATE_URLS      allow the identity provider on private addresses
+  MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS   allow the forwarded-token JWKS fetch to reach a private-address Dex
   MCP_OAUTH_ENCRYPTION_KEY          32-byte key (base64 or hex) for tokens at rest
   MCP_OAUTH_ALLOW_PUBLIC_REGISTRATION
   OAUTH_STORAGE                     memory (default) or valkey
@@ -106,7 +106,10 @@ An object labelled giantswarm.io/prevent-deletion is never deleted.`,
 				Debug:            debug,
 			}
 			if enableOAuth {
-				oauthCfg := oauth.ConfigFromEnv()
+				oauthCfg, err := oauth.ConfigFromEnv()
+				if err != nil {
+					return fmt.Errorf("invalid OAuth configuration: %w", err)
+				}
 				cfg.OAuth = &oauthCfg
 			}
 			return RunServe(cfg)

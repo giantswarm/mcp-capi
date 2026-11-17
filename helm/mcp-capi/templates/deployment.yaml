@@ -140,8 +140,8 @@ spec:
                   optional: true
             - name: MCP_OAUTH_ALLOW_PUBLIC_REGISTRATION
               value: {{ .Values.oauth.allowPublicRegistration | quote }}
-            - name: MCP_OAUTH_ALLOW_PRIVATE_URLS
-              value: {{ .Values.oauth.allowPrivateURLs | quote }}
+            - name: MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS
+              value: {{ or .Values.oauth.allowPrivateIPJWKS .Values.oauth.allowPrivateURLs | quote }}
             {{- with include "mcp-capi.oauth.trustedAudiences" . }}
             - name: OAUTH_TRUSTED_AUDIENCES
               value: {{ . | quote }}

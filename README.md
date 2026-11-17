@@ -175,6 +175,14 @@ The Helm chart exposes them under `oauth.*` (see `helm/mcp-capi/README.md`);
 `oauth.downstream.enabled` (default on) mounts no ServiceAccount token and the
 chart renders no RBAC.
 
+Dex discovery and token calls reach a Dex on a private address and follow
+`HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`; `DEX_CA_FILE` only adds the CA
+that signed Dex's certificate. The JWKS fetch that validates forwarded ID
+tokens keeps its SSRF guard unless `MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS=true`
+(`oauth.allowPrivateIPJWKS`) lifts it for the Dex issuer host.
+`MCP_OAUTH_ALLOW_PRIVATE_URLS` (`oauth.allowPrivateURLs`) is a deprecated
+alias; see [the migration note](docs/private-jwks-migration.md).
+
 ### Write policy: read-only and the GitOps guard
 
 Two switches decide what an agent may change, a third what it may take away.

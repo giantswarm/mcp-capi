@@ -1,0 +1,47 @@
+suite: OAuth JWKS address policy
+templates:
+  - templates/deployment.yaml
+set:
+  global.domain: example.test
+  oauth.enabled: true
+  oauth.dex.issuerURL: https://dex.example.test
+  oauth.dex.clientID: mcp-capi
+  oauth.dex.clientSecret: dex-secret
+  oauth.encryptionKey: encryption-key
+tests:
+  - it: keeps the JWKS guard enabled by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS
+            value: "false"
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MCP_OAUTH_ALLOW_PRIVATE_URLS
+            value: "false"
+  - it: permits private-address JWKS fetching when explicitly configured
+    set:
+      oauth.allowPrivateIPJWKS: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS
+            value: "true"
+  - it: reads the deprecated value as the JWKS permission
+    set:
+      oauth.allowPrivateURLs: true
+      oauth.allowPrivateIPJWKS: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS
+            value: "true"
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MCP_OAUTH_ALLOW_PRIVATE_URLS
+            value: "true"
