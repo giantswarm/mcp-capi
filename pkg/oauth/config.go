@@ -1,7 +1,9 @@
 package oauth
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -70,10 +72,16 @@ type Config struct {
 	// its JWKS.
 	TrustedAudiences []string
 
-	// AllowPrivateURLs permits the identity provider (issuer and JWKS) to
-	// resolve to private/internal IP addresses, e.g. dex.<mc>.<base> on a
-	// private management cluster. TLS verification is still enforced.
-	AllowPrivateURLs bool
+	// AllowPrivateIPJWKS permits the JWKS fetch that validates forwarded ID
+	// tokens to reach the Dex issuer host on a private address, e.g.
+	// dex.<mc>.<base> on a private management cluster. HTTPS and certificate
+	// verification remain required. Dex discovery and token calls reach
+	// private addresses without it.
+	AllowPrivateIPJWKS bool
+
+	// DeprecatedPrivateURLsEnv names the deprecated variable AllowPrivateIPJWKS
+	// was also read from, empty when it is unset.
+	DeprecatedPrivateURLsEnv string
 
 	// DexCAFile is a PEM file with the CA that signed the Dex certificate.
 	// Used for OIDC discovery, the token endpoint and JWKS. Empty means the
@@ -94,37 +102,47 @@ const StorageTypeValkey = "valkey"
 
 const envTrue = "true"
 
+const (
+	envAllowPrivateIPJWKS = "MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS"
+	envAllowPrivateURLs   = "MCP_OAUTH_ALLOW_PRIVATE_URLS"
+)
+
 // ConfigFromEnv reads the configuration from the environment. The variable
 // names match mcp-prometheus and mcp-kubernetes so one platform contract
 // configures every MCP server the same way.
-func ConfigFromEnv() Config {
+func ConfigFromEnv() (Config, error) {
 	return configFromLookup(os.LookupEnv)
 }
 
-func configFromLookup(lookup func(string) (string, bool)) Config {
+func configFromLookup(lookup func(string) (string, bool)) (Config, error) {
 	get := func(k string) string {
 		v, _ := lookup(k)
 		return strings.TrimSpace(v)
 	}
+	allowPrivateIPJWKS, deprecatedPrivateURLsEnv, err := privateIPJWKSFromEnv(get)
+	if err != nil {
+		return Config{}, err
+	}
 	cfg := Config{
-		Issuer:                  get("MCP_OAUTH_ISSUER"),
-		EncryptionKey:           get("MCP_OAUTH_ENCRYPTION_KEY"),
-		AllowPublicRegistration: get("MCP_OAUTH_ALLOW_PUBLIC_REGISTRATION") == envTrue,
-		StorageType:             get("OAUTH_STORAGE"),
-		ValkeyURL:               get("VALKEY_URL"),
-		ValkeyPassword:          get("VALKEY_PASSWORD"),
-		ValkeyTLS:               get("VALKEY_TLS_ENABLED") == envTrue,
-		ValkeyKeyPrefix:         get("VALKEY_KEY_PREFIX"),
-		Provider:                strings.ToLower(get("MCP_OAUTH_PROVIDER")),
-		RedirectURL:             get("OAUTH_REDIRECT_URL"),
-		GoogleClientID:          get("GOOGLE_CLIENT_ID"),
-		GoogleClientSecret:      get("GOOGLE_CLIENT_SECRET"),
-		DexIssuerURL:            get("DEX_ISSUER_URL"),
-		DexClientID:             get("DEX_CLIENT_ID"),
-		DexClientSecret:         get("DEX_CLIENT_SECRET"),
-		KubernetesAudience:      get("DEX_K8S_AUTHENTICATOR_CLIENT_ID"),
-		AllowPrivateURLs:        get("MCP_OAUTH_ALLOW_PRIVATE_URLS") == envTrue,
-		DexCAFile:               get("DEX_CA_FILE"),
+		Issuer:                   get("MCP_OAUTH_ISSUER"),
+		EncryptionKey:            get("MCP_OAUTH_ENCRYPTION_KEY"),
+		AllowPublicRegistration:  get("MCP_OAUTH_ALLOW_PUBLIC_REGISTRATION") == envTrue,
+		StorageType:              get("OAUTH_STORAGE"),
+		ValkeyURL:                get("VALKEY_URL"),
+		ValkeyPassword:           get("VALKEY_PASSWORD"),
+		ValkeyTLS:                get("VALKEY_TLS_ENABLED") == envTrue,
+		ValkeyKeyPrefix:          get("VALKEY_KEY_PREFIX"),
+		Provider:                 strings.ToLower(get("MCP_OAUTH_PROVIDER")),
+		RedirectURL:              get("OAUTH_REDIRECT_URL"),
+		GoogleClientID:           get("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret:       get("GOOGLE_CLIENT_SECRET"),
+		DexIssuerURL:             get("DEX_ISSUER_URL"),
+		DexClientID:              get("DEX_CLIENT_ID"),
+		DexClientSecret:          get("DEX_CLIENT_SECRET"),
+		KubernetesAudience:       get("DEX_K8S_AUTHENTICATOR_CLIENT_ID"),
+		AllowPrivateIPJWKS:       allowPrivateIPJWKS,
+		DeprecatedPrivateURLsEnv: deprecatedPrivateURLsEnv,
+		DexCAFile:                get("DEX_CA_FILE"),
 	}
 	if cfg.Provider == "" {
 		cfg.Provider = ProviderDex
@@ -138,5 +156,28 @@ func configFromLookup(lookup func(string) (string, bool)) Config {
 			cfg.TrustedAudiences = append(cfg.TrustedAudiences, a)
 		}
 	}
-	return cfg
+	return cfg, nil
+}
+
+// privateIPJWKSFromEnv reads MCP_OAUTH_ALLOW_PRIVATE_IP_JWKS and its
+// deprecated alias MCP_OAUTH_ALLOW_PRIVATE_URLS; either set to true permits
+// private JWKS addresses. It also returns the alias name when the alias is set.
+func privateIPJWKSFromEnv(get func(string) string) (bool, string, error) {
+	var allow bool
+	var deprecated string
+	for _, name := range []string{envAllowPrivateIPJWKS, envAllowPrivateURLs} {
+		raw := get(name)
+		if raw == "" {
+			continue
+		}
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			return false, "", fmt.Errorf("oauth: %s: expected a boolean: %w", name, err)
+		}
+		if name == envAllowPrivateURLs {
+			deprecated = name
+		}
+		allow = allow || value
+	}
+	return allow, deprecated, nil
 }

@@ -9,15 +9,14 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
-	"time"
 
 	mcpoauth "github.com/giantswarm/mcp-oauth"
 	"github.com/giantswarm/mcp-oauth/handler"
 	"github.com/giantswarm/mcp-oauth/providers"
 	"github.com/giantswarm/mcp-oauth/providers/dex"
 	"github.com/giantswarm/mcp-oauth/providers/google"
-	mcpoidc "github.com/giantswarm/mcp-oauth/providers/oidc"
 	"github.com/giantswarm/mcp-oauth/security"
 	"github.com/giantswarm/mcp-oauth/storage"
 	"github.com/giantswarm/mcp-oauth/storage/memory"
@@ -42,6 +41,9 @@ func NewServer(ctx context.Context, cfg Config, logger *slog.Logger) (*Server, e
 	}
 	if cfg.RedirectURL == "" {
 		return nil, fmt.Errorf("oauth: OAUTH_REDIRECT_URL must be set")
+	}
+	if cfg.DeprecatedPrivateURLsEnv != "" {
+		logger.Warn("DEPRECATED: " + cfg.DeprecatedPrivateURLsEnv + " is read as " + envAllowPrivateIPJWKS + " and will be refused from v0.8.0; set " + envAllowPrivateIPJWKS + " instead")
 	}
 
 	var (
@@ -74,17 +76,7 @@ func newServerWithProvider(_ context.Context, provider providers.Provider, cfg C
 		return nil, err
 	}
 
-	serverCfg := &mcpoauth.ServerConfig{
-		Issuer:                        cfg.Issuer,
-		AllowPublicClientRegistration: cfg.AllowPublicRegistration,
-		AllowRefreshTokenRotation:     true,
-		TrustedAudiences:              cfg.TrustedAudiences,
-		JWKSRootCAs:                   rootCAs,
-		// A private Dex serves its JWKS from the same private address as its
-		// issuer, so the one knob covers both.
-		AllowPrivateIPJWKS: cfg.AllowPrivateURLs,
-	}
-	srv, err := mcpoauth.NewServer(provider, store, store, store, serverCfg, logger)
+	srv, err := mcpoauth.NewServer(provider, store, store, store, serverConfig(cfg, rootCAs), logger)
 	if err != nil {
 		cleanup()
 		return nil, fmt.Errorf("oauth: create server: %w", err)
@@ -95,6 +87,32 @@ func newServerWithProvider(_ context.Context, provider providers.Provider, cfg C
 		logger:  logger,
 		cleanup: cleanup,
 	}, nil
+}
+
+// serverConfig builds the mcp-oauth server configuration from cfg.
+// AllowPrivateIPJWKS lifts the SSRF guard of the forwarded-ID-token JWKS fetch
+// for the Dex issuer host only: Dex serves its keys from that host, and every
+// other host keeps the guard.
+func serverConfig(cfg Config, rootCAs *x509.CertPool) *mcpoauth.ServerConfig {
+	return &mcpoauth.ServerConfig{
+		Issuer:                        cfg.Issuer,
+		AllowPublicClientRegistration: cfg.AllowPublicRegistration,
+		AllowRefreshTokenRotation:     true,
+		TrustedAudiences:              cfg.TrustedAudiences,
+		JWKSRootCAs:                   rootCAs,
+		AllowPrivateIPJWKSHosts:       privateJWKSHosts(cfg),
+	}
+}
+
+func privateJWKSHosts(cfg Config) []string {
+	if !cfg.AllowPrivateIPJWKS || (cfg.Provider != "" && cfg.Provider != ProviderDex) {
+		return nil
+	}
+	issuer, err := url.Parse(cfg.DexIssuerURL)
+	if err != nil || issuer.Hostname() == "" {
+		return nil
+	}
+	return []string{issuer.Hostname()}
 }
 
 // Close releases the token store.
@@ -125,17 +143,6 @@ func newDexProvider(cfg Config, logger *slog.Logger) (providers.Provider, *x509.
 	if cfg.DexIssuerURL == "" || cfg.DexClientID == "" || cfg.DexClientSecret == "" {
 		return nil, nil, fmt.Errorf("oauth: DEX_ISSUER_URL, DEX_CLIENT_ID and DEX_CLIENT_SECRET must be set for MCP_OAUTH_PROVIDER=%s", ProviderDex)
 	}
-	scopes := []string{"openid", "profile", "email", "groups", "offline_access"}
-	if cfg.KubernetesAudience != "" {
-		scopes = append(scopes, "audience:server:client_id:"+cfg.KubernetesAudience)
-	}
-	dexCfg := &dex.Config{
-		IssuerURL:    cfg.DexIssuerURL,
-		ClientID:     cfg.DexClientID,
-		ClientSecret: cfg.DexClientSecret,
-		RedirectURL:  cfg.RedirectURL,
-		Scopes:       scopes,
-	}
 	rootCAs, err := loadRootCAs(cfg.DexCAFile)
 	if err != nil {
 		return nil, nil, fmt.Errorf("oauth: %w", err)
@@ -143,16 +150,10 @@ func newDexProvider(cfg Config, logger *slog.Logger) (providers.Provider, *x509.
 	if rootCAs != nil {
 		logger.Info("Using custom CA for Dex and JWKS TLS verification", "caFile", cfg.DexCAFile)
 	}
-	switch {
-	case cfg.AllowPrivateURLs:
-		dexCfg.HTTPClient = mcpoidc.NewPrivateIPAllowedHTTPClient(30*time.Second, rootCAs)
-	case rootCAs != nil:
-		dexCfg.HTTPClient = &http.Client{
-			Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}},
-			Timeout:   30 * time.Second,
-		}
+	if cfg.AllowPrivateIPJWKS {
+		logger.Warn(envAllowPrivateIPJWKS+" permits the Dex issuer host's JWKS endpoint to resolve to private addresses; TLS verification remains required", "hosts", privateJWKSHosts(cfg), "cwe", "CWE-918")
 	}
-	provider, err := dex.NewProvider(dexCfg)
+	provider, err := dex.NewProvider(dexProviderConfig(cfg, rootCAs))
 	if err != nil {
 		return nil, nil, fmt.Errorf("oauth: create Dex provider: %w", err)
 	}
@@ -160,12 +161,30 @@ func newDexProvider(cfg Config, logger *slog.Logger) (providers.Provider, *x509.
 	return provider, rootCAs, nil
 }
 
+// dexProviderConfig leaves HTTPClient unset so mcp-oauth's Dex client keeps
+// its proxy handling and private-address reach; rootCAs only replaces the
+// trust pool.
+func dexProviderConfig(cfg Config, rootCAs *x509.CertPool) *dex.Config {
+	scopes := []string{"openid", "profile", "email", "groups", "offline_access"}
+	if cfg.KubernetesAudience != "" {
+		scopes = append(scopes, "audience:server:client_id:"+cfg.KubernetesAudience)
+	}
+	return &dex.Config{
+		IssuerURL:    cfg.DexIssuerURL,
+		ClientID:     cfg.DexClientID,
+		ClientSecret: cfg.DexClientSecret,
+		RedirectURL:  cfg.RedirectURL,
+		Scopes:       scopes,
+		RootCAs:      rootCAs,
+	}
+}
+
 func newGoogleProvider(cfg Config, logger *slog.Logger) (providers.Provider, error) {
 	if cfg.GoogleClientID == "" || cfg.GoogleClientSecret == "" {
 		return nil, fmt.Errorf("oauth: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set for MCP_OAUTH_PROVIDER=%s", ProviderGoogle)
 	}
-	if cfg.DexCAFile != "" || cfg.AllowPrivateURLs {
-		logger.Warn("DEX_CA_FILE and MCP_OAUTH_ALLOW_PRIVATE_URLS are ignored for the Google provider (public endpoints)")
+	if cfg.DexCAFile != "" || cfg.AllowPrivateIPJWKS {
+		logger.Warn("DEX_CA_FILE and " + envAllowPrivateIPJWKS + " are ignored for the Google provider (public endpoints)")
 	}
 	provider, err := google.NewProvider(&google.Config{
 		ClientID:     cfg.GoogleClientID,

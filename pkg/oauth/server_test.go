@@ -1,18 +1,20 @@
 package oauth
 
 import (
-	"context"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"log/slog"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewServerValidation(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(discard{}, nil))
-	base := Config{Issuer: "https://mcp-capi.example.com", RedirectURL: "https://mcp-capi.example.com/oauth/callback"}
+	base := Config{Issuer: testIssuer, RedirectURL: testRedirectURL}
 
 	cases := map[string]struct {
 		mutate func(*Config)
@@ -28,7 +30,7 @@ func TestNewServerValidation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cfg := base
 			tc.mutate(&cfg)
-			_, err := NewServer(context.Background(), cfg, logger)
+			_, err := NewServer(t.Context(), cfg, logger)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("NewServer() error = %v, want it to mention %q", err, tc.want)
 			}
@@ -72,3 +74,57 @@ func TestBuildEncryptorRejectsShortKey(t *testing.T) {
 type discard struct{}
 
 func (discard) Write(p []byte) (int, error) { return len(p), nil }
+
+func TestServerConfigPrivateIPJWKSHosts(t *testing.T) {
+	const issuer = "https://dex.mc.example.internal:8443/dex"
+	tests := []struct {
+		name string
+		cfg  Config
+		want []string
+	}{
+		{name: "dex, flag off keeps the guard", cfg: Config{Provider: ProviderDex, DexIssuerURL: issuer}},
+		{name: "dex, flag on allows the issuer host only", cfg: Config{Provider: ProviderDex, DexIssuerURL: issuer, AllowPrivateIPJWKS: true}, want: []string{"dex.mc.example.internal"}},
+		{name: "default provider is dex", cfg: Config{DexIssuerURL: issuer, AllowPrivateIPJWKS: true}, want: []string{"dex.mc.example.internal"}},
+		{name: "google ignores the flag", cfg: Config{Provider: ProviderGoogle, DexIssuerURL: issuer, AllowPrivateIPJWKS: true}},
+		{name: "no issuer host", cfg: Config{Provider: ProviderDex, AllowPrivateIPJWKS: true}},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			serverCfg := serverConfig(testCase.cfg, nil)
+			require.Equal(t, testCase.want, serverCfg.AllowPrivateIPJWKSHosts)
+			require.False(t, serverCfg.AllowPrivateIPJWKS) //nolint:staticcheck // The deprecated blanket switch must stay off.
+		})
+	}
+}
+
+func TestNewServerWarnsAboutDeprecatedPrivateURLsForEveryProvider(t *testing.T) {
+	var logs strings.Builder
+	logger := slog.New(slog.NewTextHandler(&logs, nil))
+	srv, err := NewServer(t.Context(), Config{
+		Issuer:                   testIssuer,
+		RedirectURL:              testRedirectURL,
+		Provider:                 ProviderGoogle,
+		GoogleClientID:           testClientID,
+		GoogleClientSecret:       testClientSecret,
+		AllowPrivateIPJWKS:       true,
+		DeprecatedPrivateURLsEnv: envAllowPrivateURLs,
+	}, logger)
+	require.NoError(t, err)
+	t.Cleanup(srv.Close)
+	require.Contains(t, logs.String(), "DEPRECATED: "+envAllowPrivateURLs+" is read as "+envAllowPrivateIPJWKS)
+}
+
+func TestDexProviderConfigLeavesClientToMCPOAuth(t *testing.T) {
+	rootCAs := x509.NewCertPool()
+	dexCfg := dexProviderConfig(Config{
+		DexIssuerURL:       "https://dex.example.com",
+		DexClientID:        testClientID,
+		DexClientSecret:    testClientSecret,
+		RedirectURL:        testRedirectURL,
+		KubernetesAudience: k8sAudience,
+		AllowPrivateIPJWKS: true,
+	}, rootCAs)
+	require.Nil(t, dexCfg.HTTPClient)
+	require.Same(t, rootCAs, dexCfg.RootCAs)
+	require.Contains(t, dexCfg.Scopes, "audience:server:client_id:"+k8sAudience)
+}

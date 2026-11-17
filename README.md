@@ -175,6 +175,9 @@ The Helm chart exposes them under `oauth.*` (see `helm/mcp-capi/README.md`);
 `oauth.downstream.enabled` (default on) mounts no ServiceAccount token and the
 chart renders no RBAC.
 
+For a Dex on a private address or behind a proxy, see
+[private-address JWKS settings](docs/private-jwks-migration.md).
+
 ### Write policy: read-only and the GitOps guard
 
 Two switches decide what an agent may change, a third what it may take away.
