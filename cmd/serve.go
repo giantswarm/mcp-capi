@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	mcppkg "github.com/giantswarm/mcp-capi/pkg/mcp"
 	"github.com/giantswarm/mcp-capi/pkg/oauth"
@@ -257,6 +259,7 @@ func RunServe(cfg ServeConfig) error {
 		level = slog.LevelDebug
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	ctrllog.SetLogger(logr.FromSlogHandler(logger.Handler()))
 
 	// Create server options
 	opts := mcppkg.ServerOptions{
