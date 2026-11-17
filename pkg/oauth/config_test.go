@@ -8,14 +8,17 @@ import (
 )
 
 const (
-	k8sAudience     = "dex-k8s-authenticator"
-	testRedirectURL = "https://mcp-capi.example.com/oauth/callback"
-	envFalse        = "false"
+	k8sAudience      = "dex-k8s-authenticator"
+	testIssuer       = "https://mcp-capi.example.com"
+	testRedirectURL  = testIssuer + "/oauth/callback"
+	testClientID     = "client"
+	testClientSecret = "secret"
+	envFalse         = "false"
 )
 
 func TestConfigFromLookup(t *testing.T) {
 	env := map[string]string{
-		"MCP_OAUTH_ISSUER":                "https://mcp-capi.example.com",
+		"MCP_OAUTH_ISSUER":                testIssuer,
 		"OAUTH_REDIRECT_URL":              testRedirectURL,
 		"DEX_ISSUER_URL":                  "https://dex.example.com",
 		"DEX_CLIENT_ID":                   "mcp-capi",

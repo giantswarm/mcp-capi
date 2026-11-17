@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -64,13 +65,16 @@ func TestDexDiscoveryFollowsProxyEnvironment(t *testing.T) {
 	require.NoError(t, os.WriteFile(emptyBundle, nil, 0o600))
 
 	for _, testCase := range []struct {
-		name       string
-		dexCAFile  bool
-		noProxy    string
-		wantTunnel bool
+		name               string
+		dexCAFile          bool
+		allowPrivateIPJWKS bool
+		noProxy            string
+		wantTunnel         bool
 	}{
 		{name: "issuer behind HTTPS_PROXY", wantTunnel: true},
 		{name: "issuer with DEX_CA_FILE behind HTTPS_PROXY", dexCAFile: true, wantTunnel: true},
+		{name: "issuer with private JWKS allowed behind HTTPS_PROXY", allowPrivateIPJWKS: true, wantTunnel: true},
+		{name: "issuer with DEX_CA_FILE and private JWKS allowed behind HTTPS_PROXY", dexCAFile: true, allowPrivateIPJWKS: true, wantTunnel: true},
 		{name: "issuer in NO_PROXY", noProxy: dexProxyHostname},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -90,6 +94,7 @@ func TestDexDiscoveryFollowsProxyEnvironment(t *testing.T) {
 				dexProxyChildEnv+"=1",
 				"DEX_PROXY_TEST_ISSUER="+issuer,
 				"DEX_PROXY_TEST_CA_FILE="+dexCAFile,
+				"DEX_PROXY_TEST_ALLOW_PRIVATE_IP_JWKS="+strconv.FormatBool(testCase.allowPrivateIPJWKS),
 				"SSL_CERT_FILE="+systemRoots,
 				"SSL_CERT_DIR="+t.TempDir(),
 				"HTTPS_PROXY="+proxy.server.URL,
@@ -117,11 +122,12 @@ func TestDexDiscoveryProxyChild(t *testing.T) {
 	}
 	installDexProxyResolver(t)
 	_, _, err := newDexProvider(Config{
-		DexIssuerURL:    os.Getenv("DEX_PROXY_TEST_ISSUER"),
-		DexClientID:     "client",
-		DexClientSecret: "secret",
-		DexCAFile:       os.Getenv("DEX_PROXY_TEST_CA_FILE"),
-		RedirectURL:     testRedirectURL,
+		DexIssuerURL:       os.Getenv("DEX_PROXY_TEST_ISSUER"),
+		DexClientID:        testClientID,
+		DexClientSecret:    testClientSecret,
+		DexCAFile:          os.Getenv("DEX_PROXY_TEST_CA_FILE"),
+		AllowPrivateIPJWKS: os.Getenv("DEX_PROXY_TEST_ALLOW_PRIVATE_IP_JWKS") == envTrue,
+		RedirectURL:        testRedirectURL,
 	}, slog.New(slog.DiscardHandler))
 	require.NoError(t, err)
 }

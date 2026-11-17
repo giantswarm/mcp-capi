@@ -42,6 +42,9 @@ func NewServer(ctx context.Context, cfg Config, logger *slog.Logger) (*Server, e
 	if cfg.RedirectURL == "" {
 		return nil, fmt.Errorf("oauth: OAUTH_REDIRECT_URL must be set")
 	}
+	if cfg.DeprecatedPrivateURLsEnv != "" {
+		logger.Warn("DEPRECATED: " + cfg.DeprecatedPrivateURLsEnv + " is read as " + envAllowPrivateIPJWKS + " and will be refused from v0.8.0; set " + envAllowPrivateIPJWKS + " instead")
+	}
 
 	var (
 		provider providers.Provider
@@ -146,9 +149,6 @@ func newDexProvider(cfg Config, logger *slog.Logger) (providers.Provider, *x509.
 	}
 	if rootCAs != nil {
 		logger.Info("Using custom CA for Dex and JWKS TLS verification", "caFile", cfg.DexCAFile)
-	}
-	if cfg.DeprecatedPrivateURLsEnv != "" {
-		logger.Warn("DEPRECATED: " + cfg.DeprecatedPrivateURLsEnv + " is read as " + envAllowPrivateIPJWKS + " and will be refused from v0.8.0; set " + envAllowPrivateIPJWKS + " instead")
 	}
 	if cfg.AllowPrivateIPJWKS {
 		logger.Warn(envAllowPrivateIPJWKS+" permits the Dex issuer host's JWKS endpoint to resolve to private addresses; TLS verification remains required", "hosts", privateJWKSHosts(cfg), "cwe", "CWE-918")

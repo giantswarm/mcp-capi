@@ -14,7 +14,7 @@ import (
 
 func TestNewServerValidation(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(discard{}, nil))
-	base := Config{Issuer: "https://mcp-capi.example.com", RedirectURL: testRedirectURL}
+	base := Config{Issuer: testIssuer, RedirectURL: testRedirectURL}
 
 	cases := map[string]struct {
 		mutate func(*Config)
@@ -97,12 +97,29 @@ func TestServerConfigPrivateIPJWKSHosts(t *testing.T) {
 	}
 }
 
+func TestNewServerWarnsAboutDeprecatedPrivateURLsForEveryProvider(t *testing.T) {
+	var logs strings.Builder
+	logger := slog.New(slog.NewTextHandler(&logs, nil))
+	srv, err := NewServer(t.Context(), Config{
+		Issuer:                   testIssuer,
+		RedirectURL:              testRedirectURL,
+		Provider:                 ProviderGoogle,
+		GoogleClientID:           testClientID,
+		GoogleClientSecret:       testClientSecret,
+		AllowPrivateIPJWKS:       true,
+		DeprecatedPrivateURLsEnv: envAllowPrivateURLs,
+	}, logger)
+	require.NoError(t, err)
+	t.Cleanup(srv.Close)
+	require.Contains(t, logs.String(), "DEPRECATED: "+envAllowPrivateURLs+" is read as "+envAllowPrivateIPJWKS)
+}
+
 func TestDexProviderConfigLeavesClientToMCPOAuth(t *testing.T) {
 	rootCAs := x509.NewCertPool()
 	dexCfg := dexProviderConfig(Config{
 		DexIssuerURL:       "https://dex.example.com",
-		DexClientID:        "client",
-		DexClientSecret:    "secret",
+		DexClientID:        testClientID,
+		DexClientSecret:    testClientSecret,
 		RedirectURL:        testRedirectURL,
 		KubernetesAudience: k8sAudience,
 		AllowPrivateIPJWKS: true,
