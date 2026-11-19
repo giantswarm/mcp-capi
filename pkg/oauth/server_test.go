@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -75,24 +76,33 @@ type discard struct{}
 
 func (discard) Write(p []byte) (int, error) { return len(p), nil }
 
-func TestServerConfigPrivateIPJWKSHosts(t *testing.T) {
+func TestServerConfigDoesNotPassPrivateIPJWKS(t *testing.T) {
 	const issuer = "https://dex.mc.example.internal:8443/dex"
-	tests := []struct {
-		name string
-		cfg  Config
-		want []string
-	}{
-		{name: "dex, flag off keeps the guard", cfg: Config{Provider: ProviderDex, DexIssuerURL: issuer}},
-		{name: "dex, flag on allows the issuer host only", cfg: Config{Provider: ProviderDex, DexIssuerURL: issuer, AllowPrivateIPJWKS: true}, want: []string{"dex.mc.example.internal"}},
-		{name: "default provider is dex", cfg: Config{DexIssuerURL: issuer, AllowPrivateIPJWKS: true}, want: []string{"dex.mc.example.internal"}},
-		{name: "google ignores the flag", cfg: Config{Provider: ProviderGoogle, DexIssuerURL: issuer, AllowPrivateIPJWKS: true}},
-		{name: "no issuer host", cfg: Config{Provider: ProviderDex, AllowPrivateIPJWKS: true}},
+	for _, provider := range []string{ProviderDex, ProviderGoogle, ""} {
+		t.Run(provider, func(t *testing.T) {
+			serverCfg := serverConfig(Config{Provider: provider, DexIssuerURL: issuer, AllowPrivateIPJWKS: true}, nil)
+			require.Empty(t, serverCfg.AllowPrivateIPJWKSHosts)
+			require.False(t, serverCfg.AllowPrivateIPJWKS) //nolint:staticcheck // SA1019: asserting the deprecated blanket stays unset
+		})
 	}
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			serverCfg := serverConfig(testCase.cfg, nil)
-			require.Equal(t, testCase.want, serverCfg.AllowPrivateIPJWKSHosts)
-			require.False(t, serverCfg.AllowPrivateIPJWKS) //nolint:staticcheck // The deprecated blanket switch must stay off.
+}
+
+func TestNewServerWarnsWhenPrivateIPJWKSHasNoEffect(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("enabled=%v", enabled), func(t *testing.T) {
+			var logs strings.Builder
+			logger := slog.New(slog.NewTextHandler(&logs, nil))
+			srv, err := NewServer(t.Context(), Config{
+				Issuer:             testIssuer,
+				RedirectURL:        testRedirectURL,
+				Provider:           ProviderGoogle,
+				GoogleClientID:     testClientID,
+				GoogleClientSecret: testClientSecret,
+				AllowPrivateIPJWKS: enabled,
+			}, logger)
+			require.NoError(t, err)
+			t.Cleanup(srv.Close)
+			require.Equal(t, enabled, strings.Contains(logs.String(), envAllowPrivateIPJWKS+" (Helm oauth.allowPrivateIPJWKS, alias "+envAllowPrivateURLs+") has no effect"))
 		})
 	}
 }

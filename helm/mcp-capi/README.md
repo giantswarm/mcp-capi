@@ -124,8 +124,8 @@ listed caller is no longer admitted.
 | oauth.existingSecretChecksum | string | `""` |  |
 | oauth.encryptionKey | string | `""` |  |
 | oauth.allowPublicRegistration | bool | `false` |  |
-| oauth.allowPrivateIPJWKS | bool | `false` | Permit the JWKS fetch that validates forwarded ID tokens to reach the Dex issuer host on a private address. HTTPS and TLS verification remain required. Dex discovery and token calls already reach private addresses and follow HTTP_PROXY, HTTPS_PROXY and NO_PROXY without this setting. |
-| oauth.allowPrivateURLs | bool | `false` | Deprecated: read as allowPrivateIPJWKS; set that instead. Refused from v0.8.0 (planned for 2027-02-17). See docs/private-jwks-migration.md. |
+| oauth.allowPrivateIPJWKS | bool | `false` | Deprecated, no effect: the configured issuer host may resolve to a private address without it. |
+| oauth.allowPrivateURLs | bool | `false` | Deprecated, no effect. Refused from v0.8.0 (planned for 2027-02-17). See docs/private-jwks-migration.md. |
 | oauth.trustedAudiences | list | `[]` |  |
 | oauth.downstream.enabled | bool | `true` |  |
 | oauth.storage.type | string | `"memory"` |  |
