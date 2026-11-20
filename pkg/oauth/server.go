@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 
 	mcpoauth "github.com/giantswarm/mcp-oauth"
@@ -43,7 +42,10 @@ func NewServer(ctx context.Context, cfg Config, logger *slog.Logger) (*Server, e
 		return nil, fmt.Errorf("oauth: OAUTH_REDIRECT_URL must be set")
 	}
 	if cfg.DeprecatedPrivateURLsEnv != "" {
-		logger.Warn("DEPRECATED: " + cfg.DeprecatedPrivateURLsEnv + " is read as " + envAllowPrivateIPJWKS + " and will be refused from v0.8.0; set " + envAllowPrivateIPJWKS + " instead")
+		logger.Warn("DEPRECATED: " + cfg.DeprecatedPrivateURLsEnv + " is read as " + envAllowPrivateIPJWKS + " and will be refused from v0.8.0; remove it")
+	}
+	if cfg.AllowPrivateIPJWKS {
+		logger.Warn(envAllowPrivateIPJWKS + " (Helm oauth.allowPrivateIPJWKS, alias " + envAllowPrivateURLs + ") has no effect and will be removed; the JWKS of the configured issuer host may resolve to a private address without it")
 	}
 
 	var (
@@ -90,9 +92,6 @@ func newServerWithProvider(_ context.Context, provider providers.Provider, cfg C
 }
 
 // serverConfig builds the mcp-oauth server configuration from cfg.
-// AllowPrivateIPJWKS lifts the SSRF guard of the forwarded-ID-token JWKS fetch
-// for the Dex issuer host only: Dex serves its keys from that host, and every
-// other host keeps the guard.
 func serverConfig(cfg Config, rootCAs *x509.CertPool) *mcpoauth.ServerConfig {
 	return &mcpoauth.ServerConfig{
 		Issuer:                        cfg.Issuer,
@@ -100,19 +99,7 @@ func serverConfig(cfg Config, rootCAs *x509.CertPool) *mcpoauth.ServerConfig {
 		AllowRefreshTokenRotation:     true,
 		TrustedAudiences:              cfg.TrustedAudiences,
 		JWKSRootCAs:                   rootCAs,
-		AllowPrivateIPJWKSHosts:       privateJWKSHosts(cfg),
 	}
-}
-
-func privateJWKSHosts(cfg Config) []string {
-	if !cfg.AllowPrivateIPJWKS || (cfg.Provider != "" && cfg.Provider != ProviderDex) {
-		return nil
-	}
-	issuer, err := url.Parse(cfg.DexIssuerURL)
-	if err != nil || issuer.Hostname() == "" {
-		return nil
-	}
-	return []string{issuer.Hostname()}
 }
 
 // Close releases the token store.
@@ -150,9 +137,6 @@ func newDexProvider(cfg Config, logger *slog.Logger) (providers.Provider, *x509.
 	if rootCAs != nil {
 		logger.Info("Using custom CA for Dex and JWKS TLS verification", "caFile", cfg.DexCAFile)
 	}
-	if cfg.AllowPrivateIPJWKS {
-		logger.Warn(envAllowPrivateIPJWKS+" permits the Dex issuer host's JWKS endpoint to resolve to private addresses; TLS verification remains required", "hosts", privateJWKSHosts(cfg), "cwe", "CWE-918")
-	}
 	provider, err := dex.NewProvider(dexProviderConfig(cfg, rootCAs))
 	if err != nil {
 		return nil, nil, fmt.Errorf("oauth: create Dex provider: %w", err)
@@ -183,8 +167,8 @@ func newGoogleProvider(cfg Config, logger *slog.Logger) (providers.Provider, err
 	if cfg.GoogleClientID == "" || cfg.GoogleClientSecret == "" {
 		return nil, fmt.Errorf("oauth: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set for MCP_OAUTH_PROVIDER=%s", ProviderGoogle)
 	}
-	if cfg.DexCAFile != "" || cfg.AllowPrivateIPJWKS {
-		logger.Warn("DEX_CA_FILE and " + envAllowPrivateIPJWKS + " are ignored for the Google provider (public endpoints)")
+	if cfg.DexCAFile != "" {
+		logger.Warn("DEX_CA_FILE is ignored for the Google provider (public endpoints)")
 	}
 	provider, err := google.NewProvider(&google.Config{
 		ClientID:     cfg.GoogleClientID,

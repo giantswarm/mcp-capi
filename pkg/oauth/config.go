@@ -72,11 +72,9 @@ type Config struct {
 	// its JWKS.
 	TrustedAudiences []string
 
-	// AllowPrivateIPJWKS permits the JWKS fetch that validates forwarded ID
-	// tokens to reach the Dex issuer host on a private address, e.g.
-	// dex.<mc>.<base> on a private management cluster. HTTPS and certificate
-	// verification remain required. Dex discovery and token calls reach
-	// private addresses without it.
+	// AllowPrivateIPJWKS is accepted for compatibility and has no effect: the
+	// mcp-oauth server permits the configured provider's issuer host to
+	// resolve to a private address on its own.
 	AllowPrivateIPJWKS bool
 
 	// DeprecatedPrivateURLsEnv names the deprecated variable AllowPrivateIPJWKS
