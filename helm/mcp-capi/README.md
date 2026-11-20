@@ -1,5 +1,8 @@
 # mcp-capi
 
+CIMD is enabled by default. DCR is deprecated by MCP 2026-07-28 and remains a
+compatibility fallback; see the [OAuth registration guide](../../docs/oauth-client-registration.md).
+
 A Helm chart for mcp-capi - Model Context Protocol server for Cluster API
 
 **Homepage:** <https://github.com/giantswarm/mcp-capi>

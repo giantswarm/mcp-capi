@@ -94,11 +94,12 @@ func newServerWithProvider(_ context.Context, provider providers.Provider, cfg C
 // serverConfig builds the mcp-oauth server configuration from cfg.
 func serverConfig(cfg Config, rootCAs *x509.CertPool) *mcpoauth.ServerConfig {
 	return &mcpoauth.ServerConfig{
-		Issuer:                        cfg.Issuer,
-		AllowPublicClientRegistration: cfg.AllowPublicRegistration,
-		AllowRefreshTokenRotation:     true,
-		TrustedAudiences:              cfg.TrustedAudiences,
-		JWKSRootCAs:                   rootCAs,
+		EnableClientIDMetadataDocuments: true,
+		Issuer:                          cfg.Issuer,
+		AllowPublicClientRegistration:   cfg.AllowPublicRegistration,
+		AllowRefreshTokenRotation:       true,
+		TrustedAudiences:                cfg.TrustedAudiences,
+		JWKSRootCAs:                     rootCAs,
 	}
 }
 
