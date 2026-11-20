@@ -138,3 +138,7 @@ func TestDexProviderConfigLeavesClientToMCPOAuth(t *testing.T) {
 	require.Same(t, rootCAs, dexCfg.RootCAs)
 	require.Contains(t, dexCfg.Scopes, "audience:server:client_id:"+k8sAudience)
 }
+
+func TestServerConfigEnablesClientIDMetadataDocuments(t *testing.T) {
+	require.True(t, serverConfig(Config{}, nil).EnableClientIDMetadataDocuments)
+}

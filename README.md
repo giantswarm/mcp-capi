@@ -1,5 +1,10 @@
 # MCP CAPI Server
 
+OAuth client registration: CIMD is enabled by default. DCR is deprecated by MCP
+2026-07-28 and remains a compatibility fallback. See
+[registration, consent, egress and TLS configuration](docs/oauth-client-registration.md).
+
+
 A Model Context Protocol (MCP) server for Cluster API (CAPI), enabling seamless integration between Large Language Models (LLMs) and Kubernetes cluster management through CAPI.
 
 ## Overview
