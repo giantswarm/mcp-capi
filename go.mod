@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/giantswarm/go-selfupdate v1.7.7
 	github.com/giantswarm/k8senv v0.3.0
-	github.com/giantswarm/mcp-oauth v1.16.0
+	github.com/giantswarm/mcp-oauth v1.19.0
 	github.com/giantswarm/mcp-toolkit v0.5.4
 	github.com/giantswarm/selfupdate-cosign v0.3.29
 	github.com/go-logr/logr v1.4.4
@@ -44,6 +44,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fatih/color v1.19.0 // indirect
+	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
