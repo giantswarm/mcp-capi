@@ -247,7 +247,14 @@ func newStore(cfg Config, enc *security.Encryptor) (combinedStore, func(), error
 		if cfg.ValkeyURL == "" {
 			return nil, nil, fmt.Errorf("oauth: VALKEY_URL must be set when OAUTH_STORAGE=valkey")
 		}
-		vcfg := valkey.Config{Address: cfg.ValkeyURL, Password: cfg.ValkeyPassword}
+		vcfg := valkey.Config{
+			Address:  cfg.ValkeyURL,
+			Password: cfg.ValkeyPassword,
+			// Every release on this key prefix writes the family revocation
+			// marker first (mcp-oauth v1.17.2 or newer), so an unindexed
+			// namespace can be indexed while serving.
+			MigrateFamilyRevocationIndex: true,
+		}
 		if cfg.ValkeyKeyPrefix != "" {
 			vcfg.KeyPrefix = cfg.ValkeyKeyPrefix
 		}
