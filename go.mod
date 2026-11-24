@@ -6,7 +6,7 @@ require (
 	github.com/giantswarm/go-selfupdate v1.7.7
 	github.com/giantswarm/k8senv v0.3.0
 	github.com/giantswarm/mcp-oauth v1.20.0
-	github.com/giantswarm/mcp-toolkit v0.5.4
+	github.com/giantswarm/mcp-toolkit v0.7.0
 	github.com/giantswarm/selfupdate-cosign v0.3.30
 	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
@@ -79,7 +79,7 @@ require (
 	github.com/google/go-containerregistry v0.22.1 // indirect
 	github.com/google/go-github/v93 v93.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
-	github.com/google/jsonschema-go v0.4.2 // indirect
+	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.33.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
