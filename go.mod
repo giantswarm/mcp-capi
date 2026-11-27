@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/giantswarm/go-selfupdate v1.7.7
 	github.com/giantswarm/k8senv v0.3.0
-	github.com/giantswarm/mcp-oauth v1.20.0
+	github.com/giantswarm/mcp-oauth v1.24.0
 	github.com/giantswarm/mcp-toolkit v0.7.0
 	github.com/giantswarm/selfupdate-cosign v0.3.30
 	github.com/go-logr/logr v1.4.4
